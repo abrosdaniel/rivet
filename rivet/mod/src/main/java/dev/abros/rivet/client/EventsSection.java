@@ -1,0 +1,25 @@
+package dev.abros.rivet.client;
+import com.google.gson.*;
+import dev.abros.rivet.core.Json;
+import java.util.*;
+import static dev.abros.rivet.client.CommunityScreen.*;
+/** events entry layout and contextual actions. */
+final class EventsSection {
+ static void render(CommunityScreen host,JsonObject j){boolean manage=j.get("manage").getAsBoolean();int card=host.beginCard();
+                host.text("Начало: "+local(j.get("startsAt").getAsLong()));host.text("Длительность: "+(j.has("durationMinutes")?j.get("durationMinutes").getAsString():"60")+" мин.");if(j.has("conflicts")&&!j.getAsJsonArray("conflicts").isEmpty()){host.text("Пересекается с вашим участием:");for(var e:j.getAsJsonArray("conflicts")){var conflict=e.getAsJsonObject();host.text(Json.str(conflict,"title")+" · "+local(conflict.get("startsAt").getAsLong()));}}int capacity=j.get("capacity").getAsInt();var participants=j.getAsJsonObject("participants");host.text("Участников: "+j.get("participantsCount").getAsInt()+(capacity>0?" / "+capacity:""));int n=j.has("participantOffset")?j.get("participantOffset").getAsInt():0;for(var entry:participants.entrySet()){host.text((capacity>0&&n++>=capacity?"Очередь: ":"✓ ")+entry.getValue().getAsString());}
+                if(j.has("waitlistPosition")&&j.get("waitlistPosition").getAsInt()>0)host.text("Ваше место в очереди: "+j.get("waitlistPosition").getAsInt());
+                long remaining=j.get("startsAt").getAsLong()-System.currentTimeMillis();if(remaining>0)host.text("До начала: "+Math.max(1,(remaining+59999)/60000)+" мин.");
+
+                if(can(j,"join")||can(j,"leave"))host.action(j.get("isParticipant").getAsBoolean()?"Отменить участие":"Участвовать",()->{if(j.get("isParticipant").getAsBoolean())host.send("leave",new JsonObject());else if(j.has("conflicts")&&!j.getAsJsonArray("conflicts").isEmpty())host.confirm("Участвовать несмотря на пересечение?","join",new JsonObject());else host.send("join",new JsonObject());});
+                if(CommunityScreen.plus()){
+                 int reminder=j.has("reminderMinutes")?j.get("reminderMinutes").getAsInt():5;
+                 host.action("Напомнить: "+(reminder<0?"выключено":reminder==0?"в начале":reminder+" мин."),()->net.minecraft.client.Minecraft.getInstance().setScreen(new ChoicePopup(host.surface(),"Напомнить о событии",List.of("За час","За 15 минут","За 5 минут","В начале","Не напоминать"),i->{var body=new JsonObject();body.addProperty("minutes",List.of(60,15,5,0,-1).get(i));host.send("plusReminder",body);})));
+                 if(j.has("series")&&manage)host.secondary("Отменить будущие встречи серии",()->host.confirm("Отменить все будущие встречи серии?","plusCancelSeries",new JsonObject()));
+                }
+                if(j.has("cancelReason"))host.text("Причина отмены: "+Json.str(j,"cancelReason"));
+                if(ServerMenuClient.supports("player-tools")&&manage&&remaining<=0)for(var person:participants.entrySet()){String target=person.getKey();host.secondary("Посещение: "+person.getValue().getAsString()+(j.has("attendance")&&j.getAsJsonObject("attendance").has(target)?(j.getAsJsonObject("attendance").getAsJsonObject(target).get("present").getAsBoolean()?" · присутствовал":" · отсутствовал"):" · не отмечено"),()->net.minecraft.client.Minecraft.getInstance().setScreen(new ChoicePopup(host.surface(),"Посещение · "+person.getValue().getAsString(),List.of("Присутствовал","Не присутствовал"),index->{var body=new JsonObject();body.addProperty("target",target);body.addProperty("present",index==0);host.send("toolsAttendance",body);})));}
+                host.endCard(card);
+                if(can(j,"reschedule")){host.secondary("Перенести",()->host.form("Перенос события","reschedule",List.of(new CommunityScreen.Field("startsAt","Начало · местное время",30)),new JsonObject()));host.secondary("Отменить событие",()->host.form("Отмена события","cancel",List.of(new CommunityScreen.Field("reason","Причина отмены",500)),new JsonObject()));}
+
+ }
+}

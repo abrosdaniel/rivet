@@ -1,0 +1,12 @@
+dependencies { implementation project(':core') }
+tasks.register('standaloneJar', Jar) {
+    archiveClassifier = 'standalone'
+    duplicatesStrategy = DuplicatesStrategy.EXCLUDE
+    manifest { attributes 'Main-Class': 'dev.abros.rivet.helper.Main' }
+    from sourceSets.main.output
+    dependsOn configurations.runtimeClasspath
+    from { configurations.runtimeClasspath.findAll { !it.name.startsWith('postgresql-') && !it.name.startsWith('HikariCP-') && !it.name.startsWith('checker-qual-') && !it.name.startsWith('bcprov-') && !it.name.startsWith('bcpkix-') && !it.name.startsWith('bcutil-') }.collect { it.isDirectory() ? it : zipTree(it) } }
+    exclude 'dev/abros/rivet/core/auth/**', 'dev/abros/rivet/core/PgDatabase*', 'dev/abros/rivet/core/DatabaseSettings*', 'dev/abros/rivet/core/CommunityStore*', 'dev/abros/rivet/core/CommunityReports*', 'META-INF/*.SF', 'META-INF/*.RSA', 'META-INF/*.DSA', 'module-info.class', 'META-INF/versions/**/module-info.class'
+}
+
+tasks.named('test') { dependsOn tasks.named('standaloneJar'); systemProperty 'rivet.helperJar', tasks.named('standaloneJar').get().archiveFile.get().asFile.absolutePath }

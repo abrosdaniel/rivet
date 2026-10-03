@@ -1,0 +1,39 @@
+package dev.abros.rivet.core.auth;
+import org.junit.jupiter.api.*;
+import org.junit.jupiter.api.io.TempDir;
+import java.nio.file.*;
+import java.util.*;
+import static org.junit.jupiter.api.Assertions.*;
+@org.junit.jupiter.api.Tag("postgres")
+class AuthStoreTest {
+ @TempDir Path root;
+ static final String UUID_A="00000000-0000-0000-0000-000000000001",UUID_B="00000000-0000-0000-0000-000000000002";
+ static char[] pass(){return "a sufficiently long passphrase".toCharArray();}
+ @Test void passwordsSaltedAndVerified(){String first=AuthSecrets.password(pass()),second=AuthSecrets.password(pass());assertNotEquals(first,second);assertTrue(AuthSecrets.verify(pass(),first));assertFalse(AuthSecrets.verify("incorrect".toCharArray(),first));assertThrows(IllegalArgumentException.class,()->AuthSecrets.password("short".toCharArray()));}
+ @Test void resetAtomicRevokesDevicesAndGeneration()throws Exception{try(var db=new AuthStore(dev.abros.rivet.core.TestDatabase.database(root))){var before=db.register("Alice",UUID_A,pass(),0);var device=db.remember("Alice","Laptop",1);String token=db.invite("Moderator","Alice",2);assertEquals(0,db.account("Alice").generation());db.reset("Alice",UUID_A,token,"a different long password".toCharArray(),3);assertEquals(before.generation()+1,db.account("Alice").generation());assertEquals(0,db.devices("Alice",4).size());assertThrows(Exception.class,()->db.deviceLogin("Alice",UUID_A,device.token(),4));assertThrows(Exception.class,()->db.reset("Alice",UUID_A,token,pass(),100000));assertEquals("local",db.login("Alice",UUID_A,"a different long password".toCharArray(),200000).type());}}
+ @Test void resetExpiredAndReplacedInvitationsRejected()throws Exception{try(var db=new AuthStore(dev.abros.rivet.core.TestDatabase.database(root))){db.register("Alice",UUID_A,pass(),0);String old=db.invite("console","Alice",0),fresh=db.invite("console","Alice",1);assertThrows(Exception.class,()->db.reset("Alice",UUID_A,old,pass(),10));assertThrows(Exception.class,()->db.reset("Alice",UUID_A,fresh,pass(),900002));assertEquals(0,db.account("Alice").generation());}}
+ @Test void invitationStoresOnlyHashAndAuditsIssuer()throws Exception{
+  var database=dev.abros.rivet.core.TestDatabase.database(root);
+  try(var store=new AuthStore(database)){
+   store.register("Alice",UUID_A,pass(),0);String token=store.invite("Moderator","Alice",10);
+   database.transaction(()->{
+    try(var q=database.connection().prepareStatement("SELECT hash,expires FROM auth_resets WHERE name='Alice'");var row=q.executeQuery()){
+     assertTrue(row.next());assertNotEquals(token,row.getString(1));assertEquals(AuthSecrets.digest(token),row.getString(1));assertEquals(900010,row.getLong(2));assertFalse(row.next());
+    }
+    try(var q=database.connection().prepareStatement("SELECT actor,action,target FROM auth_audit WHERE action='reset-invitation'");var row=q.executeQuery()){
+     assertTrue(row.next());assertEquals("Moderator",row.getString(1));assertEquals("reset-invitation",row.getString(2));assertEquals("Alice",row.getString(3));assertFalse(row.next());
+    }
+    return null;
+   });
+  }
+ }
+ @Test void reservationStopsClaimingExistingPlayers()throws Exception{try(var db=new AuthStore(dev.abros.rivet.core.TestDatabase.database(root))){db.reserve("Alice",UUID_A);assertThrows(Exception.class,()->db.register("alice",UUID_B,pass(),0));String invite=db.invite("console","Alice",0);db.reset("Alice",UUID_A,invite,pass(),1);assertEquals("local",db.login("Alice",UUID_A,pass(),2).type());}}
+ @Test void identityMismatchDoesNotOverwriteCredentials()throws Exception{try(var db=new AuthStore(dev.abros.rivet.core.TestDatabase.database(root))){db.register("Alice",UUID_A,pass(),0);assertThrows(Exception.class,()->db.login("Alice",UUID_B,pass(),1));assertEquals(UUID_A,db.account("Alice").uuid());}}
+ @Test void officialCannotTakeLocalAccount()throws Exception{try(var db=new AuthStore(dev.abros.rivet.core.TestDatabase.database(root))){db.register("Alice",UUID_A,pass(),0);assertThrows(Exception.class,()->db.official("Alice",UUID_A,UUID_B,1));}}
+ @Test void tokensBoundToAccountAndExpire()throws Exception{try(var db=new AuthStore(dev.abros.rivet.core.TestDatabase.database(root))){db.register("Alice",UUID_A,pass(),0);db.register("Bob",UUID_B,pass(),0);var device=db.remember("Alice","Laptop",1);assertThrows(Exception.class,()->db.deviceLogin("Bob",UUID_B,device.token(),2));assertThrows(Exception.class,()->db.revoke("Bob",device.id(),3));assertEquals("Alice",db.deviceLogin("Alice",UUID_A,device.token(),4).name());assertThrows(Exception.class,()->db.deviceLogin("Alice",UUID_A,device.token(),31L*86400000));}}
+ @Test void failuresThrottleAcrossConnectionsAndReopen()throws Exception{try(var db=new AuthStore(dev.abros.rivet.core.TestDatabase.database(root))){db.register("Alice",UUID_A,pass(),0);assertThrows(Exception.class,()->db.login("Alice",UUID_A,"bad".toCharArray(),1));}try(var db=new AuthStore(dev.abros.rivet.core.TestDatabase.database(root))){assertThrows(Exception.class,()->db.login("Alice",UUID_A,pass(),2));assertEquals("Alice",db.login("Alice",UUID_A,pass(),100000).name());}}
+ @Test void passwordChangeRevokesInvitationsAndSessions()throws Exception{try(var db=new AuthStore(dev.abros.rivet.core.TestDatabase.database(root))){db.register("Alice",UUID_A,pass(),0);db.remember("Alice","Device",1);String invitation=db.invite("console","Alice",2);db.change("Alice",UUID_A,pass(),"brand new password value".toCharArray(),3);assertEquals(1,db.account("Alice").generation());assertEquals(0,db.devices("Alice",4).size());assertThrows(Exception.class,()->db.reset("Alice",UUID_A,invitation,pass(),5));}}
+ @Test void blockingRevokesAllCredentials()throws Exception{try(var db=new AuthStore(dev.abros.rivet.core.TestDatabase.database(root))){db.register("Alice",UUID_A,pass(),0);var device=db.remember("Alice","Device",1);db.block("console","Alice",true,2);assertThrows(Exception.class,()->db.login("Alice",UUID_A,pass(),3));assertFalse(db.hasDevice("Alice",device.id(),4));assertThrows(Exception.class,()->db.invite("mod","Alice",5));}}
+ @Test void databaseSharedWithCommunityAndSurvivesWorldChange()throws Exception{try(var community=new dev.abros.rivet.core.CommunityStore(dev.abros.rivet.core.TestDatabase.database(root),dev.abros.rivet.core.CommunityStore.defaults());var auth=new AuthStore(dev.abros.rivet.core.TestDatabase.database(root))){auth.register("Alice",UUID_A,pass(),0);community.seen(new dev.abros.rivet.core.CommunityStore.Actor(UUID_A,"Alice",false,false));}Files.createDirectories(root.resolve("new-world"));try(var auth=new AuthStore(dev.abros.rivet.core.TestDatabase.database(root));var community=new dev.abros.rivet.core.CommunityStore(dev.abros.rivet.core.TestDatabase.database(root),dev.abros.rivet.core.CommunityStore.defaults())){assertEquals("Alice",auth.account("Alice").name());assertEquals("Alice",community.personName(UUID_A));}assertFalse(Files.isRegularFile(root.resolve("rivet/server.db")));assertFalse(Files.exists(root.resolve("new-world/rivet")));}
+ @Test void differentlyCasedAdminBlockRevokesTokensPermanently()throws Exception{try(var db=new AuthStore(dev.abros.rivet.core.TestDatabase.database(root))){db.register("Alice",UUID_A,pass(),0);var device=db.remember("Alice","Laptop",1);String invitation=db.invite("console","Alice",2);db.block("console","alice",true,3);db.block("console","ALICE",false,4);assertFalse(db.hasDevice("Alice",device.id(),5));assertThrows(Exception.class,()->db.deviceLogin("Alice",UUID_A,device.token(),6));assertThrows(Exception.class,()->db.reset("Alice",UUID_A,invitation,pass(),100000));}}
+}

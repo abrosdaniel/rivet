@@ -1,0 +1,90 @@
+package dev.abros.rivet.core;
+
+import com.zaxxer.hikari.HikariConfig;
+import com.zaxxer.hikari.HikariDataSource;
+import java.nio.charset.StandardCharsets;
+import java.security.MessageDigest;
+import java.sql.*;
+import java.util.Objects;
+
+/** One bounded pool per server, with an explicit transaction scope per operation. */
+public final class PgDatabase implements AutoCloseable {
+    @FunctionalInterface public interface Work<T> { T run() throws Exception; }
+    private final HikariDataSource pool;
+    private final java.util.concurrent.Semaphore communitySlots;
+    private final ThreadLocal<Connection> current = new ThreadLocal<>();
+
+    public PgDatabase(DatabaseSettings settings) throws Exception {
+        communitySlots = new java.util.concurrent.Semaphore(Math.max(1, settings.poolSize()-2), true);
+        var config = new HikariConfig();
+        config.setPoolName("Rivet database");
+        config.setDriverClassName("org.postgresql.Driver");
+        config.setJdbcUrl(settings.jdbcUrl());
+        config.setUsername(settings.username());
+        config.setPassword(settings.password());
+        config.setMaximumPoolSize(settings.poolSize());
+        config.setMinimumIdle(2);
+        config.setConnectionTimeout(3000);
+        config.setValidationTimeout(1000);
+        config.setInitializationFailTimeout(5000);
+        config.addDataSourceProperty("connectTimeout", "5");
+        config.addDataSourceProperty("socketTimeout", "15");
+        config.addDataSourceProperty("tcpKeepAlive", "true");
+        config.addDataSourceProperty("sslmode", settings.sslMode());
+        if (!settings.sslRootCert().isEmpty()) config.addDataSourceProperty("sslrootcert", settings.sslRootCert());
+        config.addDataSourceProperty("ApplicationName", "Rivet");
+        config.addDataSourceProperty("currentSchema", "rivet");
+        config.addDataSourceProperty("options", "-c statement_timeout=5000 -c lock_timeout=2000 -c idle_in_transaction_session_timeout=15000");
+        // PostgreSQL resolves immutable schema/table names; all user values use parameters.
+        HikariDataSource opened;
+        try { opened = new HikariDataSource(config); }
+        catch (RuntimeException ex) { throw new IllegalStateException("Cannot connect to Rivet PostgreSQL. Check database settings, credentials and connectivity."); }
+        pool = opened;
+        try {
+            transaction(() -> {
+                DatabaseMigrations.apply(this);
+                return null;
+            });
+        } catch (Exception ex) { pool.close(); throw new IllegalStateException("Cannot initialize Rivet PostgreSQL schema. Check database ownership and PostgreSQL version. SQL state: "+(ex instanceof SQLException sql?sql.getSQLState():"unavailable")+". "+(ex instanceof IllegalStateException?ex.getMessage():"Migration transaction rolled back")); }
+    }
+
+    /** Leave capacity for login and session validation even when menu reads are busy. */
+    public <T> T communityTransaction(Work<T> work) throws Exception {
+        if (current.get()!=null) return work.run();
+        if (!communitySlots.tryAcquire(2, java.util.concurrent.TimeUnit.SECONDS))
+            throw new CommunityFailure(CommunityFailure.Code.UNAVAILABLE,"Сервер занят. Повторите действие чуть позже.");
+        try { return transaction(work); }
+        finally { communitySlots.release(); }
+    }
+
+    public boolean inTransaction(){return current.get()!=null;}
+
+    public Connection connection() {
+        var connection = current.get();
+        if (connection == null) throw new IllegalStateException("Database access outside transaction");
+        return connection;
+    }
+
+    public <T> T transaction(Work<T> work) throws Exception {
+        if (current.get() != null) return work.run();
+        long started=System.nanoTime();boolean failed=true;
+        try (Connection connection = pool.getConnection()) {
+            connection.setAutoCommit(false);
+            current.set(connection);
+            try { T result = work.run(); connection.commit(); failed=false;return result; }
+            catch (Exception | Error ex) { try { connection.rollback(); } catch (SQLException rollback) { ex.addSuppressed(rollback); } throw ex; }
+            finally { current.remove(); }
+        }finally{PerformanceMetrics.record("database.transaction",System.nanoTime()-started,failed);}
+    }
+
+    /** Transaction-scoped lock also protects a key whose row does not exist yet. */
+    public void lock(String key) throws SQLException {
+        long value;
+        try { value = java.nio.ByteBuffer.wrap(MessageDigest.getInstance("SHA-256").digest(key.getBytes(StandardCharsets.UTF_8))).getLong(); }
+        catch (java.security.NoSuchAlgorithmException ex) { throw new IllegalStateException(ex); }
+        try (var statement = connection().prepareStatement("SELECT pg_advisory_xact_lock(?)")) { statement.setLong(1, value); statement.execute(); }
+    }
+
+    public int activeConnections() { return pool.getHikariPoolMXBean().getActiveConnections(); }
+    @Override public void close() { pool.close(); }
+}

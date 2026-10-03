@@ -1,0 +1,18 @@
+dependencies { api 'com.google.code.gson:gson:2.10.1' }
+
+
+dependencies { implementation 'org.postgresql:postgresql:42.7.13'; implementation('com.zaxxer:HikariCP:6.3.3') { exclude group: 'org.slf4j', module: 'slf4j-api' }; implementation 'org.slf4j:slf4j-api:2.0.9'; api 'org.bouncycastle:bcpkix-jdk18on:1.85' }
+
+// Database tests exercise real PostgreSQL, never an in-memory substitute.
+tasks.named('test') { useJUnitPlatform { excludeTags 'postgres' } }
+tasks.register('postgresTest', Test) {
+    testClassesDirs = sourceSets.test.output.classesDirs
+    classpath = sourceSets.test.runtimeClasspath
+    useJUnitPlatform { includeTags 'postgres' }
+    shouldRunAfter tasks.named('test')
+    outputs.upToDateWhen { false }
+}
+if (project.hasProperty('postgresTests')) tasks.named('check') { dependsOn 'postgresTest' }
+
+// NeoForge provides NightConfig at runtime; standalone core tests need the parser.
+dependencies { compileOnly 'com.electronwill.night-config:toml:3.8.3'; testImplementation 'com.electronwill.night-config:toml:3.8.3' }

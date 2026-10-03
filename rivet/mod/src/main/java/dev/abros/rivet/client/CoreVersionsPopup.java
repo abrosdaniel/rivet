@@ -1,0 +1,58 @@
+package dev.abros.rivet.client;
+
+import dev.abros.rivet.Rivet;
+import dev.abros.rivet.core.CoreUpdater;
+import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.gui.components.Button;
+import net.minecraft.client.gui.screens.Screen;
+import net.minecraft.network.chat.Component;
+import java.util.List;
+
+/** Version selection is read-only. Only Install starts a download and transaction. */
+final class CoreVersionsPopup extends ScrollScreen {
+    private final Screen parent;
+    private final String branch;
+    private List<CoreUpdater.Update> versions=List.of();
+    private CoreUpdater.Update selected;
+    private boolean started,loading,installing;
+    private String status="";
+    CoreVersionsPopup(Screen parent){this(parent,"");}
+    CoreVersionsPopup(Screen parent,String branch){super(Component.literal("Версия Rivet"));this.parent=parent;this.branch=branch;if(Client.offeredUpdate!=null&&!Client.offeredUpdate.version().equals(Rivet.VERSION)&&(branch.isEmpty()||dev.abros.rivet.core.Versions.supportsRequirement(Client.offeredUpdate.version(),branch))){versions=List.of(Client.offeredUpdate);}}
+    private int panelWidth(){return Math.min(340,width-16);}
+    private int left(){return width-panelWidth()-8;}
+    private int bottom(){return Math.min(height-8,270);}
+    @Override protected void init(){
+        ModalLayer.prepare(parent,this);
+        int x=left(),w=panelWidth();
+        scrollArea(versions.size()+1,new dev.abros.rivet.core.NativeLayout.Box(x,66,Math.max(0,w),Math.max(0,(bottom()-92)-(66))),24);
+        for(int i=firstRow;i<Math.min(versions.size()+1,firstRow+visibleRows);i++){
+            var update=i==0?null:versions.get(i-1);
+            String label=update==null?"✓ "+Rivet.VERSION+" · установлена":(update.equals(selected)?"→ ":"")+update.version();
+            var choice=addRenderableWidget(UiActions.button(Component.literal(font.plainSubstrByWidth(label,w-34)),UiActions.Tone.NORMAL,"",button->{selected=update;rebuildWidgets();}).bounds(x+8,66+(i-firstRow)*24,w-24,20).build());choice.active=!installing&&update!=null;
+        }
+        var install=addRenderableWidget(UiActions.button(Component.literal(installing?"Подготовка…":selected==null?"Выберите версию":"Установить "+selected.version()),UiActions.Tone.NORMAL,"",button->install()).bounds(x+8,bottom()-58,w-16,20).build());install.active=selected!=null&&!installing&&Client.pending.isEmpty();
+        var close=UiActions.close(new dev.abros.rivet.core.NativeLayout.Box(x+8,bottom()-34,w-16,20),this::addRenderableWidget,this::onClose);close.active=!installing;
+        if(!started){started=true;load();}
+    }
+    private void load(){
+        if(Client.hub==null){status=Client.error.isBlank()?"Rivet загружается…":"Ошибка запуска: "+Client.error;return;}
+        loading=true;
+        Client.NETWORK.submit(()->{try{var updates=Client.hub.availableCoreUpdates().stream().filter(u->!u.version().equals(Rivet.VERSION)).filter(u->branch.isEmpty()||dev.abros.rivet.core.Versions.supportsRequirement(u.version(),branch)).toList();minecraft.execute(()->{loading=false;versions=updates;if(selected==null||!updates.contains(selected))selected=null;status=updates.isEmpty()?"Других версий нет":"";if(minecraft.screen==this)rebuildWidgets();});}catch(Exception failure){minecraft.execute(()->{loading=false;status="Не удалось проверить версии. Попробуйте позже.";});}});
+    }
+    @Override public void tick(){super.tick();if(started&&!loading&&Client.hub!=null&&status.startsWith("Rivet загружается"))load();}
+    private void install(){
+        if(selected==null||installing)return;installing=true;status="";var update=selected;rebuildWidgets();
+        Client.IO.submit(()->{try{String transaction=Client.hub.prepareCoreUpdate(Client.loadedJar,update);Client.pending=transaction;minecraft.execute(()->minecraft.setScreen(new RestartScreen(parent,transaction)));}catch(Exception failure){minecraft.execute(()->{installing=false;status=Errors.message(failure);rebuildWidgets();});}});
+    }
+    @Override public void renderBackground(GuiGraphics graphics,int x,int y,float delta){UiDialog.surface(graphics,left(),34,panelWidth(),bottom()-34);}
+    @Override public void render(GuiGraphics graphics,int x,int y,float delta){
+        UiDialog.render(parent,this,graphics,delta,()->{super.render(graphics,x,y,delta);
+            graphics.drawString(font,"Установлена: "+Rivet.VERSION,left()+8,44,UiPalette.color(0xE2BE75));
+            graphics.drawString(font,font.plainSubstrByWidth(loading?"Загрузка…":status,panelWidth()-16),left()+8,bottom()-82,UiPalette.color(0xBAC7D2));graphics.flush();
+        });
+    }
+    @Override public boolean mouseClicked(double x,double y,int button){if(button==0&&(x<left()||x>left()+panelWidth()||y<34||y>bottom())){onClose();return true;}return super.mouseClicked(x,y,button);}
+    @Override public boolean mouseScrolled(double x,double y,double dx,double dy){return x>=left()&&x<=left()+panelWidth()&&super.mouseScrolled(x,y,dx,dy);}
+    @Override public void onClose(){if(!installing)minecraft.setScreen(parent);}
+    @Override public boolean shouldCloseOnEsc(){return !installing;}
+}

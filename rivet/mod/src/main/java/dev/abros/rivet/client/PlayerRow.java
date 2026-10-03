@@ -1,0 +1,20 @@
+package dev.abros.rivet.client;
+import com.google.gson.JsonObject;
+import dev.abros.rivet.core.Json;
+import net.minecraft.client.Minecraft;
+import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.gui.components.Button;
+import net.minecraft.network.chat.Component;
+/** Compact selectable player card; standard Button keeps keyboard and narration support. */
+final class PlayerRow extends Button {
+ private final JsonObject player;private final boolean selected;
+ PlayerRow(int x,int y,int width,JsonObject player,Runnable action,boolean selected){super(x,y,width,24,PlayerText.name(player),b->action.run(),DEFAULT_NARRATION);this.player=player;this.selected=selected;}
+ @Override protected void renderWidget(GuiGraphics g,int mx,int my,float dt){
+  var font=Minecraft.getInstance().font;boolean online=player.has("online")&&player.get("online").getAsBoolean();
+  UiTheme.panel(g,getX(),getY(),width,height,selected?UiPalette.color(0xEE30485B):UiTheme.mix(UiPalette.color(0xD91B252E),UiPalette.color(0xEE2B3946),UiTheme.hover(this)));
+  g.fill(getX(),getY(),getX()+2,getY()+height,selected?UiPalette.color(0xFFE2BE75):online?UiPalette.color(0xFF79CBA6):UiPalette.color(0xFF637080));
+  Ui.text(g,font,net.minecraft.locale.Language.getInstance().getVisualOrder(font.substrByWidth(getMessage(),Math.max(1,width-18))),getX()+7,getY()+3,UiKit.text(),false);
+  Ui.text(g,font,net.minecraft.locale.Language.getInstance().getVisualOrder(font.substrByWidth(PlayerText.text((online?"В сети":"Не в сети")),Math.max(1,width-18))),getX()+7,getY()+14,online?UiPalette.color(0x79CBA6):UiPalette.color(0xEF7777));
+  if(isFocused())g.renderOutline(getX(),getY(),width,height,UiPalette.color(0xFFE2BE75));
+ }
+}

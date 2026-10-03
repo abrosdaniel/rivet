@@ -1,0 +1,11 @@
+package dev.abros.rivet.core;
+import java.nio.file.Path;
+/** Shared local test database; each test's temporary identity clears its own test run. */
+public final class TestDatabase {
+ private static PgDatabase database;private static Path test;
+ public static synchronized PgDatabase database(Path identity)throws Exception{
+  if(database==null){String password=System.getenv("RIVET_TEST_DB_PASSWORD");if(password==null)throw new IllegalStateException("PostgreSQL tests require RIVET_TEST_DB_PASSWORD and an isolated test database");database=new PgDatabase(new DatabaseSettings(System.getenv().getOrDefault("RIVET_TEST_DB_HOST","127.0.0.1"),Integer.parseInt(System.getenv().getOrDefault("RIVET_TEST_DB_PORT","55439")),"rivet_test","rivet_test",password,"disable","",8));Runtime.getRuntime().addShutdownHook(new Thread(()->database.close()));}
+  if(!identity.equals(test)){database.transaction(()->{try(var statement=database.connection().createStatement()){statement.execute("TRUNCATE community_profile,community_ignores,skin_profiles,skin_library,skin_images,community_events,request_receipts,documents,people,notices,records,preferences,auth_devices,auth_resets,auth_accounts,auth_failures,auth_audit RESTART IDENTITY CASCADE");}return null;});test=identity;}
+  return database;
+ }
+}

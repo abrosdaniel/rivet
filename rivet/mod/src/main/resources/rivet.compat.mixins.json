@@ -1,0 +1,14 @@
+{
+  "required": false,
+  "minVersion": "0.8",
+  "package": "dev.abros.rivet.mixin.compat",
+  "plugin": "dev.abros.rivet.compat.CompatibilityMixinPlugin",
+  "compatibilityLevel": "JAVA_21",
+  "client": [
+    "AccessDeniedScreenMixin",
+    "AccessDeniedProfileMixin"
+  ],
+  "injectors": {
+    "defaultRequire": 0
+  }
+}
