@@ -53,9 +53,7 @@ def package(root, artifact, output):
             entry.external_attr = 0o100644 << 16
             data = source.read_bytes()
             if relative.as_posix() == "template/.github/workflows/rivet.yml":
-                revision = os.environ.get("GITHUB_SHA", "v" + number)
-                if not re.fullmatch(r"[0-9a-f]{40}|v[0-9]+\.[0-9]+\.[0-9]+", revision):
-                    raise ValueError("Invalid tooling revision")
+                revision = "main"
                 text = data.decode()
                 text = re.sub(r"(seed\.yml@)[^\s]+", lambda m: m[1]+revision, text)
                 text = re.sub(r"(tooling-ref: )[^\s]+", lambda m: m[1]+revision, text)
@@ -73,6 +71,11 @@ def package(root, artifact, output):
     core = output / "core.json"
     core.write_text(json.dumps(descriptor, indent=2) + "\n")
     files = [output / name, output / "template.zip", core]
+    migration = root / "rivet/SERVER_MIGRATION.md"
+    if migration.is_file():
+        destination = output / migration.name
+        shutil.copyfile(migration, destination)
+        files.append(destination)
     sums = output / "SHA256SUMS.txt"
     sums.write_text("".join(hashlib.sha256(p.read_bytes()).hexdigest() + "  " + p.name + "\n" for p in files))
     return files + [sums]

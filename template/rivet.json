@@ -1,7 +1,7 @@
 {
   "name": "Example Server",
   "version": "1.0.0",
-  "rivetVersion": "3.x",
+  "rivetVersion": "1.0.x",
   "server": {
     "address": "play.example.org:25565"
   },

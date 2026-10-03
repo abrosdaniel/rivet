@@ -20,5 +20,5 @@ record UiWorkspace(NativeLayout.Box frame,NativeLayout.Box header,NativeLayout.B
   g.fill(header.x(),header.bottom()+3,header.right(),header.bottom()+4,UiTheme.mix(UiKit.surface(),UiKit.muted(),0.15f));
   g.fill(sidebar.right()+5,sidebar.y(),sidebar.right()+6,sidebar.bottom(),UiTheme.mix(UiKit.surface(),UiKit.muted(),0.12f));
  }
- void heading(GuiGraphics g,Font font,Component title){UiTypography.draw(g,font,title.getString(),header.x()+4,header.y()+5,header.width()-(header.width()<396?88:150),UiTypography.Role.PAGE);}
+ void heading(GuiGraphics g,Font font,Component title){UiBrand.draw(g,font,header);int titleWidth=Math.max(0,UiBrand.left(font,header)-header.x()-12);if(titleWidth>12)UiTypography.draw(g,font,title.getString(),header.x()+4,header.y()+5,titleWidth,UiTypography.Role.PAGE);}
 }

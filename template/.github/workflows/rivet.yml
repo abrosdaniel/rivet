@@ -4,6 +4,6 @@ permissions:
   contents: write
 jobs:
   project:
-    uses: abrosdaniel/rivet/.github/workflows/seed.yml@v1.0.0
+    uses: abrosdaniel/rivet/.github/workflows/seed.yml@main
     with:
-      tooling-ref: v1.0.0
+      tooling-ref: main

@@ -245,7 +245,7 @@ public final class ServerFeatures {
     private static CommunityStore.Actor actor(ServerPlayer p){return new CommunityStore.Actor(p.getUUID().toString(),p.getGameProfile().getName(),admin(p),p.hasPermissions(2)||ServerIntegration.luckPermsEnabled()&&LuckPermsAdapter.profile(p.getUUID()).getAsJsonObject("capabilities").get("rivet.events").getAsBoolean());}
     private static int bounded(JsonObject j,String key,int max){int value=j.get(key).getAsInt();if(value<0||value>max)throw new IllegalArgumentException("Invalid "+key);return value;}
     private interface Work {void run(CommandSourceStack source)throws Exception;}
-    private static int execute(CommandSourceStack source,String command,Work work){try{work.run(source);if(!command.matches("/?ah (maintenance|restart)( .*|$)"))auditAsync(source.getTextName(),"/rivet", command);return 1;}catch(Exception ex){source.sendFailure(Component.literal(safeError(ex)));return 0;}}
+    private static int execute(CommandSourceStack source,String command,Work work){try{work.run(source);if(!command.matches("/?rivet (maintenance|restart)( .*|$)"))auditAsync(source.getTextName(),"/rivet", command);return 1;}catch(Exception ex){source.sendFailure(Component.literal(safeError(ex)));return 0;}}
     private static boolean admin(CommandSourceStack source){return source.hasPermission(2)||source.getEntity() instanceof ServerPlayer p&&admin(p);}
     private static void commands(net.neoforged.neoforge.event.RegisterCommandsEvent e){
         ServerCommands.register(e.getDispatcher());

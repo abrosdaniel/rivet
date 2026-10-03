@@ -46,15 +46,15 @@ class ModRelease(unittest.TestCase):
         current["version"] = "2.0.0"
         m.validate_protocol_change(current, previous)
 
-    def test_template_pins_both_workflow_and_tools_to_tested_commit(self):
+    def test_template_uses_main_for_workflow_and_tools_even_in_release_ci(self):
         workflow = self.root / "template/.github/workflows/rivet.yml"
         workflow.write_text("uses: abrosdaniel/rivet/.github/workflows/seed.yml@v1.0.0\nwith:\n  tooling-ref: v1.0.0\n")
         with patch.dict(os.environ, GITHUB_SHA="a"*40):
             files = m.package(self.root, self.artifact, self.root / "out")
         with zipfile.ZipFile(files[1]) as archive:
             text = archive.read(".github/workflows/rivet.yml").decode()
-            self.assertIn("seed.yml@"+"a"*40, text)
-            self.assertIn("tooling-ref: "+"a"*40, text)
+            self.assertIn("seed.yml@main", text)
+            self.assertIn("tooling-ref: main", text)
             self.assertFalse(any(name.startswith(("tooling/", "schemas/", "channels/")) for name in archive.namelist()))
 
     def test_archive_and_hashes_are_reproducible(self):
@@ -68,6 +68,16 @@ class ModRelease(unittest.TestCase):
         for line in files[3].read_text().splitlines():
             digest, name = line.split("  ")
             self.assertEqual(digest, hashlib.sha256((files[3].parent / name).read_bytes()).hexdigest())
+
+    def test_migration_guide_is_packaged_and_hashed(self):
+        guide = self.root / "rivet/SERVER_MIGRATION.md"
+        guide.parent.mkdir(exist_ok=True)
+        guide.write_text("Stop the server and back up its data first.")
+        files = m.package(self.root, self.artifact, self.root / "out")
+        packaged = self.root / "out/SERVER_MIGRATION.md"
+        self.assertIn(packaged, files)
+        self.assertEqual(packaged.read_bytes(), guide.read_bytes())
+        self.assertIn(hashlib.sha256(packaged.read_bytes()).hexdigest() + "  SERVER_MIGRATION.md", files[-1].read_text())
 
     def test_missing_bundle_is_rejected(self):
         with self.assertRaises(ValueError):

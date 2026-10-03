@@ -70,8 +70,8 @@ tasks.register('checkUiComposition') {
         def violations = []
         sources.each { source ->
             def text = source.getText('UTF-8')
-            if (text.contains("applyGuiDefault") || source.name != "AccessibilityScreen.java" && text =~ /options\.guiScale\(\)\.set\(/)
-                violations.add("${source.name}: Rivet must not override Minecraft GUI scale")
+            if (text.contains("applyGuiDefault") || !['AccessibilityScreen.java', 'ClientDefaults.java'].contains(source.name) && text =~ /options\.guiScale\(\)\.set\(/)
+                violations.add("${source.name}: GUI scale changes belong only to user settings or one-time client initialization")
             if (source.name != 'UiFields.java' && text =~ /new\s+(UiEditBox|UiMultiLineEditBox|PasswordBox|PasswordVisibilityButton)\s*\(/)
                 violations.add("${source.name}: fields must be composed through UiFields")
             if (source.name != 'UiTabs.java' && text =~ /new\s+(TabButton|UiTab)\s*\(/)
