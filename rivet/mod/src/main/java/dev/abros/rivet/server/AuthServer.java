@@ -67,7 +67,7 @@ public final class AuthServer {
             com.mojang.logging.LogUtils.getLogger().info("Rivet Auth TLS fingerprint: {}",identity.fingerprint());
         }catch(Exception ex){throw new IllegalStateException("Cannot initialize Rivet Auth; startup aborted",ex);}
     }
-    public static boolean mayReset(ServerPlayer p){return enabled()&&authenticated(p)&&LuckPermsAdapter.profile(p.getUUID()).getAsJsonObject("capabilities").get("rivet.auth.reset").getAsBoolean();}
+    public static boolean mayReset(ServerPlayer p){return enabled()&&authenticated(p)&&LuckPermsAdapter.profile(p).getAsJsonObject("capabilities").get("rivet.auth.reset").getAsBoolean();}
     public static boolean authenticated(ServerPlayer p){if(!enabled())return true;var s=SESSIONS.get(p.connection.getConnection());return s!=null&&s.joined&&s.account!=null;}
     private static void tasks(RegisterConfigurationTasksEvent e){
         if(!enabled())return;

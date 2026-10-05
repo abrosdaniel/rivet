@@ -92,4 +92,16 @@ class DatabaseReliabilityTest {
         assertThrows(SQLException.class,()->db.transaction(()->{try(var q=db.connection().createStatement()){q.execute("ALTER TABLE people RENAME COLUMN name TO broken_name");}DatabaseMigrations.apply(db);return null;}));
         db.transaction(()->{DatabaseMigrations.apply(db);return null;});
     }
+    @Test void integrationNoticesAndOutboxCommitTogether()throws Exception{
+        var store=new CommunityStore(db,CommunityStore.defaults());String player=UUID.randomUUID().toString();
+        assertThrows(SQLException.class,()->db.transaction(()->{store.integrationNotice(player,"spark warning","load","spark","spark");try(var q=db.connection().createStatement()){q.execute("SELECT 1/0");}return null;}));
+        assertEquals(0,scalar("SELECT count(*) FROM notices"));assertEquals(0,scalar("SELECT count(*) FROM community_events"));
+        store.integrationNotice(player,"Report ready","Profile","spark","spark");assertEquals(1,store.unread(player));assertEquals(1,scalar("SELECT count(*) FROM community_events"));
+        db.transaction(()->{try(var q=db.connection().createStatement();var row=q.executeQuery("SELECT body->>'routeSection',body->>'priority' FROM notices")){assertTrue(row.next());assertEquals("spark",row.getString(1));assertEquals("important",row.getString(2));}return null;});
+    }
+    @Test void v5FixtureMigratesWithIdentityActiveSkinAndOrderingPreserved()throws Exception{
+        db.transaction(()->{try(var q=db.connection().createStatement()){q.execute("ALTER TABLE skin_library DROP COLUMN position CASCADE");q.execute("DELETE FROM schema_versions WHERE version=6");try(var input=getClass().getResourceAsStream("/fixtures/skins-v5.sql")){q.execute(new String(input.readAllBytes(),java.nio.charset.StandardCharsets.UTF_8));}}DatabaseMigrations.apply(db);return null;});
+        db.transaction(()->{try(var q=db.connection().createStatement();var rows=q.executeQuery("SELECT name,position,owner::text FROM skin_library ORDER BY position")){assertTrue(rows.next());assertEquals("Builder",rows.getString(1));assertEquals(0,rows.getInt(2));assertEquals("10000000-0000-0000-0000-000000000001",rows.getString(3));assertTrue(rows.next());assertEquals("Explorer",rows.getString(1));assertEquals(1,rows.getInt(2));assertFalse(rows.next());}try(var q=db.connection().createStatement();var rows=q.executeQuery("SELECT active::text,slim FROM skin_profiles")){assertTrue(rows.next());assertEquals("00000000-0000-0000-0000-000000000002",rows.getString(1));assertTrue(rows.getBoolean(2));}return null;});
+        db.transaction(()->{DatabaseMigrations.apply(db);return null;});assertEquals(6,scalar("SELECT count(*) FROM schema_versions"));
+    }
 }

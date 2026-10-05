@@ -20,7 +20,7 @@ final class ServerMenuScreen extends ScrollScreen implements CommunityScreen.Rec
     private final List<Summary> summaries=new ArrayList<>();
     private record DashboardSection(String title,List<Summary> items){}
     private final List<DashboardSection> dashboardSections=new ArrayList<>();
-    private void section(String title){if(summaries.isEmpty())dashboardSections.add(new DashboardSection(title,List.of()));else for(int i=0;i<summaries.size();i+=columns())dashboardSections.add(new DashboardSection(title,List.copyOf(summaries.subList(i,Math.min(summaries.size(),i+columns())))));summaries.clear();}
+    private void section(String title){if(summaries.isEmpty())return;for(int i=0;i<summaries.size();i+=columns())dashboardSections.add(new DashboardSection(i==0?title:"",List.copyOf(summaries.subList(i,Math.min(summaries.size(),i+columns())))));summaries.clear();}
 
     private String metric(String key){return dev.abros.rivet.core.DisplayCounts.text(overviewData,key,overviewBusy?"…":"—");}
     private void group(String group){adminGroup=group;resetScroll();rebuildWidgets();}
@@ -47,16 +47,21 @@ final class ServerMenuScreen extends ScrollScreen implements CommunityScreen.Rec
             summaries.clear();stateKey=modeKey();
             dashboardSections.clear();
             if(adminGroup.equals("overview")){
-                section("Сводка на сейчас");
+                if(ServerMenuClient.may("rivet.reports"))dashboardSections.add(new DashboardSection("Обращения · сводка",List.of()));
                 if(ServerMenuClient.may("rivet.reports")){
                     if(overviewData.has("attentionReports"))for(var entry:overviewData.getAsJsonArray("attentionReports")){var report=entry.getAsJsonObject();card(Json.opt(report,"player","Игрок"),Json.opt(report,"attentionReason","Ожидает ответа"),Json.opt(report,"message",""),Json.opt(report,"assignedName","").isBlank()?"Ответственный не назначен":"Ответственный: "+Json.opt(report,"assignedName",""),0xFFEF7777,()->minecraft.setScreen(new ReportDetailScreen(this,report,true)));}
-                    if(summaries.isEmpty())card("Обращения игроков",overviewBusy?"Загрузка…":metric("openReports").equals("0")?"Все обращения обработаны":"Открыть очередь","Назначение ответственного и ответы","Открытые и закрытые обращения",0xFFEF7777,()->FeatureListScreen.open(this,"reports"));
-                    section("Требуют внимания · приоритетные и самые старые");
+                    if(summaries.isEmpty()&&!metric("openReports").equals("0"))card("Обращения игроков",overviewBusy?"Загрузка…":metric("openReports").equals("0")?"Все обращения обработаны":"Открыть очередь","Назначение ответственного и ответы","Открытые и закрытые обращения",metric("openReports").equals("0")?0xFF79CBA6:0xFFEF7777,()->FeatureListScreen.open(this,"reports"));
+                    section("Обращения игроков");
                 }
-                if(server)card("Сервер",stateFlag("maintenance")?"Обслуживание":"Вход открыт",scheduled()?"Остановка запланирована":"Остановка не запланирована",stateFlag("pinned")?"Объявление закреплено":"Нет закреплённого объявления",0xFF79CBA6,()->group("server"));
-                if(ServerMenuClient.admin()&&ServerMenuClient.supports("player-tools"))card("Состояние Rivet",overviewData.has("recentErrors")?overviewData.getAsJsonArray("recentErrors").isEmpty()?"Ошибок не зафиксировано":overviewData.getAsJsonArray("recentErrors").size()+" последних ошибок":"Нет данных об ошибках","Очередь записи: "+metric("storageQueue"),"Очередь чтения: "+metric("readQueue"),0xFFB49AE8,()->minecraft.setScreen(new AdminDashboardScreen(this,true)));
-                else if(ServerMenuClient.may("rivet.diagnostics"))card("Состояние Rivet","Проверка подключений","Состояние мода и интеграций","Получить текущий отчёт",0xFFB49AE8,()->ServerMenuClient.request("diagnostics"));
-                if(!summaries.isEmpty())section("Сервер и обслуживание");
+                boolean rivetErrors=overviewData.has("recentErrors")&&!overviewData.getAsJsonArray("recentErrors").isEmpty();
+                if(rivetErrors)card("Ошибки Rivet",overviewData.getAsJsonArray("recentErrors").size()+" последних ошибок","Открыть диагностику","Подробности и журнал",0xFFEF7777,()->minecraft.setScreen(new AdminDashboardScreen(this,true)));
+                if(server&&(stateFlag("maintenance")||scheduled())){card("Состояние сервера",stateFlag("maintenance")?"Обслуживание включено":"Остановка запланирована","Проверить режим и время остановки","Открыть управление сервером",0xFFF0A77C,()->group("server"));}
+                if(!summaries.isEmpty())section("Требуют внимания");
+                if(server&&!stateFlag("maintenance")&&!scheduled())card("Сервер",stateFlag("maintenance")?"Обслуживание":"Вход открыт",scheduled()?"Остановка запланирована":"Остановка не запланирована",stateFlag("pinned")?"Объявление закреплено":"Нет закреплённого объявления",0xFF79CBA6,()->group("server"));
+                if(!rivetErrors&&ServerMenuClient.admin()&&ServerMenuClient.supports("player-tools"))card("Состояние Rivet",overviewData.has("recentErrors")?overviewData.getAsJsonArray("recentErrors").isEmpty()?"Ошибок не зафиксировано":overviewData.getAsJsonArray("recentErrors").size()+" последних ошибок":"Нет данных об ошибках","Очередь записи: "+metric("storageQueue"),"Очередь чтения: "+metric("readQueue"),0xFFB49AE8,()->minecraft.setScreen(new AdminDashboardScreen(this,true)));
+                else if(!rivetErrors&&ServerMenuClient.may("rivet.diagnostics"))card("Состояние Rivet","Проверка подключений","Состояние мода и интеграций","Получить текущий отчёт",0xFFB49AE8,()->ServerMenuClient.request("diagnostics"));
+                if(ServerMenuClient.may("rivet.diagnostics")&&ServerMenuClient.supports("spark-diagnostics"))card("Производительность","spark","TPS, MSPT, CPU и память","Профилирование и история отчётов",0xFF79CBA6,()->minecraft.setScreen(new SparkDiagnosticsScreen(this)));
+                if(!summaries.isEmpty())section("Сервер и диагностика");
                 if(ServerMenuClient.admin()&&ServerMenuClient.supports("community-extensions"))card("Права ролей","Предпросмотр","Какие разделы и действия доступны","Без смены вашей роли",0xFFB49AE8,()->minecraft.setScreen(new RolePreviewScreen(this)));
                 if(ServerMenuClient.admin())card("Журнал действий","История администрации","Кто и что изменил","Открыть записи и подробности",0xFF82B6F2,()->FeatureListScreen.open(this,"history"));
                 if(ServerMenuClient.admin()&&ServerMenuClient.supports("admin-tools"))card("Данные сообщества","Экспорт","Выберите нужный раздел","Выгрузка данных с сервера",0xFFE2BE75,()->group("data"));
@@ -79,12 +84,12 @@ final class ServerMenuScreen extends ScrollScreen implements CommunityScreen.Rec
             }
             int columns=columns(),tileWidth=(available-8*(columns-1))/columns;
             if(adminGroup.equals("overview")){
-                scrollArea(dashboardSections.size(),new dev.abros.rivet.core.NativeLayout.Box(left,42,Math.max(0,available),Math.max(0,(height-64)-(42))),112);
+                scrollArea(dashboardSections.size(),new dev.abros.rivet.core.NativeLayout.Box(left,42,Math.max(0,available),Math.max(0,(height-64)-(42))),86);
                 for(int row=firstRow;row<Math.min(dashboardSections.size(),firstRow+visibleRows);row++){
-                    int y=42+(row-firstRow)*112;var section=dashboardSections.get(row);
-                    if(row==0){String[] keys={"openReports","unassignedReports","highReports"},labels={"Открытые обращения","Без ответственного","Высокий приоритет"};int statWidth=(available-8)/3;for(int i=0;i<3;i++){String key=keys[i];if(ServerMenuClient.may("rivet.reports"))addRenderableWidget(new UiMetricCard(left+i*(statWidth+4),y+18,statWidth,labels[i],metric(key),()->minecraft.setScreen(ServerMenuClient.supports("community-extensions")?new ReportQueueScreen(this,key.equals("unassignedReports")?"unassigned":key.equals("highReports")?"high":"all"):new FeatureListScreen(this,"reports"))));}if(ServerMenuClient.may("rivet.reports"))addRenderableWidget(UiActions.button(Component.literal("Все обращения"),UiActions.Tone.NORMAL,"",b->FeatureListScreen.open(this,"reports")).bounds(left,y+80,110,20).build());continue;}
+                    int y=42+(row-firstRow)*86;var section=dashboardSections.get(row);
+                    if(section.items.isEmpty()){String[] keys={"openReports","unassignedReports","highReports"},labels={"Открытые обращения","Без ответственного","Высокий приоритет"};int statWidth=(available-8)/3;for(int i=0;i<3;i++){String key=keys[i];if(ServerMenuClient.may("rivet.reports"))addRenderableWidget(UiMetricCard.compact(left+i*(statWidth+4),y+18,statWidth,labels[i],metric(key),()->minecraft.setScreen(ServerMenuClient.supports("community-extensions")?new ReportQueueScreen(this,key.equals("unassignedReports")?"unassigned":key.equals("highReports")?"high":"all"):new FeatureListScreen(this,"reports"))));}if(ServerMenuClient.may("rivet.reports"))addRenderableWidget(UiActions.button(Component.literal("Все обращения"),UiActions.Tone.NORMAL,"",b->FeatureListScreen.open(this,"reports")).bounds(left,y+60,110,20).build());continue;}
                     int count=section.items.size(),cardWidth=(available-8*(Math.min(count,columns)-1))/Math.max(1,Math.min(count,columns));
-                    for(int n=0;n<Math.min(count,columns);n++){var item=section.items.get(n);addRenderableWidget(new UiSummaryCard(left+n*(cardWidth+8),y+18,cardWidth,item.title,item.value,item.details,item.accent,item.action));}
+                    for(int n=0;n<Math.min(count,columns);n++){var item=section.items.get(n);addRenderableWidget(UiSummaryCard.compact(left+n*(cardWidth+8),y+18,cardWidth,item.title,item.value,item.details,item.accent,item.action));}
                 }
                 if(ServerMenuClient.admin()&&ServerMenuClient.supports("player-tools")){overviewRefresh=UiPageFooter.workspace(width,height).start(UiActions.Command.REFRESH,this::addRenderableWidget,this::loadOverview);overviewRefresh.active=!overviewBusy;}
             }else{
@@ -112,7 +117,7 @@ final class ServerMenuScreen extends ScrollScreen implements CommunityScreen.Rec
         return Client.tr("server.admintext").getString();
     }
     @Override public void render(GuiGraphics g,int x,int y,float d){super.render(g,x,y,d);UiHeading.page(g,font,Component.literal(tab.equals("admin")?sectionTitle():ServerMenuClient.header()),width);nav.drawFrame(g);content.text(body());if(!tab.equals("admin"))content.render(g,font);
-        if(tab.equals("admin")&&adminGroup.equals("overview"))for(int row=firstRow;row<Math.min(dashboardSections.size(),firstRow+visibleRows);row++)Ui.text(g,font,UiKit.fit(font,dashboardSections.get(row).title,nav.right()-nav.left()-20),nav.left(),42+(row-firstRow)*112,UiKit.muted(),false);
+        if(tab.equals("admin")&&adminGroup.equals("overview"))for(int row=firstRow;row<Math.min(dashboardSections.size(),firstRow+visibleRows);row++)Ui.text(g,font,UiKit.fit(font,dashboardSections.get(row).title,nav.right()-nav.left()-20),nav.left(),42+(row-firstRow)*86,UiKit.muted(),false);
         Ui.status(g,font,adminGroup.equals("overview")&&!overviewNotice.isEmpty()?overviewNotice:ServerMenuClient.result,nav.left(),height-48,nav.right()-nav.left()-20,height-32);}
     @Override public boolean keyPressed(int key,int scan,int modifiers){
         if(!tab.equals("admin")&&(key==266||key==267)){content.scroll(nav.left()+8,106,key==266?6:-6);return true;}

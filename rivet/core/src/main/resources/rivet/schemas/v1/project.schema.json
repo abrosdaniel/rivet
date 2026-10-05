@@ -252,9 +252,10 @@
     },
     "rivetVersion": {
       "type": "string",
-      "pattern": "^(0|[1-9][0-9]*)\\.(x(\\.x)?|(0|[1-9][0-9]*)\\.(x|0|[1-9][0-9]*))$",
-      "description": "Compatible major (3.x.x, legacy 3.x) or minimum release within that major (3.4.x or 3.4.2).",
-      "x-patternMessage": "Укажите версию Rivet строкой: 3.x.x, 3.4.x или 3.4.2."
+      "pattern": "^((0|[1-9][0-9]*)\\.(x(\\.x)?|(0|[1-9][0-9]*)\\.(x|0|[1-9][0-9]*))|=(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)|>=(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*) <(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*))$",
+      "description": "Release family (1.x), explicit bounded range (>=1.1.0 <2.0.0) or exact release (=1.1.0). Legacy 1.x.x, 1.1.x and bare 1.1.0 remain supported.",
+      "x-patternMessage": "Укажите требование Rivet: 1.x, >=1.1.0 <2.0.0 или =1.1.0. Старые 3.4.x и A.B.C также поддерживаются.",
+      "x-rivetRequirement": true
     }
   },
   "required": [

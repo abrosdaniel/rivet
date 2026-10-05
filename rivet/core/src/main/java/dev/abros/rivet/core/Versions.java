@@ -1,18 +1,27 @@
 package dev.abros.rivet.core;
 public final class Versions {
     private Versions(){}
-    /** Public Rivet releases are A.B.C; A is the compatibility boundary. */
+    private static final String NUMBER="(?:0|[1-9][0-9]*)";
+    private static final String RELEASE=NUMBER+"\\."+NUMBER+"\\."+NUMBER;
+    private static final java.util.regex.Pattern RANGE=java.util.regex.Pattern.compile(">=("+RELEASE+") <("+RELEASE+")");
+    public static boolean isRelease(String version){return version!=null&&version.matches(RELEASE);}
+    /** Release families are distinct; wire protocols and negotiated features decide connection support. */
     public static boolean sameMajor(String installed,String required){
-        String pattern="(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)";
-        return installed.matches(pattern)&&required.matches(pattern)&&installed.split("\\.")[0].equals(required.split("\\.")[0]);
+        return isRelease(installed)&&isRelease(required)&&installed.split("\\.")[0].equals(required.split("\\.")[0]);
     }
-    /** A.x.x accepts a compatible major; A.B.x and A.B.C set a minimum within it. */
+    public static boolean validRequirement(String requirement){
+        if(requirement==null)return false;
+        if(requirement.matches("="+RELEASE)||requirement.matches(NUMBER+"\\.x(\\.x)?")||requirement.matches(NUMBER+"\\."+NUMBER+"\\.(x|"+NUMBER+")"))return true;
+        var range=RANGE.matcher(requirement);
+        return range.matches()&&compare(range.group(1),range.group(2))<0;
+    }
+    /** Explicit bounds: lower inclusive, upper exclusive. Bare releases retain their legacy minimum meaning. */
     public static boolean supportsRequirement(String installed,String requirement){
-        String number="(0|[1-9][0-9]*)";
-        if(installed==null||requirement==null||!installed.matches(number+"\\."+number+"\\."+number))return false;
-        // Keep the original A.x seed format readable.
-        if(requirement.matches(number+"\\.x(\\.x)?"))return sameMajor(installed,requirement.split("\\.")[0]+".0.0");
-        if(!requirement.matches(number+"\\."+number+"\\.(x|"+number+")"))return false;
+        if(!isRelease(installed)||!validRequirement(requirement))return false;
+        if(requirement.startsWith("="))return installed.equals(requirement.substring(1));
+        var range=RANGE.matcher(requirement);
+        if(range.matches())return compare(installed,range.group(1))>=0&&compare(installed,range.group(2))<0;
+        if(requirement.matches(NUMBER+"\\.x(\\.x)?"))return sameMajor(installed,requirement.split("\\.")[0]+".0.0");
         String minimum=requirement.endsWith(".x")?requirement.substring(0,requirement.length()-1)+"0":requirement;
         return sameMajor(installed,minimum)&&compare(installed,minimum)>=0;
     }

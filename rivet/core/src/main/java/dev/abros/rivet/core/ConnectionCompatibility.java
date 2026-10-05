@@ -4,7 +4,7 @@ import java.util.*;
 /** Stable connection envelope. New B features are optional names, never required fields. */
 public final class ConnectionCompatibility {
     private ConnectionCompatibility(){}
-    public static final Set<String> FEATURES=Set.of("compatibility-adapters","scheduled-announcements","notice-actions","task-archive","resource-alternatives","hud","menu","auth","pack","home","players","board","groups","events","polls","ideas","notifications","info","help","admin","player-statistics","admin-tools","moderation-votes","moderation-vote-duration","moderation-vote-status","skins","skin-names","skin-order","community-plus","skin-receipts","task-tools","player-tools","community-extensions");
+    public static final Set<String> FEATURES=Set.of("menu-deltas","social-display","spark-diagnostics","compatibility-adapters","scheduled-announcements","notice-actions","task-archive","resource-alternatives","hud","menu","auth","pack","home","players","board","groups","events","polls","ideas","notifications","info","help","admin","player-statistics","admin-tools","moderation-votes","moderation-vote-duration","moderation-vote-status","skins","skin-names","skin-order","community-plus","skin-receipts","task-tools","player-tools","community-extensions");
     public static JsonArray features(){var array=new JsonArray();FEATURES.stream().sorted().forEach(array::add);return array;}
     public static String branch(String version){if(!Versions.sameMajor(version,version))throw new IllegalArgumentException("Invalid Rivet version");return version.split("\\.")[0]+".x";}
     public static Set<String> common(JsonElement value){
@@ -12,6 +12,7 @@ public final class ConnectionCompatibility {
         var result=new HashSet<String>();for(var item:value.getAsJsonArray()){if(!item.isJsonPrimitive()||!item.getAsJsonPrimitive().isString()||item.getAsString().length()>64)throw new IllegalArgumentException("Invalid Rivet feature");if(FEATURES.contains(item.getAsString()))result.add(item.getAsString());}return Set.copyOf(result);
     }
     public static String failure(String local,String peer,JsonObject protocols){
+        if(!Versions.isRelease(local)||!Versions.isRelease(peer))return "Некорректная версия Rivet при подключении.";
         if(!Versions.sameMajor(local,peer))return "Для этого сервера нужна ветка Rivet "+branch(local)+". Выберите версию Rivet.";
         for(String key:List.of("pack","auth","menu"))if(protocols==null||!protocols.has(key)||!WireProtocols.current().get(key).equals(protocols.get(key)))return "Несовместимый выпуск Rivet. Выберите другую версию ветки "+branch(local)+".";
         return "";

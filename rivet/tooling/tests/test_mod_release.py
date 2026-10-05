@@ -69,16 +69,6 @@ class ModRelease(unittest.TestCase):
             digest, name = line.split("  ")
             self.assertEqual(digest, hashlib.sha256((files[3].parent / name).read_bytes()).hexdigest())
 
-    def test_migration_guide_is_packaged_and_hashed(self):
-        guide = self.root / "rivet/SERVER_MIGRATION.md"
-        guide.parent.mkdir(exist_ok=True)
-        guide.write_text("Stop the server and back up its data first.")
-        files = m.package(self.root, self.artifact, self.root / "out")
-        packaged = self.root / "out/SERVER_MIGRATION.md"
-        self.assertIn(packaged, files)
-        self.assertEqual(packaged.read_bytes(), guide.read_bytes())
-        self.assertIn(hashlib.sha256(packaged.read_bytes()).hexdigest() + "  SERVER_MIGRATION.md", files[-1].read_text())
-
     def test_missing_bundle_is_rejected(self):
         with self.assertRaises(ValueError):
             m.package(self.root, self.root / "absent", self.root / "out")

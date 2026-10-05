@@ -14,11 +14,18 @@ import java.util.*;
 
 /** Explicit allowlist of optional adapters; no arbitrary reflective operation dispatch. */
 public final class CompatibilityRegistry {
- private static final Map<String,CompatibilityAdapter> ADAPTERS=Map.of(dev.abros.rivet.compat.AccessDeniedBindings.ID,new CreateAccessDeniedAdapter());
+ private static final SparkAdapter SPARK=new SparkAdapter();
+ private static final Map<String,CompatibilityAdapter> ADAPTERS=Map.of(dev.abros.rivet.compat.AccessDeniedBindings.ID,new CreateAccessDeniedAdapter(),"spark",SPARK,"luckperms",new LuckPermsAdapter(),"plasmovoice",new PlasmoVoiceAdapter());
+ private static void guard(String id,dev.abros.rivet.core.OptionalIntegration.Operation<Boolean> work){var adapter=ADAPTERS.get(id);adapter.lifecycle().call(work,()->{if(adapter==SPARK)SPARK.unavailable();return false;});}
  private static final Map<UUID,Window> rates=new HashMap<>();
  private record Window(long start,int count){}
+ private static long observed;
+ public static JsonArray diagnostics(){var rows=new JsonArray();ADAPTERS.values().stream().sorted(java.util.Comparator.comparing(CompatibilityAdapter::id)).forEach(a->{var row=a.diagnostics();rows.add(row);});return rows;}
  private CompatibilityRegistry(){}
  public static void install(){
+  NeoForge.EVENT_BUS.addListener((net.neoforged.neoforge.event.server.ServerStartedEvent e)->{ADAPTERS.values().forEach(CompatibilityAdapter::clear);guard("spark",()->{SPARK.start(e.getServer());return true;});});
+  NeoForge.EVENT_BUS.addListener((net.neoforged.neoforge.event.tick.ServerTickEvent.Post e)->{if(SPARK.sampleDue())guard("spark",()->{SPARK.tick(e.getServer());return true;});long revision=dev.abros.rivet.core.OptionalIntegration.changes();if(revision!=observed){observed=revision;ServerFeatures.adapterStateChanged(e.getServer());}});
+  NeoForge.EVENT_BUS.addListener((net.neoforged.neoforge.event.CommandEvent e)->SPARK.command(e));
   NeoForge.EVENT_BUS.addListener((net.neoforged.neoforge.event.server.ServerStartedEvent e)->com.mojang.logging.LogUtils.getLogger().info("Rivet adapters: {}",status()));
   NeoForge.EVENT_BUS.addListener((net.neoforged.neoforge.event.server.ServerStoppedEvent e)->{rates.clear();ADAPTERS.values().forEach(CompatibilityAdapter::clear);});
   NeoForge.EVENT_BUS.addListener((net.neoforged.neoforge.event.entity.player.PlayerEvent.PlayerLoggedOutEvent e)->{rates.remove(e.getEntity().getUUID());});
@@ -29,11 +36,13 @@ public final class CompatibilityRegistry {
      .then(Commands.literal("apply").then(Commands.argument("network",StringArgumentType.word()).then(Commands.argument("token",StringArgumentType.word()).executes(c->command(c.getSource(),StringArgumentType.getString(c,"adapter"),"apply",StringArgumentType.getString(c,"network"),StringArgumentType.getString(c,"token"))))))));e.getDispatcher().register(root);
   });
  }
- public static String status(){var lines=new ArrayList<String>();ADAPTERS.values().forEach(a->lines.add(a.id()+": "+a.status()));return String.join("\n",lines);}
+ public static String status(){var lines=new ArrayList<String>();ADAPTERS.values().stream().sorted(java.util.Comparator.comparing(CompatibilityAdapter::id)).forEach(a->lines.add(a.id()+" (API "+a.apiVersion()+"): "+a.status()));return String.join("\n",lines);}
  private static JsonObject execute(ServerPlayer p,JsonObject j)throws Exception{
   if(!AuthServer.authenticated(p))throw new IllegalArgumentException("Сначала войдите в аккаунт");
   long now=System.currentTimeMillis();var w=rates.get(p.getUUID());if(w==null||now-w.start()>=1000)w=new Window(now,0);if(w.count()>=24)throw new IllegalArgumentException("Слишком много запросов адаптера");rates.put(p.getUUID(),new Window(w.start(),w.count()+1));
-  var adapter=ADAPTERS.get(Json.str(j,"adapter"));if(adapter==null)throw new IllegalArgumentException("Адаптер не найден");return adapter.execute(p,j,new ServerIdentityDirectory(p.server));
+  var adapter=ADAPTERS.get(Json.str(j,"adapter"));if(adapter==null)throw new IllegalArgumentException("Адаптер не найден");if(adapter.apiVersion()!=CompatibilityAdapter.API_VERSION||j.has("adapterApi")&&j.get("adapterApi").getAsInt()!=adapter.apiVersion())throw new IllegalArgumentException("Несовместимый API адаптера");var operation=(dev.abros.rivet.core.OptionalIntegration.Operation<JsonObject>)()->adapter.execute(p,j,new ServerIdentityDirectory(p.server));
+  boolean diagnostic=adapter==SPARK&&Set.of("snapshot","alerts").contains(Json.opt(j,"op","snapshot"));
+  var result=diagnostic?operation.run():adapter.lifecycle().required(operation);result.addProperty("adapterApi",adapter.apiVersion());return result;
  }
  public static boolean handle(JsonObject j,IPayloadContext context){
   if(!Json.opt(j,"action","").equals("compatibility"))return false;

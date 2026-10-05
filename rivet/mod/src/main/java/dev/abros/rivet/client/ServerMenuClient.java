@@ -33,7 +33,7 @@ public final class ServerMenuClient {
     public static void install(IEventBus bus){
         AuthClient.install();
         SkinClient.install();
-        RivetHud.install(bus);
+        RivetHud.install(bus);SocialClient.install(bus);
         bus.addListener((net.neoforged.neoforge.client.event.RegisterKeyMappingsEvent e)->{e.register(OPEN);e.register(SKINS);});
         NeoForge.EVENT_BUS.addListener(ServerMenuClient::tick);
         NeoForge.EVENT_BUS.addListener(ServerMenuClient::screen);
@@ -56,7 +56,7 @@ public final class ServerMenuClient {
     static void request(String action){if(action.equals("state")){request(stateRequest());return;}var j=new JsonObject();j.addProperty("action",action);request(j);}
 
     static void open(){if(!available())return;request("state");Minecraft.getInstance().setScreen(new CommunityScreen(null,"home",""));}
-    private static void tick(net.neoforged.neoforge.client.event.ClientTickEvent.Post e){CompatibilityClient.tick();XaeroMapBridge.tick();MapLayerClient.tick();
+    private static void tick(net.neoforged.neoforge.client.event.ClientTickEvent.Post e){CompatibilityClient.tick();ClientCompatibilityRegistry.tickWorldMap();MapLayerClient.tick();
         var mc=Minecraft.getInstance();if(previewTransport!=null){RivetHud.tick();return;}Object current=mc.getConnection();
         if(current!=connection){connection=current;state=new JsonObject();moderationVote=new JsonObject();result="";Protocol.profile=new JsonObject();stateBootstrap.reset();lastPopup=0;UiNavigation.clear();subscription="";subscriptionAt=0;transport.clear();PerformanceMetrics.clear();}
         RivetHud.tick();
@@ -75,12 +75,12 @@ public final class ServerMenuClient {
     }
     static void receive(JsonObject j){
         if(CompatibilityClient.receive(j))return;
-        var mc=Minecraft.getInstance();if(!available())return;String kind=Json.opt(j,"kind","");transport.receive(j,System.currentTimeMillis());if(MapLayerClient.receive(j)||RivetHud.receive(j))return;
+        var mc=Minecraft.getInstance();if(!available())return;String kind=Json.opt(j,"kind","");transport.receive(j,System.currentTimeMillis());if(SocialClient.receive(j)||MapLayerClient.receive(j)||RivetHud.receive(j))return;
         if(kind.equals("incompatible")||kind.equals("state")&&(!j.has("menuProtocol")||j.get("menuProtocol").getAsInt()!=MenuProtocol.VERSION)){stateBootstrap.confirm();result=kind.equals("incompatible")?Json.opt(j,"text","Меню этого сервера временно недоступно для вашей версии Rivet."):"Меню этого сервера временно недоступно для вашей версии Rivet.";if(mc.screen instanceof CommunityScreen||mc.screen instanceof FeatureListScreen)mc.setScreen(new TextScreen(null,Component.literal("Обновление Rivet"),result));return;}
         if(kind.equals("moderationVoteStatus")){if(moderationVote.equals(j.getAsJsonObject("vote")))return;moderationVote=j.getAsJsonObject("vote").deepCopy();if(mc.screen instanceof CommunityScreen screen)screen.refreshUi();if(mc.screen instanceof NotificationPopup popup)popup.refreshVote();if(mc.screen instanceof ModerationVoteScreen screen)screen.invalidate();return;}
         if(kind.equals("moderationVote")){if(mc.screen instanceof ModerationVoteScreen screen)screen.receiveCommunity(j);return;}
         if(kind.equals("playerAdministration")){if(mc.screen instanceof PlayerAdministrationScreen screen)screen.receive(j);return;}
-        if(kind.equals("openCommunity")){mc.setScreen(new CommunityScreen(mc.screen,Json.str(j,"section"),Json.str(j,"id")));return;}
+        if(kind.equals("openCommunity")){if(Json.str(j,"section").equals("tasks")){if(TaskScreen.available())mc.setScreen(new TaskScreen(mc.screen,Json.opt(j,"group",""),Json.str(j,"id")));}else mc.setScreen(new CommunityScreen(mc.screen,Json.str(j,"section"),Json.str(j,"id")));return;}
         if(kind.equals("changed")){transport.invalidate(Json.opt(j,"section",""),Json.opt(j,"id",""));if(mc.screen instanceof CommunityScreen screen)screen.invalidate(Json.opt(j,"section",""),Json.opt(j,"id",""));else if(mc.screen instanceof FeatureListScreen screen)screen.invalidate();else if(mc.screen instanceof NotificationPopup screen)screen.invalidate();else if(mc.screen instanceof TaskScreen tasks)tasks.invalidate(Json.opt(j,"section",""),Json.opt(j,"id",""));else if(mc.screen instanceof ChoicePopup popup)popup.invalidate();return;}
         if(kind.equals("community")){if(mc.screen instanceof CommunityScreen screen)screen.receive(j);else if(mc.screen instanceof CommunityScreen.Receiver receiver)receiver.receiveCommunity(j);return;}
         if(kind.equals("reports")&&mc.screen instanceof ReportQueueScreen queue){queue.receiveCommunity(j);return;}

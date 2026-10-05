@@ -17,6 +17,8 @@ public final class TaskWorkspace {
     private String id, notice = "", operation = "", request = "", cursor = "", nextCursor = "";
     private JsonObject data = new JsonObject(), undo;
     private JsonArray tasks = new JsonArray();
+    private String createReason="";
+    private boolean canManage;
     private boolean busy, retry, listLoaded, canCreate, undoing, dirty, redrawAfterReply;
     private long undoUntil;
 
@@ -35,6 +37,8 @@ public final class TaskWorkspace {
     public boolean retryAvailable() { return retry; }
     public boolean listLoaded() { return listLoaded; }
     public boolean canCreate() { return canCreate; }
+    public boolean canManage(){return canManage;}
+    public String createReason(){return createReason;}
     public JsonObject data() { return data.deepCopy(); }
     public JsonArray tasks() { return tasks.deepCopy(); }
     public boolean reading() { return Set.of("workList", "workGet").contains(operation); }
@@ -56,6 +60,7 @@ public final class TaskWorkspace {
         if (id.isEmpty() && !cursor.isEmpty()) body.addProperty("cursor", cursor);
         if (!id.isEmpty()) {
             body.addProperty("task", id);
+            if(data.has("task"))for(String key:new String[]{"subtaskOffset","commentOffset"})if(data.getAsJsonObject("task").has(key))body.add(key,data.getAsJsonObject("task").get(key));
             if (data.has("task") && data.getAsJsonObject("task").has("revision"))
                 body.add("revision", data.getAsJsonObject("task").get("revision").deepCopy());
         }
@@ -80,6 +85,7 @@ public final class TaskWorkspace {
         if (busy) return;
         var packet = body.deepCopy(); packet.addProperty("action", "community");
         packet.addProperty("section", "home"); packet.addProperty("op", op);
+        if(op.equals("workList")&&listLoaded)packet.add("knownTaskRows",RowDelta.known(tasks));
         operation = op; busy = true; retry = false;
         redrawAfterReply = !reading() || !listLoaded || !id.isEmpty() && !data.has("task");
         notice = reading() ? "Загрузка…" : "Сохраняем изменения…";
@@ -111,14 +117,16 @@ public final class TaskWorkspace {
             for (int n = tasks.size() - 1; n >= 0; n--) if (Json.str(tasks.get(n).getAsJsonObject(), "id").equals(id)) tasks.remove(n);
             clearSelection(); undo = null; return new Outcome(true, true, false, false, false);
         }
+        if(reply.has("tasksDelta")){try{reply=reply.deepCopy();reply.add("tasks",RowDelta.apply(tasks,reply.getAsJsonObject("tasksDelta")));}catch(RuntimeException invalid){notice="Список изменился. Обновите задачи.";listLoaded=false;return new Outcome(true,true,false,false,false);}}
         if (reply.has("tasks")) {
             boolean create = reply.has("canCreate") && reply.get("canCreate").getAsBoolean();
             changed = !listLoaded || !tasks.equals(reply.get("tasks")) || !nextCursor.equals(Json.opt(reply, "nextCursor", "")) || canCreate != create;
             tasks = reply.getAsJsonArray("tasks").deepCopy(); nextCursor = Json.opt(reply, "nextCursor", "");
-            listLoaded = true; canCreate = create;
+            listLoaded = true; canCreate = create;canManage=reply.has("canManage")?reply.get("canManage").getAsBoolean():create;createReason=Json.opt(reply,"createReason","");
             if (id.isEmpty() && selectFirst && !tasks.isEmpty()) { id = Json.str(tasks.get(0).getAsJsonObject(), "id"); changed = true; }
             if (!id.isEmpty()) return new Outcome(true, changed || redraw, false, false, true);
         }
+        if (reply.has("canCreate")){canCreate=reply.get("canCreate").getAsBoolean();createReason=Json.opt(reply,"createReason","");}
         if (reply.has("task")) {
             var task = reply.getAsJsonObject("task"); var typed = MenuData.Task.read(task);
             if (operation.equals("workStatus") && !undoing && data.has("task")) {

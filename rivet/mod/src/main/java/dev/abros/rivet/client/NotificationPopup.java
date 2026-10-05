@@ -61,7 +61,8 @@ final class NotificationPopup extends ScrollScreen implements CommunityScreen.Re
         if (target != null) {
             var notice = target; target = null;
             String id = Json.opt(notice, "target", "");
-            if(Json.opt(notice,"routeSection","").equals("tasks"))minecraft.setScreen(new TaskScreen(parent,Json.opt(notice,"routeGroup",""),Json.opt(notice,"routeId","")));
+            if(Json.opt(notice,"routeSection","").equals("spark"))minecraft.setScreen(new SparkDiagnosticsScreen(parent));
+            else if(Json.opt(notice,"routeSection","").equals("tasks"))minecraft.setScreen(new TaskScreen(parent,Json.opt(notice,"routeGroup",""),Json.opt(notice,"routeId","")));
             else if(Json.str(notice,"section").equals("home")&&!id.isEmpty())minecraft.setScreen(new TaskScreen(parent,"",id));
             else if (Json.str(notice, "section").equals("help") && !id.isEmpty()) FeatureListScreen.openReport(parent, id);
             else if (!id.isEmpty()) minecraft.setScreen(new CommunityScreen(parent, Json.str(notice, "section"), id));

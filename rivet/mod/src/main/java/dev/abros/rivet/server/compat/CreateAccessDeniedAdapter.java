@@ -7,11 +7,14 @@ import net.minecraft.server.level.ServerPlayer;
 import java.util.*;
 
 final class CreateAccessDeniedAdapter implements CompatibilityAdapter {
+ private final dev.abros.rivet.core.OptionalIntegration lifecycle=dev.abros.rivet.compat.IntegrationSupport.capability(AccessDeniedBindings.MOD,"network-access",()->{if(!AccessDeniedBindings.supported())throw new NoSuchMethodException("Проверена версия "+AccessDeniedBindings.VERSION);AccessDeniedBindings.type("extensions.LogisticNetworkExtensions").getMethod("accessDenied$getAllowedPlayers");return "Access Denied "+AccessDeniedBindings.VERSION;});
+ public dev.abros.rivet.core.OptionalIntegration lifecycle(){return lifecycle;}
  private record Preview(UUID owner,UUID network,AccessRepairPlan plan,long expires){}
  private final Map<UUID,Preview> previews=new HashMap<>();
+ public JsonObject diagnostics(){var row=CompatibilityAdapter.super.diagnostics();row.add("capabilities",dev.abros.rivet.core.Json.GSON.toJsonTree(java.util.List.of("network-access","verified-identity-repair")));return row;}
  public String id(){return AccessDeniedBindings.ID;}
- public String status(){return AccessDeniedBindings.status();}
- public void clear(){previews.clear();}
+ public String status(){return lifecycle.status();}
+ public void clear(){previews.clear();lifecycle.reset();}
  public JsonObject execute(ServerPlayer actor,JsonObject request,ServerIdentityDirectory identities)throws Exception{
   if(!AccessDeniedBindings.supported())throw new IllegalArgumentException("Адаптер Access Denied: "+status());
   String op=Json.str(request,"op");var result=new JsonObject();

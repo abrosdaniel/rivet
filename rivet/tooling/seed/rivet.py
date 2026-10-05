@@ -15,7 +15,13 @@ def pairs(items):
 def read(p):return json.loads(Path(p).read_text(),object_pairs_hook=pairs)
 def encoded(o):return (json.dumps(o,ensure_ascii=False,indent=2)+'\n').encode()
 def write(p,o):Path(p).parent.mkdir(parents=True,exist_ok=True);Path(p).write_bytes(encoded(o))
-def validate_schema(name,o):Draft202012Validator(read(SCHEMAS/(name+'.schema.json'))).validate(o)
+def validate_schema(name,o):
+    Draft202012Validator(read(SCHEMAS/(name+'.schema.json'))).validate(o)
+    requirement=o.get('rivetVersion') if name=='project' else o.get('rivet',{}).get('version') if name=='lock' else None
+    if requirement and requirement.startswith('>='):
+        lower,upper=requirement[2:].split(' <')
+        if tuple(map(int,lower.split('.'))) >= tuple(map(int,upper.split('.'))):
+            raise ValueError('Invalid Rivet range: lower bound must be less than upper bound')
 def sha(b):return hashlib.sha256(b).hexdigest()
 def pathcheck(p):
     roots={'mods','config','defaultconfigs','kubejs','resourcepacks','shaderpacks'}

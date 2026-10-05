@@ -107,7 +107,7 @@
   "rivet.server.invalidnumber": "Enter a whole number for duration.",
   "rivet.server.helptext": "F8 opens this menu (change it in Controls).\n/rivet opens the menu by command.\n\nUse the button below to report a problem. Reports are sent only after preview and confirmation.",
   "rivet.server.admintext": "Choose an action, then enter its message and timing.\nDiagnostics show up to 30 clients; reports show 5 per page.",
-  "key.rivet.hudInteract": "Interact with Rivet HUD",
+  "key.rivet.hudInteract": "Cursor mode",
   "key.rivet.menu": "Open server menu",
   "key.categories.rivet": "Rivet",
   "rivet.server.minutes": "Minutes (0–1440)",
@@ -186,5 +186,7 @@
   "rivet.pack": "Pack",
   "key.rivet.quickSkins": "Quick skin selection",
   "rivet.close": "Close",
-  "rivet.backToList": "Back to list"
+  "rivet.backToList": "Back to list",
+  "rivet.server.noProjectNews": "No news published yet. This server is not linked to a Rivet project.",
+  "rivet.server.noProjectRules": "No rules published yet. Contact the server administrators."
 }

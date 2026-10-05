@@ -20,6 +20,7 @@ final class UiNavigation {
   var current=Minecraft.getInstance().screen;
   UiKeyboard.remember(current);
   if(returning)return;
+  if(UiSettingsShell.owns(current)&&UiSettingsShell.owns(event.getNewScreen()))return;
   if(UiTheme.owns(event.getNewScreen())){
    if(!UiTheme.owns(current)){outside=current;history.clear();}
    else if(current!=event.getNewScreen()){history.remove(event.getNewScreen());history.addLast(current);while(history.size()>32)history.removeFirst();}

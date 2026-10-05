@@ -10,11 +10,11 @@ class Contracts(unittest.TestCase):
         with tempfile.TemporaryDirectory() as tmp:
             target=Path(tmp)/'project';shutil.copytree(root,target)
             source=m.read(target/'rivet.json')
-            for requirement in ['3.x','3.x.x','3.4.x','3.4.2']:
+            for requirement in ['3.x','3.x.x','3.4.x','3.4.2','=1.1.0','>=1.1.0 <2.0.0']:
                 source['rivetVersion']=requirement;m.write(target/'rivet.json',source)
                 project,_,_=m.load_project(target)
                 self.assertEqual(requirement,project['rivet']['version'])
-            for requirement in ['3.4','3.x.2','03.x.x','3.04.x','^3.4.0']:
+            for requirement in ['3.4','3.x.2','03.x.x','3.04.x','^3.4.0','=1.1','>=2.0.0 <1.1.0','>=1.1.0 <1.1.0','>=1.1.0 <=2.0.0']:
                 source['rivetVersion']=requirement;m.write(target/'rivet.json',source)
                 with self.assertRaises(Exception):m.load_project(target)
     def test_traversal(self):

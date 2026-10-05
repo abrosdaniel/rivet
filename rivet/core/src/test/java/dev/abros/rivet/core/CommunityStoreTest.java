@@ -196,4 +196,5 @@ class CommunityStoreTest {
   var edit=command(input("groups","edit",id(group)));edit.add("revision",current.get("revision"));edit.addProperty("title","Renamed group");edit.addProperty("description","Description");edit.addProperty("type",Json.str(current,"type"));edit.add("location",JsonNull.INSTANCE);edit.addProperty("clearLocation",true);
   var wire=Json.parse(Json.GSON.toJson(edit));assertFalse(wire.has("location"));var changed=db.request(owner,wire).getAsJsonObject("detail");assertFalse(changed.has("location"));assertEquals("Renamed group",Json.str(changed,"title"));db.request(owner,wire);assertFalse(detail("groups",id(group),owner).has("location"));
  }
+ @Test void chatAudienceUsesCurrentMembershipAndRejectsNonMembers()throws Exception{var group=create("groups");String groupId=id(group);assertTrue(db.chatMembers(groupId,owner.id()).contains(owner.id()));assertEquals(groupId,Json.str(db.playerGroups(owner.id()).getFirst(),"id"));assertTrue(db.playerGroups(alice.id()).isEmpty());assertThrows(CommunityFailure.class,()->db.chatMembers(groupId,alice.id()));assertThrows(CommunityFailure.class,()->db.chatMembers(id(create("board")),owner.id()));}
 }

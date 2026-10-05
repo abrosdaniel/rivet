@@ -19,6 +19,7 @@ final class CommunityHud {
   long cap;try(var q=db.connection().prepareStatement("SELECT coalesce(max(id),0) FROM notices WHERE recipient=?")){q.setString(1,actor.id());try(var rows=q.executeQuery()){rows.next();cap=rows.getLong(1);}}
   var notices=new JsonArray();long next=since;boolean initial=!input.has("since");
   if(!initial)try(var q=db.connection().prepareStatement("SELECT id,body,read FROM notices WHERE recipient=? AND id>? AND id<=? ORDER BY id ASC LIMIT 51")){q.setString(1,actor.id());q.setLong(2,since);q.setLong(3,cap);try(var rows=q.executeQuery()){while(rows.next()){if(notices.size()==50)break;next=rows.getLong(1);var notice=Json.parse(rows.getString(2));notice.addProperty("id",Long.toString(next));notice.addProperty("read",rows.getBoolean(3));notices.add(notice);}}}
+  if(initial){var digest=new JsonArray();try(var q=db.connection().prepareStatement("SELECT coalesce(body->>'section','notifications'),count(*) FROM notices WHERE recipient=? AND read=0 GROUP BY body->>'section' ORDER BY count(*) DESC,coalesce(body->>'section','notifications') LIMIT 20")){q.setString(1,actor.id());try(var rows=q.executeQuery()){while(rows.next()){var row=new JsonObject();row.addProperty("section",rows.getString(1));row.addProperty("count",rows.getInt(2));digest.add(row);}}}out.add("digest",digest);}
   out.add("notices",notices);out.addProperty("sequence",initial?cap:Math.max(next,Math.min(since,cap)));out.addProperty("more",!initial&&next<cap);return out;
  }
 }

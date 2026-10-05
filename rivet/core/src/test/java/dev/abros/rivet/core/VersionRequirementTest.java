@@ -57,6 +57,33 @@ class VersionRequirementTest {
             assertThrows(IllegalArgumentException.class,()->Manifest.parse(json));
         }
     }
+    @Test void explicitRangesAndExactReleases()throws Exception {
+        String range=">=1.1.0 <2.0.0";
+        assertFalse(Versions.supportsRequirement("1.0.99",range));
+        assertTrue(Versions.supportsRequirement("1.1.0",range));
+        assertTrue(Versions.supportsRequirement("1.99.99",range));
+        assertFalse(Versions.supportsRequirement("2.0.0",range));
+        assertTrue(Versions.supportsRequirement("1.1.0","=1.1.0"));
+        assertFalse(Versions.supportsRequirement("1.1.1","=1.1.0"));
+        assertTrue(Versions.supportsRequirement("1.1.1","1.1.0"));
+        assertFalse(Versions.supportsRequirement("1.1.0-beta",range));
+        assertTrue(Versions.supportsRequirement("1.10.0",">=1.9.0 <1.11.0"));
+        // Bounds are explicit: a seed can include multiple release families, but the handshake still checks protocols.
+        assertTrue(Versions.supportsRequirement("2.0.0",">=1.0.0 <3.0.0"));
+        for(String requirement:List.of(range,"=1.1.0")){
+            Schema.validate("project",project(requirement));
+            var json=lock();json.getAsJsonObject("rivet").addProperty("version",requirement);
+            assertEquals("",new Hub(game,"1.1.0","21.1.250").incompatibility(Manifest.parse(json)));
+        }
+    }
+    @Test void invalidExplicitRequirementsRejectedByProjectAndLock()throws Exception {
+        for(String requirement:List.of(">=2.0.0 <1.1.0",">=1.1.0 <1.1.0",">=1.1.0",">=1.1.0 <=2.0.0",">=01.1.0 <2.0.0","=1.1","=1.1.0-beta",">=1.1.0  <2.0.0")){
+            assertFalse(Versions.supportsRequirement("1.1.0",requirement));
+            assertThrows(IllegalArgumentException.class,()->Schema.validate("project",project(requirement)));
+            var json=lock();json.getAsJsonObject("rivet").addProperty("version",requirement);
+            assertThrows(IllegalArgumentException.class,()->Manifest.parse(json));
+        }
+    }
     @Test void serverRejectsTooOldClientEvenWithinCompatibleMajor()throws Exception {
         var json=lock();json.getAsJsonObject("rivet").addProperty("version","3.4.x");
         var manifest=Manifest.parse(json);

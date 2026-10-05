@@ -13,21 +13,7 @@ import java.util.*;
 /** Optional adapter: only public waypoint interfaces, no direct edits of Xaero files. */
 final class XaeroBridge {
  private static Class<?> type(String name)throws ClassNotFoundException{return Class.forName(name);}
- private static Boolean supported;
- static boolean available(){
-  if(supported!=null)return supported;
-  if(!ModList.get().isLoaded("xaerominimap"))return supported=false;
-  try{
-   type("xaero.common.XaeroMinimapSession").getMethod("getCurrentSession");
-   type("xaero.common.HudMod").getField("INSTANCE");
-   var point=type("xaero.common.minimap.waypoints.Waypoint");
-   point.getConstructor(int.class,int.class,int.class,String.class,String.class,int.class);
-   point.getMethod("setTemporary",boolean.class);point.getMethod("setOneoffDestination",boolean.class);
-   for(String name:List.of("getX","getY","getZ","getPurpose","isThirdParty","isServerWaypoint"))point.getMethod(name);
-   type("xaero.common.gui.GuiAddWaypoint").getConstructor(type("xaero.common.HudMod"),type("xaero.hud.minimap.module.MinimapSession"),Screen.class,Screen.class,ArrayList.class,type("xaero.hud.path.XaeroPath"),type("xaero.hud.minimap.world.MinimapWorld"),String.class,boolean.class);
-   return supported=true;
-  }catch(ReflectiveOperationException|RuntimeException|LinkageError unsupported){return supported=false;}
- }
+ static void probe()throws ReflectiveOperationException{type("xaero.common.XaeroMinimapSession").getMethod("getCurrentSession");type("xaero.common.gui.GuiAddWaypoint").getConstructor(type("xaero.common.HudMod"),type("xaero.hud.minimap.module.MinimapSession"),Screen.class,Screen.class,ArrayList.class,type("xaero.hud.path.XaeroPath"),type("xaero.hud.minimap.world.MinimapWorld"),String.class,boolean.class);}
  static Object call(Object target,String name,Object...args)throws ReflectiveOperationException{
   if(target==null)throw new IllegalStateException("Xaero ещё не подготовил карту этого сервера.");
   for(var method:target.getClass().getMethods())if(method.getName().equals(name)&&method.getParameterCount()==args.length){boolean matches=true;var types=method.getParameterTypes();for(int i=0;i<types.length;i++)if(args[i]!=null&&!types[i].isInstance(args[i])&&!((types[i]==boolean.class&&args[i] instanceof Boolean)||(types[i]==int.class&&args[i] instanceof Integer)))matches=false;if(matches)return method.invoke(target,args);}
@@ -41,11 +27,11 @@ final class XaeroBridge {
    Object root=call(call(world,"getContainer"),"getRoot"),path=call(root,"getPath"),helper=call(session,"getDimensionHelper");
    String directory=(String)call(helper,"getDimensionDirectoryName",key);Object destination=call(path,"resolve",directory);
    Object container=call(manager,"getWorldContainerNullable",destination);
-   if(container==null)throw new IllegalStateException("Сначала посетите это измерение, чтобы Xaero определил его карту.");
+   if(container==null)throw new IllegalArgumentException("Сначала посетите это измерение, чтобы Xaero определил его карту.");
    Object linked=call(container,"getFirstWorldConnectedTo",world);
-   if(linked==null)throw new IllegalStateException("В Xaero не определена карта этого измерения. Выберите её после посещения измерения.");world=linked;
+   if(linked==null)throw new IllegalArgumentException("В Xaero не определена карта этого измерения. Выберите её после посещения измерения.");world=linked;
   }
-  if(!key.equals(call(world,"getDimId")))throw new IllegalStateException("Измерение карты не совпадает с местом.");
+  if(!key.equals(call(world,"getDimId")))throw new IllegalArgumentException("Измерение карты не совпадает с местом.");
   String set=(String)call(world,"getCurrentWaypointSetId");Object waypoint=null;
   // Reopen an existing point at this position, preserving the player's name/type/color.
   for(Object candidateSet:(Iterable<?>)call(world,"getIterableWaypointSets"))for(Object candidate:(Iterable<?>)call(candidateSet,"getWaypoints")){

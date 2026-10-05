@@ -97,7 +97,7 @@ jobs:
         run: |
           set -o pipefail
           timeout --signal=TERM --kill-after=20s 5m xvfb-run -a -s '-screen 0 1280x1024x24' ./gradlew :mod:runClient -PrivetUiHarness --no-daemon --console=plain 2>&1 | tee visual-approved.log
-      - run: python3 rivet/tooling/verify_ui_snapshots.py visual/approved/screenshots 180 visual-approved.log RIVET_APPROVED_UI_OK
+      - run: python3 rivet/tooling/verify_ui_snapshots.py visual/approved/screenshots 300 visual-approved.log RIVET_APPROVED_UI_OK
       - name: Render and verify HUD
         timeout-minutes: 6
         env:
@@ -106,7 +106,7 @@ jobs:
         run: |
           set -o pipefail
           timeout --signal=TERM --kill-after=20s 5m xvfb-run -a -s '-screen 0 1280x1024x24' ./gradlew :mod:runClient -PrivetUiHarness --no-daemon --console=plain 2>&1 | tee visual-hud.log
-      - run: python3 rivet/tooling/verify_ui_snapshots.py visual/hud/screenshots 216 visual-hud.log RIVET_HUD_UI_OK
+      - run: python3 rivet/tooling/verify_ui_snapshots.py visual/hud/screenshots 360 visual-hud.log RIVET_HUD_UI_OK
       - name: Render and verify task flows and navigation
         timeout-minutes: 6
         env:

@@ -27,6 +27,7 @@ abstract class ScrollScreen extends Screen {
   if(label!=null)for(var child:children())if(child.getClass()==previous.getClass()&&child instanceof net.minecraft.client.gui.components.AbstractWidget widget&&widget.getMessage().getString().equals(label)){setFocused(child);if(cursor>=0&&child instanceof net.minecraft.client.gui.components.EditBox edit)edit.setCursorPosition(Math.min(cursor,edit.getValue().length()));break;}
  }
  protected void onScrollEnd(){}
+ final void revealRow(int row){restoreScroll(row);}
  protected void restoreScroll(int row){position=Math.max(0,row);firstRow=(int)position;}
  protected void resetScroll(){position=0;firstRow=0;}
  protected void rowsChanged(){rebuildWidgets();}

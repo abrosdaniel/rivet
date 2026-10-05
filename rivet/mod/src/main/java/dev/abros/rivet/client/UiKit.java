@@ -56,5 +56,5 @@ final class UiKit {
   g.renderOutline(x,y,CHECK_SIZE,CHECK_SIZE,color);
   if(checked)UiIcons.draw(g,UiIcons.CHECK,x-1,y-1,color);
  }
- static String fit(net.minecraft.client.gui.Font font,String text,int width){if(text.isEmpty()||font.width(text)<=width)return text;return font.plainSubstrByWidth(text,Math.max(1,width-font.width("…")))+"…";}
+ static String fit(net.minecraft.client.gui.Font font,String text,int width){if(width<=0)return "";if(text.isEmpty()||font.width(text)<=width)return text;if(width<font.width("…"))return "";return font.plainSubstrByWidth(text,Math.max(0,width-font.width("…")))+"…";}
 }

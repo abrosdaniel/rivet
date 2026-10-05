@@ -71,11 +71,6 @@ def package(root, artifact, output):
     core = output / "core.json"
     core.write_text(json.dumps(descriptor, indent=2) + "\n")
     files = [output / name, output / "template.zip", core]
-    migration = root / "rivet/SERVER_MIGRATION.md"
-    if migration.is_file():
-        destination = output / migration.name
-        shutil.copyfile(migration, destination)
-        files.append(destination)
     sums = output / "SHA256SUMS.txt"
     sums.write_text("".join(hashlib.sha256(p.read_bytes()).hexdigest() + "  " + p.name + "\n" for p in files))
     return files + [sums]

@@ -9,15 +9,16 @@ import net.minecraft.network.chat.Component;
 /** A summary and its destination form one keyboard-accessible target. */
 final class UiSummaryCard extends Button {
  private final String title,value;private final List<String> details;private final int accent;
- UiSummaryCard(int x,int y,int width,String title,String value,List<String> details,int accent,Runnable action){super(x,y,width,88,Component.literal(title+". "+value+". "+String.join(". ",details)),b->action.run(),DEFAULT_NARRATION);this.title=title;this.value=value;this.details=List.copyOf(details);this.accent=accent;}
+ UiSummaryCard(int x,int y,int width,String title,String value,List<String> details,int accent,Runnable action){super(x,y,width,88,Component.literal(title+". "+value+". "+String.join(". ",details)),b->action.run(),DEFAULT_NARRATION);this.title=title;this.value=value;this.details=List.copyOf(details);this.accent=accent;setTooltip(net.minecraft.client.gui.components.Tooltip.create(Component.literal(title+"\n"+value+"\n"+String.join("\n",details))));}
+ static UiSummaryCard compact(int x,int y,int width,String title,String value,List<String> details,int accent,Runnable action){var card=new UiSummaryCard(x,y,width,title,value,details,accent,action);card.setHeight(62);return card;}
  @Override protected void renderWidget(GuiGraphics g,int mx,int my,float delta){
   int x=getX(),y=getY(),w=getWidth(),color=UiPalette.color(accent);var font=Minecraft.getInstance().font;
-  UiKit.plate(g,x,y,w,88,UiTheme.mix(UiKit.surface(),UiPalette.color(0xFF314350),UiTheme.hover(this)*0.55f));
-  UiKit.detail(g,x,y,w,88);g.fill(x+12,y+10,x+14,y+18,color);if(isFocused())g.renderOutline(x,y,w,88,color);
-  g.enableScissor(x+8,y+5,x+w-8,y+83);
+  UiKit.plate(g,x,y,w,getHeight(),UiTheme.mix(UiKit.surface(),UiPalette.color(0xFF314350),UiTheme.hover(this)*0.55f));
+  UiKit.detail(g,x,y,w,getHeight());g.fill(x+12,y+10,x+14,y+18,color);if(isFocused())g.renderOutline(x,y,w,getHeight(),color);
+  g.enableScissor(x+8,y+5,x+w-8,y+getHeight()-5);
   UiTypography.draw(g,font,title,x+20,y+10,w-48,UiTypography.Role.TITLE);
   Ui.text(g,font,UiKit.fit(font,value,w-26),x+12,y+29,color,false);
-  for(int i=0;i<Math.min(2,details.size());i++)Ui.text(g,font,UiKit.fit(font,details.get(i),w-26),x+12,y+52+i*14,UiKit.text(),false);
+  for(int i=0;i<Math.min(getHeight()==62?1:2,details.size());i++)Ui.text(g,font,UiKit.fit(font,details.get(i),w-26),x+12,y+(getHeight()==62?46:52)+i*14,UiKit.text(),false);
   UiIcons.draw(g,UiIcons.RIGHT,x+w-23,y+9,color);g.disableScissor();
  }
 }

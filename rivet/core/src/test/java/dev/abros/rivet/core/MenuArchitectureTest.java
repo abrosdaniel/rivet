@@ -125,4 +125,11 @@ class MenuArchitectureTest {
         var sent = new ArrayList<JsonObject>(); var now = new AtomicLong(1); var model = new CommunityWorkspace("board", "b", sent::add, now::get); model.load(filters()); model.receive(response(sent.getLast(), "\"detail\":{\"revision\":7},\"nextCursor\":\"\""));
         var body = new JsonObject(); model.send("close", body, filters()); assertFalse(body.has("revision")); assertEquals(7, sent.getLast().get("revision").getAsInt()); assertFalse(model.leave()); var original = sent.getLast(); now.set(15001); assertTrue(model.tick(filters())); model.retry(); assertEquals(Json.str(original, "operationId"), Json.str(sent.getLast(), "operationId")); assertFalse(model.receive(response(original, "\"detail\":{\"revision\":8}")).accepted());
     }
+    @Test void taskQuotaDoesNotRemoveManagementAndPageOffsetsTravelWithEdits(){
+        var sent=new ArrayList<JsonObject>();var workspace=new TaskWorkspace("", "", sent::add,q->null,()->1L);
+        workspace.list("", "");workspace.receive(response(sent.getLast(),"\"tasks\":[],\"canCreate\":false,\"canManage\":true,\"createReason\":\"Достигнут лимит\""),false);
+        assertFalse(workspace.canCreate());assertTrue(workspace.canManage());assertEquals("Достигнут лимит",workspace.createReason());
+        workspace.select("task");workspace.load();workspace.receive(response(sent.getLast(),"\"task\":{\"id\":\"task\",\"title\":\"Build\",\"status\":\"open\",\"revision\":2,\"manage\":true,\"subtaskOffset\":40,\"commentOffset\":20}"),false);
+        assertEquals(40,workspace.body().get("subtaskOffset").getAsInt());assertEquals(20,workspace.body().get("commentOffset").getAsInt());
+    }
 }

@@ -1,0 +1,25 @@
+package dev.abros.rivet.client;
+import net.minecraft.client.Minecraft;
+import net.minecraft.client.gui.screens.*;
+import net.minecraft.client.gui.components.Button;
+import dev.abros.rivet.core.CommunityLocation;
+import net.neoforged.api.distmarker.Dist;
+import net.neoforged.bus.api.SubscribeEvent;
+import net.neoforged.fml.common.EventBusSubscriber;
+/** Opt-in regression checks for page insets, editor navigation and destination arrival. */
+@EventBusSubscriber(modid="rivet",value=Dist.CLIENT)
+public final class RivetLayoutReviewHarness {
+ private static boolean connecting;private static int stage,scale=2;private static long next;
+ @SubscribeEvent public static void tick(net.neoforged.neoforge.client.event.ClientTickEvent.Post e){
+  if(System.getenv("RIVET_LAYOUT_REVIEW")==null||stage==9)return;var mc=Minecraft.getInstance();long now=System.currentTimeMillis();
+  if(!connecting&&mc.screen instanceof TitleScreen){connecting=true;mc.options.pauseOnLostFocus=false;var data=new net.minecraft.client.multiplayer.ServerData("Rivet test","127.0.0.1:25569",net.minecraft.client.multiplayer.ServerData.Type.OTHER);ConnectScreen.startConnecting(mc.screen,mc,net.minecraft.client.multiplayer.resolver.ServerAddress.parseString(data.ip),data,false,null);}
+  if(mc.player==null||!ServerMenuClient.available()||now<next)return;
+  if(stage==0){mc.getToasts().clear();mc.options.guiScale().set(scale);mc.resizeDisplay();mc.setScreen(new ServerInfoScreen(null));stage=1;next=now+700;return;}
+  if(stage==1){check(!net.minecraft.client.resources.language.I18n.get("rivet.server.noProjectNews").startsWith("rivet."),"Missing empty-state translation");UiGeometryHarness.verify(mc.screen);capture("server-gui-"+scale);mc.setScreen(new SocialSettingsScreen(null,1));stage=2;next=now+300;return;}
+  if(stage==2){UiGeometryHarness.verify(mc.screen);var buttons=mc.screen.children().stream().filter(v->v instanceof Button).map(v->(Button)v).toList();var editor=buttons.stream().filter(v->v.getMessage().getString().equals("Редактор HUD…")).toList();check(editor.size()==1,"Duplicate HUD editor");var button=editor.getFirst();var outer=UiDialog.fit(mc.screen.width,mc.screen.height,570,350);check(button.getY()+button.getHeight()==outer.body().bottom(),"HUD editor not pinned at bottom");for(var other:buttons)if(other!=button&&other.getX()==button.getX())check(other.getY()+other.getHeight()<=button.getY(),"Sidebar overlaps HUD editor");capture("settings-gui-"+scale);var owner=mc.screen;button.onPress();check(mc.screen instanceof HudInteractionScreen,"HUD editor did not open");mc.screen.onClose();check(mc.screen==owner,"HUD editor lost return screen");if(scale++<4){stage=0;return;}stage=3;}
+  if(stage==3){var p=mc.player;var dim=mc.level.dimension().location().toString();int x=p.getBlockX(),y=p.getBlockY(),z=p.getBlockZ();DirectionCue.start(new CommunityLocation("Far","minecraft:the_nether",x,y,z,false));check(DirectionCue.hasTarget(),"Different dimension counted as arrival");DirectionCue.start(new CommunityLocation("Above",dim,x,y+20,z,false));check(DirectionCue.hasTarget(),"Wrong height counted as arrival");DirectionCue.start(new CommunityLocation("Far",dim,x+20,y,z,false));check(DirectionCue.hasTarget(),"Distant target cleared");DirectionCue.start(new CommunityLocation("Arrived",dim,x,y,z,false));check(!DirectionCue.hasTarget()&&DirectionCue.mapRows().isEmpty(),"Destination HUD or waypoint retained after arrival");check(SettingsSearchScreen.search("редактор hud").size()==1,"HUD search has stale duplicate links");mc.options.guiScale().set(3);mc.resizeDisplay();mc.player.connection.sendChat("!Проверка ссылки [pos]");mc.setScreen(new ChatScreen(""));stage=4;next=now+1500;return;}
+  if(stage==4){var history=((dev.abros.rivet.mixin.ChatHistoryAccessor)mc.gui.getChat()).rivet$messages();var link=history.stream().filter(m->m.content().getString().contains("Проверка ссылки")).map(m->m.content().visit((style,text)->text.contains("↗")&&style.getClickEvent()!=null?java.util.Optional.of(style):java.util.Optional.<net.minecraft.network.chat.Style>empty(),net.minecraft.network.chat.Style.EMPTY)).filter(java.util.Optional::isPresent).map(java.util.Optional::get).findFirst().orElseThrow(()->new IllegalStateException("No coordinate link received"));check(link.isUnderlined()&&link.getHoverEvent()!=null&&link.getClickEvent().getAction()==net.minecraft.network.chat.ClickEvent.Action.RUN_COMMAND,"Coordinate link is not discoverable");check(mc.screen.handleComponentClicked(link),"Coordinate click not handled");capture("chat-coordinate-link");mc.setScreen(new ServerInfoScreen(null));System.out.println("RIVET_LAYOUT_REVIEW_OK GUI 2-4, HUD sidebar and return, arrival + dimension + height + live chat link");stage=9;}
+ }
+ private static void capture(String name){var output=new java.io.File("/private/tmp/rivet-layout-review");output.mkdirs();var mc=Minecraft.getInstance();net.minecraft.client.Screenshot.grab(output,name+".png",mc.getMainRenderTarget(),msg->{});}
+ private static void check(boolean ok,String message){if(!ok)throw new IllegalStateException(message);}
+}

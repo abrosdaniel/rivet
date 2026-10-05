@@ -13,7 +13,7 @@ final class UiActions {
  }
  private static final Map<Button,Command> commands=new WeakHashMap<>();
  static Button command(Command command,NativeLayout.Box slot,Consumer<AbstractWidget> add,Runnable run){
-  var b=button(Client.tr(command.label),Tone.NORMAL,command.icon,ignored->run.run()).bounds(slot.x(),slot.y(),Math.min(COMMAND_WIDTH,slot.width()),CONTROL_HEIGHT).build();
+  var b=button(Component.literal(switch(command){case REFRESH->"Обновить";case RETRY->"Повторить";case BACK->"Назад";case CLOSE->"Закрыть";case LIST->"К списку";}),Tone.NORMAL,command.icon,ignored->run.run()).bounds(slot.x(),slot.y(),Math.min(COMMAND_WIDTH,slot.width()),CONTROL_HEIGHT).build();
   commands.put(b,command);add.accept(b);return b;
  }
  static Command commandOf(Button button){return commands.get(button);}
@@ -22,7 +22,7 @@ final class UiActions {
  private static final Map<Button,Style> styles=new WeakHashMap<>();
  record Action(Component label,Runnable run,boolean enabled,Tone tone,String icon,String reason){Action withIcon(String icon){return new Action(label,run,enabled,tone,icon,reason);}Action because(String reason){return new Action(label,run,enabled,tone,icon,reason);}}
  static Action action(String label,Runnable run,boolean enabled){return new Action(Component.literal(label),run,enabled,Tone.NORMAL,"","");}
- static Button.Builder button(Component label,Tone tone,String icon,Button.OnPress press){return new Button.Builder(label,press){@Override public Button build(){return style(super.build(),tone,icon);}};}
+ static Button.Builder button(Component label,Tone tone,String icon,Button.OnPress press){return new Button.Builder(label,press){@Override public Button build(){var built=style(super.build(),tone,icon);if(net.minecraft.client.Minecraft.getInstance().font.width(label)>built.getWidth()-16)built.setTooltip(Tooltip.create(label));return built;}};}
  static Action primary(String label,Runnable run,boolean enabled){return new Action(Component.literal(label),run,enabled,Tone.PRIMARY,UiIcons.CHECK,"");}
  static Action danger(String label,Runnable run,boolean enabled){return new Action(Component.literal(label),run,enabled,Tone.DANGER,UiIcons.DELETE,"");}
  static <T extends Button> T style(T button,Tone tone,String icon){styles.put(button,new Style(tone,icon));return button;}
