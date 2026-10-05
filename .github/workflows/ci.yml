@@ -115,7 +115,7 @@ jobs:
         run: |
           set -o pipefail
           timeout --signal=TERM --kill-after=20s 5m xvfb-run -a -s '-screen 0 1280x1024x24' ./gradlew :mod:runClient -PrivetUiHarness --no-daemon --console=plain 2>&1 | tee visual-tasks.log
-      - run: python3 rivet/tooling/verify_ui_snapshots.py visual/tasks/screenshots 215 visual-tasks.log RIVET_NATIVE_OK
+      - run: python3 rivet/tooling/verify_ui_snapshots.py visual/tasks/screenshots auto visual-tasks.log RIVET_NATIVE_OK
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
         if: always()
         with:
