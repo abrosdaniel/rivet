@@ -40,7 +40,7 @@ public final class ServerIntegration {
         try {
             var root=net.neoforged.fml.loading.FMLPaths.GAMEDIR.get().toAbsolutePath().normalize();
             var remote=new Remote();remote.cacheMetadata(root.resolve("rivet/cache/http"));
-            policy=ServerProjectPolicy.load(new RepositoryClient(root,remote),ServerDatabase.settings().text("project.repository"),ServerDatabase.settings().flag("project.requireProjectPack"));
+            policy=ServerProjectPolicy.load(new RepositoryClient(root,remote),ServerDatabase.settings().text("project.repository"),ServerDatabase.settings().flag("project.requirePack"));
             if(policy.release()!=null&&!Versions.supportsRequirement(dev.abros.rivet.Rivet.VERSION,policy.requiredRivetVersion())){
                 com.mojang.logging.LogUtils.getLogger().error("Rivet: проект требует версию {}, на сервере установлена {}. Установите указанную версию Rivet или исправьте rivetVersion в проекте.",policy.requiredRivetVersion(),dev.abros.rivet.Rivet.VERSION);
                 throw new IllegalStateException("Ветка Rivet сервера не совпадает с rivetVersion проекта");
@@ -54,7 +54,7 @@ public final class ServerIntegration {
         }
     }
     public static boolean luckPermsEnabled(){return net.neoforged.fml.ModList.get().isLoaded("luckperms");}
-    public static String helpText(){return ServerDatabase.settings().text("menu.helpText");}
+    public static String helpText(){return ServerDatabase.settings().text("menu.help");}
     public static String project(){var current=policy;return current==null?"":current.repository();}
     public static String packVersion(){var current=policy;return current==null?"":current.version();}
     public static String requiredHash(){var current=policy;return current==null||!current.required()?"":current.hash();}
@@ -85,7 +85,7 @@ public final class ServerIntegration {
             public ConfigurationTask.Type type(){return TYPE;}
             public void run(Consumer<CustomPacketPayload> sender){
                 NONCES.put(listener,pending);JsonObject hello=new JsonObject();hello.addProperty("coreVersion",dev.abros.rivet.Rivet.VERSION);hello.add("protocols",WireProtocols.current());hello.add("features",ConnectionCompatibility.features());hello.addProperty("protocolVersion",WireProtocols.version("pack"));hello.addProperty("nonce",pending.nonce());hello.addProperty("repository",current.repository());hello.addProperty("serverId",current.serverId());hello.addProperty("requiredVersion",current.version());hello.addProperty("requiredLockSha256",current.hash());sender.accept(new Protocol.Hello(Json.GSON.toJson(hello)));
-                CompletableFuture.delayedExecutor(ServerDatabase.settings().number("connection.handshakeTimeoutSeconds"),TimeUnit.SECONDS).execute(()->{if(server!=null)server.execute(()->{if(NONCES.remove(listener,pending))listener.disconnect(Component.literal("Rivet: handshake timeout"));});});
+                CompletableFuture.delayedExecutor(ServerDatabase.settings().number("connection.handshakeTimeout"),TimeUnit.SECONDS).execute(()->{if(server!=null)server.execute(()->{if(NONCES.remove(listener,pending))listener.disconnect(Component.literal("Rivet: handshake timeout"));});});
             }
         });
     }

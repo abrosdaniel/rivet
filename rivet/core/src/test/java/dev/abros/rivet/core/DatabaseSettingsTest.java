@@ -9,7 +9,7 @@ class DatabaseSettingsTest {
     @TempDir Path game;
     void config(String password,String env)throws Exception {
         Path file=game.resolve("config/rivet-server.toml");Files.createDirectories(file.getParent());
-        Files.writeString(file,ServerSettings.template().replace("password = \"\"","password = '"+password+"'").replace("passwordEnvironment = \"\"","passwordEnvironment = \""+env+"\""));
+        Files.writeString(file,ServerSettings.template().replace("password = \"\"","password = '"+password+"'").replace("passwordEnv = \"\"","passwordEnv = \""+env+"\""));
     }
     @Test void acceptsLiteralPasswordAndHidesIt()throws Exception {
         String password="sëcret=:#\\value with spaces";config(password,"");

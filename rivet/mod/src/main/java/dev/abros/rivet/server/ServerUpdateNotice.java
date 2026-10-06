@@ -25,7 +25,7 @@ final class ServerUpdateNotice {
 
     private static synchronized void start(ServerStartedEvent event) {
         stopWorker();
-        if(!ServerDatabase.settings().flag("updates.notifyConsole"))return;
+        if(!ServerDatabase.settings().flag("updates.console"))return;
         var updater = new CoreUpdater(new Remote());
         var announced = new HashSet<String>();
         String running = Rivet.VERSION;

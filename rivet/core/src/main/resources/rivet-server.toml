@@ -7,18 +7,19 @@
 # Исключение: auth.mode = "false" — именно строка в кавычках.
 # Необязательные параметры можно пропустить: используются стандартные значения.
 # [project], [connection], [auth], [database] нужно сохранить полностью.
-# Новые параметры не дописываются автоматически в уже существующий файл.
+# При обновлении отсутствующие параметры добавляются с пояснениями.
+# Ваши значения сохраняются; резервная копия остаётся рядом с конфигом.
 
 [project]
 # Публичный GitHub-репозиторий сборки; пусто — без привязки к сборке.
 # Пример: repository = "https://github.com/owner/server-pack"
 repository = ""
 # Требовать Rivet и актуальную сборку. Без GitHub нужен проверенный кэш.
-requireProjectPack = false
+requirePack = false
 
 [connection]
 # Ожидание ответа клиента, секунды. Диапазон: 3–60.
-handshakeTimeoutSeconds = 10
+handshakeTimeout = 10
 
 # Интеграции с установленными модами подключаются автоматически через адаптеры.
 
@@ -26,9 +27,9 @@ handshakeTimeoutSeconds = 10
 # "false" — выключен, "base" — пароль, "hybrid" — пароль + официальный аккаунт.
 mode = "false"
 # Разрешить самостоятельную регистрацию.
-allowRegistration = true
+registration = true
 # Минимум для НОВЫХ паролей: 6–128 символов. Старые пароли сохраняются.
-minimumPasswordLength = 6
+minPasswordLength = 6
 
 [database]
 # Адрес PostgreSQL: 127.0.0.1, имя контейнера в общей сети или адрес хоста БД.
@@ -42,14 +43,14 @@ username = "rivet"
 password = ""
 # Необязательно: имя переменной окружения вместо password.
 # Если указано, переменная ОБЯЗАНА содержать пароль; скрытого fallback нет.
-passwordEnvironment = ""
+passwordEnv = ""
 # Пул соединений: 2–32.
-poolSize = 8
+pool = 8
 # "verify-full" — TLS с проверкой сертификата и имени хоста (по умолчанию);
 # "disable" — без TLS, для доверенной внутренней сети.
 sslMode = "verify-full"
 # Путь к корневому сертификату при необходимости.
-sslRootCert = ""
+sslCert = ""
 
 [statistics]
 # Выключенное поле не собирается и не показывается. История в БД сохраняется.
@@ -57,9 +58,9 @@ sslRootCert = ""
 firstJoin = true
 lastActivity = true
 # Общее время также используется для допуска к голосованиям о наказании.
-totalPlayTime = true
+playTime = true
 # Сбор времени сессии; показ в виджете игрок включает отдельно у себя.
-currentSession = true
+session = true
 # Число смертей.
 deaths = true
 
@@ -67,26 +68,26 @@ deaths = true
 # Библиотека и синхронизация скинов игроков.
 enabled = true
 # Максимум загружаемого PNG в МиБ: 1–16. Разрешение: 64×64 или 64×32.
-maxFileSizeMiB = 1
+maxSizeMiB = 1
 # Сохранённых скинов на игрока: 1–5. «Обычный» место не занимает.
-maxSkinsPerPlayer = 2
+maxPerPlayer = 2
 # "false" — стандартный; "UUID" — подтверждённый Mojang UUID; "nickname" — поиск по нику.
-mojangFallback = "false"
+fallback = "false"
 
-[moderationVotes]
+[votes]
 # По умолчанию выключены; защищённые игроки не могут быть целью.
 enabled = false
 # Участников без учёта цели: 5–300.
-minimumPlayers = 5
+minPlayers = 5
 # Длительность голосования, секунды: 30–600.
 durationSeconds = 120
 # Учтённое время инициатора, минуты: 0–10080.
-minimumPlayMinutes = 120
+minPlayMinutes = 120
 # Пауза для инициатора и защита цели от повторного голосования: 1–10080 минут.
 initiatorCooldownMinutes = 30
 targetCooldownMinutes = 60
 
-[moderationVotes.actions]
+[votes.actions]
 kick = true
 ban = true
 # Требуется доступная интеграция Plasmo Voice.
@@ -109,14 +110,14 @@ sections = ["home", "players", "board", "groups", "events", "polls", "ideas", "n
 
 [menu]
 # Текст помощи, до 2000 символов.
-helpText = "Откройте меню командой /rivet. За помощью обратитесь к администрации сервера."
+help = "Откройте меню командой /rivet. За помощью обратитесь к администрации сервера."
 # До 12 ссылок: имя до 60 символов, адрес HTTPS до 512 символов.
 # Пример: links = [{ name = "Сайт", url = "https://example.org" }]
 links = []
 
 [updates]
 # Проверять обновления и сообщать в консоль: при запуске и раз в 6 часов.
-notifyConsole = true
+console = true
 
 [retention]
 # Закрытые обращения и корзина: 1–365 дней. Открытые обращения сохраняются.
@@ -140,10 +141,10 @@ maxComments = 100
 # TPS — тики в секунду (обычно 20); MSPT — время одного тика в миллисекундах.
 # Предупреждение при TPS ниже порога ИЛИ MSPT выше порога.
 # TPS: 1–20; MSPT: 1–1000 мс.
-minimumTps = 18
-maximumMspt = 50
+minTps = 18
+maxMspt = 50
 # Как долго нагрузка должна непрерывно превышать порог: 1–3600 секунд.
-sustainedSeconds = 30
+durationSeconds = 30
 # Минимальная пауза между предупреждениями: 1–86400 секунд.
 cooldownSeconds = 300
 
@@ -156,15 +157,20 @@ enabled = true
 localName = "Рядом"
 globalName = ""
 # Разрешить [pos] — кликабельные координаты. При false остаётся обычным текстом.
-allowCoordinates = true
+coordinates = true
 # Локальный канал: радиус 1–1000 блоков, отдельно в каждом измерении.
-localEnabled = true
+local = true
 localRadius = 100
 # Канал объединений использует участников из базы данных Rivet.
-groupEnabled = true
+group = true
 
 [display]
 # Режим оформления TAB передаётся всем клиентам сервером.
 # "auto" — уступать известным модам оформления на клиенте;
 # "rivet" — оформление Rivet; "compatible" — стандартное оформление.
-tabMode = "auto"
+tab = "auto"
+
+# Оформление имени над головой: префикс LuckPerms + ник + суффикс.
+# true — включено для клиентов Rivet; false — обычное имя Minecraft.
+# Без LuckPerms имя остаётся обычным. UUID и ник аккаунта не меняются.
+nameplates = true

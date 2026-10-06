@@ -9,7 +9,7 @@ public record ServerProjectPolicy(String repository, boolean required, Repositor
     public static ServerProjectPolicy load(RepositoryClient client,String project,boolean required)throws Exception {
         String checked=Instant.now().toString();
         if(project.isBlank()) {
-            if(required)throw new IllegalArgumentException("Rivet: requireProjectPack=true требует ссылку project в config/rivet-server.toml");
+            if(required)throw new IllegalArgumentException("Rivet: requirePack=true требует ссылку project в config/rivet-server.toml");
             return new ServerProjectPolicy("",false,null,checked,"","","");
         }
         String repository=Repositories.normalize(project);

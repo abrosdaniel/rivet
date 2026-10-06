@@ -20,7 +20,7 @@ public final class ServerSettings {
             return new String(in.readAllBytes(),java.nio.charset.StandardCharsets.UTF_8);
         }
     }
-    public static ServerSettings load(Path root)throws IOException {
+    public static synchronized ServerSettings load(Path root)throws IOException {
         Path file=root.resolve("config/rivet-server.toml");
         if(Files.isSymbolicLink(file))throw invalid("файл не должен быть символической ссылкой");
         if(!Files.exists(file)){
@@ -30,15 +30,88 @@ public final class ServerSettings {
             Files.writeString(file,template());
         }
         if(Files.size(file)>65536)throw invalid("размер файла превышает 64 КиБ");
-        return parse(Files.readString(file));
+        String original=Files.readString(file);
+        var settings=parse(original); // Validate before changing an owner's file.
+        String expanded=expand(original);
+        if(!expanded.equals(original)){
+            parse(expanded);
+            if(expanded.getBytes(java.nio.charset.StandardCharsets.UTF_8).length>65536)throw invalid("дополненный файл превышает 64 КиБ");
+            if(!Files.readString(file).equals(original))throw new IOException("Rivet configuration changed while preparing update; retry startup");
+            Path backup=Files.createTempFile(file.getParent(),"rivet-server-",".toml.bak");
+            Files.copy(file,backup,StandardCopyOption.REPLACE_EXISTING,StandardCopyOption.COPY_ATTRIBUTES);
+            Path pending=Files.createTempFile(file.getParent(),".rivet-server-",".tmp");
+            try{
+                Files.copy(file,pending,StandardCopyOption.REPLACE_EXISTING,StandardCopyOption.COPY_ATTRIBUTES);
+                Files.writeString(pending,expanded);
+                try{Files.move(pending,file,StandardCopyOption.ATOMIC_MOVE,StandardCopyOption.REPLACE_EXISTING);}
+                catch(AtomicMoveNotSupportedException unsupported){Files.move(pending,file,StandardCopyOption.REPLACE_EXISTING);}
+            }finally{Files.deleteIfExists(pending);}
+        }
+        return settings;
+    }
+    /** Add only absent template fields; existing text, including secrets and comments, stays intact. */
+    private static String expand(String original)throws IOException{
+        var present=flatten(new TomlParser().parse(original));
+        var additions=new LinkedHashMap<String,StringBuilder>();
+        String section="";var comments=new StringBuilder();
+        for(String line:template().replace("\r\n","\n").split("\n")){
+            if(line.startsWith("[")){section=line.substring(1,line.indexOf(']'));comments.setLength(0);}
+            else if(line.isBlank()||line.stripLeading().startsWith("#"))comments.append(line).append('\n');
+            else{
+                String key=line.substring(0,line.indexOf('=')).strip();
+                if(!present.containsKey(section+"."+key))additions.computeIfAbsent(section,k->new StringBuilder()).append(comments).append(line).append('\n');
+                comments.setLength(0);
+            }
+        }
+        if(additions.isEmpty())return original;
+        String newline=original.contains("\r\n")?"\r\n":"\n";
+        var headers=new ArrayList<ConfigHeader>();String quote="";int offset=0;
+        for(String line:original.split("(?<=\n)",-1)){
+            if(quote.isEmpty()){
+                var match=java.util.regex.Pattern.compile("^\\s*\\[([^\\[].*)]\\s*(?:#.*)?$").matcher(line.strip());
+                if(match.matches()){
+                    var parsed=flatten(new TomlParser().parse("["+match.group(1)+"]\n__rivet_section_probe = true\n"));
+                    String path=parsed.keySet().iterator().next();headers.add(new ConfigHeader(path.substring(0,path.lastIndexOf('.')),offset));
+                }
+            }
+            quote=multilineQuote(line,quote);offset+=line.length();
+        }
+        var insertions=new TreeMap<Integer,StringBuilder>();
+        for(var entry:additions.entrySet()){
+            int index=-1;for(int n=0;n<headers.size();n++)if(headers.get(n).section().equals(entry.getKey())){index=n;break;}
+            if(index>=0){int at=index+1<headers.size()?headers.get(index+1).offset():original.length();insertions.computeIfAbsent(at,k->new StringBuilder()).append(newline).append(entry.getValue().toString().replace("\n",newline));}
+            else if(present.keySet().stream().anyMatch(key->key.startsWith(entry.getKey()+"."))){
+                // A section written as root-level dotted keys must keep that TOML representation.
+                int at=headers.isEmpty()?original.length():headers.getFirst().offset();
+                StringBuilder text=insertions.computeIfAbsent(at,k->new StringBuilder());text.append(newline);
+                for(String line:entry.getValue().toString().split("\n"))text.append(line.isBlank()||line.stripLeading().startsWith("#")?line:entry.getKey()+"."+line).append(newline);
+            }else insertions.computeIfAbsent(original.length(),k->new StringBuilder()).append(newline).append('[').append(entry.getKey()).append(']').append(newline).append(entry.getValue().toString().replace("\n",newline));
+        }
+        var result=new StringBuilder(original);for(var entry:insertions.descendingMap().entrySet())result.insert(entry.getKey(),entry.getValue());return result.toString();
+    }
+    private record ConfigHeader(String section,int offset){}
+    private static String multilineQuote(String line,String quote){
+        for(int n=0;n<line.length();n++){
+            if(!quote.isEmpty()){
+                if(quote.equals("\"\"\"")&&line.charAt(n)==92){n++;continue;}
+                if(line.startsWith(quote,n)){n+=2;quote="";}
+            }else{
+                char c=line.charAt(n);if(c=='#')break;
+                if(c=='\''||c=='"'){
+                    String triple=String.valueOf(c).repeat(3);
+                    if(line.startsWith(triple,n)){quote=triple;n+=2;}
+                    else while(++n<line.length()){if(c=='"'&&line.charAt(n)==92)n++;else if(line.charAt(n)==c)break;}
+                }
+            }
+        }return quote;
     }
     public static ServerSettings parse(String text){
         Map<String,Object> values,defaults;
         try{values=flatten(new TomlParser().parse(text));defaults=flatten(new TomlParser().parse(template()));}
         catch(Exception failure){throw invalid("ошибка TOML: проверьте кавычки, типы и повторяющиеся параметры (значения скрыты)");}
         // Obsolete punishment defaults are ignored, so existing production configs still load.
-        values.remove("chat.allowItems");values.remove("integrations.luckperms");values.remove("display.chatMode");values.remove("moderationVotes.actions.banMinutes");values.remove("moderationVotes.actions.muteMinutes");
-        for(var e:defaults.entrySet())if(!values.containsKey(e.getKey())&&List.of("statistics.","skins.","moderationVotes.","community.","menu.","updates.","retention.","chat.","display.","tasks.","spark.").stream().anyMatch(e.getKey()::startsWith))values.put(e.getKey(),e.getValue());
+        values.remove("chat.allowItems");values.remove("integrations.luckperms");values.remove("display.chatMode");values.remove("votes.actions.banMinutes");values.remove("votes.actions.muteMinutes");
+        for(var e:defaults.entrySet())if(!values.containsKey(e.getKey())&&List.of("statistics.","skins.","votes.","community.","menu.","updates.","retention.","chat.","display.","tasks.","spark.").stream().anyMatch(e.getKey()::startsWith))values.put(e.getKey(),e.getValue());
         var missing=new TreeSet<>(defaults.keySet());missing.removeAll(values.keySet());
         if(!missing.isEmpty())throw invalid("отсутствуют обязательные параметры: "+String.join(", ",missing)+"; сверяйтесь с SERVER_GUIDE.md");
         var unknown=new TreeSet<>(values.keySet());unknown.removeAll(defaults.keySet());
@@ -58,30 +131,30 @@ public final class ServerSettings {
     public int number(String key){return Math.toIntExact(((Number)values.get(key)).longValue());}
     private void range(String key,int min,int max){long n=((Number)values.get(key)).longValue();if(n<min||n>max)throw invalid(key+": допустимо "+min+"–"+max);}
     private void validate(){
-        range("retention.reportDays",1,365);range("retention.trashDays",1,365);range("retention.auditEntries",100,100000);skins();range("connection.handshakeTimeoutSeconds",3,60);range("auth.minimumPasswordLength",6,128);
+        range("retention.reportDays",1,365);range("retention.trashDays",1,365);range("retention.auditEntries",100,100000);skins();range("connection.handshakeTimeout",3,60);range("auth.minPasswordLength",6,128);
         range("tasks.maxPerOwner",0,Integer.MAX_VALUE);range("tasks.maxSubtasks",0,Integer.MAX_VALUE);range("tasks.maxComments",0,Integer.MAX_VALUE);
-        range("spark.minimumTps",1,20);range("spark.maximumMspt",1,1000);range("spark.sustainedSeconds",1,3600);range("spark.cooldownSeconds",1,86400);
-        range("database.port",1,65535);range("database.poolSize",2,32);
+        range("spark.minTps",1,20);range("spark.maxMspt",1,1000);range("spark.durationSeconds",1,3600);range("spark.cooldownSeconds",1,86400);
+        range("database.port",1,65535);range("database.pool",2,32);
         if(!Set.of("false","base","hybrid").contains(text("auth.mode")))throw invalid("auth.mode: ожидается строка false, base или hybrid");
-        if(text("menu.helpText").length()>2000)throw invalid("menu.helpText: максимум 2000 символов");
-        String env=text("database.passwordEnvironment");if(!env.isEmpty()&&!env.matches("[A-Za-z_][A-Za-z0-9_]*"))throw invalid("database.passwordEnvironment: неверное имя переменной");
-        for(String key:List.of("display.tabMode"))if(!Set.of("auto","rivet","compatible").contains(text(key)))throw invalid(key+": auto, rivet или compatible");
+        if(text("menu.help").length()>2000)throw invalid("menu.help: максимум 2000 символов");
+        String env=text("database.passwordEnv");if(!env.isEmpty()&&!env.matches("[A-Za-z_][A-Za-z0-9_]*"))throw invalid("database.passwordEnv: неверное имя переменной");
+        for(String key:List.of("display.tab"))if(!Set.of("auto","rivet","compatible").contains(text(key)))throw invalid(key+": auto, rivet или compatible");
         for(String key:List.of("chat.localName","chat.globalName"))if(text(key).codePointCount(0,text(key).length())>40||text(key).codePoints().anyMatch(Character::isISOControl))throw invalid(key+": до 40 символов, без переводов строк");
         if(number("chat.localRadius")<1||number("chat.localRadius")>1000)throw invalid("chat.localRadius: 1–1000");
-        try{votes();community();menu();new DatabaseSettings(text("database.host"),number("database.port"),text("database.database"),text("database.username"),"validation",text("database.sslMode"),text("database.sslRootCert"),number("database.poolSize"));}
-        catch(Exception failure){throw invalid("проверьте диапазоны moderationVotes, списки community, ссылки menu и параметры database; значения скрыты");}
+        try{votes();community();menu();new DatabaseSettings(text("database.host"),number("database.port"),text("database.database"),text("database.username"),"validation",text("database.sslMode"),text("database.sslCert"),number("database.pool"));}
+        catch(Exception failure){throw invalid("проверьте диапазоны votes, списки community, ссылки menu и параметры database; значения скрыты");}
     }
     public DatabaseSettings database(){return database(System::getenv);}
     DatabaseSettings database(Function<String,String> environment){
-        String env=text("database.passwordEnvironment"),password=env.isEmpty()?text("database.password"):environment.apply(env);
-        if(password==null||password.isBlank())throw invalid("заполните database.password или заданную переменную database.passwordEnvironment");
-        return new DatabaseSettings(text("database.host"),number("database.port"),text("database.database"),text("database.username"),password,text("database.sslMode"),text("database.sslRootCert"),number("database.poolSize"));
+        String env=text("database.passwordEnv"),password=env.isEmpty()?text("database.password"):environment.apply(env);
+        if(password==null||password.isBlank())throw invalid("заполните database.password или заданную переменную database.passwordEnv");
+        return new DatabaseSettings(text("database.host"),number("database.port"),text("database.database"),text("database.username"),password,text("database.sslMode"),text("database.sslCert"),number("database.pool"));
     }
-    public dev.abros.rivet.core.skins.SkinSettings skins(){return new dev.abros.rivet.core.skins.SkinSettings(flag("skins.enabled"),number("skins.maxFileSizeMiB"),number("skins.maxSkinsPerPlayer"),text("skins.mojangFallback"));}
+    public dev.abros.rivet.core.skins.SkinSettings skins(){return new dev.abros.rivet.core.skins.SkinSettings(flag("skins.enabled"),number("skins.maxSizeMiB"),number("skins.maxPerPlayer"),text("skins.fallback"));}
     public TaskLimits taskLimits(){return new TaskLimits(number("tasks.maxPerOwner"),number("tasks.maxSubtasks"),number("tasks.maxComments"));}
-    public SparkTimeline.AlertSettings sparkAlerts(){return new SparkTimeline.AlertSettings(number("spark.minimumTps"),number("spark.maximumMspt"),number("spark.sustainedSeconds"),number("spark.cooldownSeconds"));}
-    public PlayerStatistics.Settings statistics(){return new PlayerStatistics.Settings(flag("statistics.firstJoin"),flag("statistics.lastActivity"),flag("statistics.totalPlayTime"),flag("statistics.currentSession"),flag("statistics.deaths"));}
-    public ModerationVotes.Settings votes(){return new ModerationVotes.Settings(flag("moderationVotes.enabled"),number("moderationVotes.minimumPlayers"),number("moderationVotes.durationSeconds"),number("moderationVotes.minimumPlayMinutes"),number("moderationVotes.initiatorCooldownMinutes"),number("moderationVotes.targetCooldownMinutes"),flag("moderationVotes.actions.kick"),flag("moderationVotes.actions.ban"),flag("moderationVotes.actions.mute"));}
+    public SparkTimeline.AlertSettings sparkAlerts(){return new SparkTimeline.AlertSettings(number("spark.minTps"),number("spark.maxMspt"),number("spark.durationSeconds"),number("spark.cooldownSeconds"));}
+    public PlayerStatistics.Settings statistics(){return new PlayerStatistics.Settings(flag("statistics.firstJoin"),flag("statistics.lastActivity"),flag("statistics.playTime"),flag("statistics.session"),flag("statistics.deaths"));}
+    public ModerationVotes.Settings votes(){return new ModerationVotes.Settings(flag("votes.enabled"),number("votes.minPlayers"),number("votes.durationSeconds"),number("votes.minPlayMinutes"),number("votes.initiatorCooldownMinutes"),number("votes.targetCooldownMinutes"),flag("votes.actions.kick"),flag("votes.actions.ban"),flag("votes.actions.mute"));}
     public JsonObject community(){var j=new JsonObject();j.addProperty("groupsTitle",text("community.groupsTitle"));j.addProperty("maxMemberships",number("community.maxMemberships"));for(String key:List.of("categories","groupTypes","sections")){var a=new JsonArray();for(Object v:(List<?>)values.get("community."+key)){if(!(v instanceof String s))throw invalid("community."+key+": ожидаются строки");a.add(s);}j.add(key,a);}return CommunityStore.validateConfig(j);}
     public JsonObject menu(){var j=new JsonObject();var a=new JsonArray();for(Object v:(List<?>)values.get("menu.links")){if(!(v instanceof UnmodifiableConfig c))throw invalid("menu.links: ожидаются name и url");var link=new JsonObject();for(var e:c.entrySet()){if(!(e.getValue() instanceof String s))throw invalid("menu.links: ожидаются строки");link.addProperty(e.getKey(),s);}a.add(link);}j.add("links",a);return ServerMenuData.validate(j);}
     private static IllegalArgumentException invalid(String detail){return new IllegalArgumentException("Rivet: config/rivet-server.toml — "+detail+". Запуск остановлен.");}

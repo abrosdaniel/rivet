@@ -63,7 +63,7 @@ public final class AuthServer {
         if(ModList.get().isLoaded("authlogic"))throw new IllegalStateException("Remove AuthLogic before enabling Rivet Auth");
         root=net.neoforged.fml.loading.FMLPaths.GAMEDIR.get();
         try{
-            store=new AuthStore(database,ServerDatabase.settings().number("auth.minimumPasswordLength"));identities=new ServerIdentities(store.profiles());identity=AuthTls.identity(root.resolve("rivet"));mode=requestedMode;
+            store=new AuthStore(database,ServerDatabase.settings().number("auth.minPasswordLength"));identities=new ServerIdentities(store.profiles());identity=AuthTls.identity(root.resolve("rivet"));mode=requestedMode;
             com.mojang.logging.LogUtils.getLogger().info("Rivet Auth TLS fingerprint: {}",identity.fingerprint());
         }catch(Exception ex){throw new IllegalStateException("Cannot initialize Rivet Auth; startup aborted",ex);}
     }
@@ -105,7 +105,7 @@ public final class AuthServer {
         final AuthTls.Tunnel tunnel;volatile AuthStore.Account account;volatile boolean joined,transportReady;boolean upgrading;boolean offered,resetAllowed;volatile String device="";long window;int packets,attempts;long lastAction;
         Session(ServerConfigurationPacketListenerImpl listener)throws Exception{this.listener=listener;connection=listener.getConnection();name=AuthStore.name(listener.getOwner().getName());uuid=listener.getOwner().getId().toString();tunnel=new AuthTls.Tunnel(identity.context(),false,b->connection.send(new ClientboundCustomPayloadPacket(new AuthProtocol.ToClient(b))),this::message);}
         void send(JsonObject j)throws Exception{tunnel.send(Json.GSON.toJson(j));}
-        void offer()throws Exception{var j=result("offer","");j.addProperty("mode",mode);j.addProperty("name",name);j.addProperty("challenge",challenge);var a=database.account(name);j.addProperty("type",a==null?"new":a.type());j.addProperty("linked",a!=null&&a.official()!=null);j.addProperty("registration",ServerDatabase.settings().flag("auth.allowRegistration"));j.addProperty("minimumPasswordLength",database.minimumPasswordLength());send(j);}
+        void offer()throws Exception{var j=result("offer","");j.addProperty("mode",mode);j.addProperty("name",name);j.addProperty("challenge",challenge);var a=database.account(name);j.addProperty("type",a==null?"new":a.type());j.addProperty("linked",a!=null&&a.official()!=null);j.addProperty("registration",ServerDatabase.settings().flag("auth.registration"));j.addProperty("minimumPasswordLength",database.minimumPasswordLength());send(j);}
         void message(String json){message(json,null);}
         void message(String json,String verified){try{
             var j=Json.parse(json);String action=Json.str(j,"action");long now=System.currentTimeMillis();
@@ -121,7 +121,7 @@ public final class AuthServer {
                 if(account!=null)throw new IllegalArgumentException("Ожидается подтверждение входа");if(verified==null){if(++attempts>10){disconnect("Слишком много попыток входа");return;}database.checkRate(name,now);}
                 switch(action){
                     case "login" -> account=withPassword(j,"password",p->database.login(name,uuid,p,now));
-                    case "register" -> {if(!ServerDatabase.settings().flag("auth.allowRegistration"))throw new IllegalArgumentException("Регистрация закрыта. Обратитесь к администратору");account=withPassword(j,"password",p->database.register(name,uuid,p,now));}
+                    case "register" -> {if(!ServerDatabase.settings().flag("auth.registration"))throw new IllegalArgumentException("Регистрация закрыта. Обратитесь к администратору");account=withPassword(j,"password",p->database.register(name,uuid,p,now));}
                     case "device" -> {String token=Json.str(j,"token");account=database.deviceLogin(name,uuid,token,now);device=database.deviceId(name,token);}
                     case "official" -> {
                         if(!mode.equals("hybrid"))throw new IllegalArgumentException("Официальный вход недоступен");
