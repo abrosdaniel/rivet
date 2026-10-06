@@ -140,6 +140,8 @@ public final class ServerSettings {
         String env=text("database.passwordEnv");if(!env.isEmpty()&&!env.matches("[A-Za-z_][A-Za-z0-9_]*"))throw invalid("database.passwordEnv: неверное имя переменной");
         for(String key:List.of("display.tab"))if(!Set.of("auto","rivet","compatible").contains(text(key)))throw invalid(key+": auto, rivet или compatible");
         for(String key:List.of("chat.localName","chat.globalName"))if(text(key).codePointCount(0,text(key).length())>40||text(key).codePoints().anyMatch(Character::isISOControl))throw invalid(key+": до 40 символов, без переводов строк");
+        for(String key:List.of("chat.localColor","chat.globalColor","chat.groupColor"))if(!text(key).matches("#[0-9a-fA-F]{6}"))throw invalid(key+": ожидается цвет #RRGGBB в кавычках");
+        ChatFormat.parse(text("chat.format"),false);ChatFormat.parse(text("chat.channelFormat"),true);
         if(number("chat.localRadius")<1||number("chat.localRadius")>1000)throw invalid("chat.localRadius: 1–1000");
         try{votes();community();menu();new DatabaseSettings(text("database.host"),number("database.port"),text("database.database"),text("database.username"),"validation",text("database.sslMode"),text("database.sslCert"),number("database.pool"));}
         catch(Exception failure){throw invalid("проверьте диапазоны votes, списки community, ссылки menu и параметры database; значения скрыты");}

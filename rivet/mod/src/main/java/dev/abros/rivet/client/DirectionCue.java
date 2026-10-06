@@ -32,7 +32,7 @@ final class DirectionCue {
   var mc=Minecraft.getInstance();var point=active();var settings=HudSettings.INSTANCE;
   if(!preview&&(!settings.directionEnabled||point==null||mc.player==null||mc.screen!=null&&!(mc.screen instanceof net.minecraft.client.gui.screens.ChatScreen)&&!(mc.screen instanceof HudInteractionScreen)||mc.options.hideGui))return;if(point==null)point=new CommunityLocation("Точка маршрута","minecraft:overworld",10,64,10,false);
   String text;
-  if(preview)text="↑  120 м · 10, 10";else if(!mc.level.dimension().location().toString().equals(point.dimension()))text="Другое измерение · "+point.dimension();
+  if(preview)text="↑  120 м · 10, 10";else if(!mc.level.dimension().location().toString().equals(point.dimension()))text="Другое измерение: "+dev.abros.rivet.network.DimensionLabels.name(point.dimension()).getString();
   else{
    double dx=point.x()-mc.player.getX(),dz=point.z()-mc.player.getZ();
    double angle=net.minecraft.util.Mth.wrapDegrees((float)(Math.toDegrees(Math.atan2(-dx,dz))-mc.player.getYRot()));
