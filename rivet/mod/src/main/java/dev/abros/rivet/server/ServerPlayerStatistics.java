@@ -18,13 +18,11 @@ final class ServerPlayerStatistics {
     private static PlayerStatistics store;
     private static long lastCheckpoint;
     static void install(){
-        NeoForge.EVENT_BUS.addListener((net.neoforged.neoforge.event.server.ServerStartingEvent e)->start());
         NeoForge.EVENT_BUS.addListener((net.neoforged.neoforge.event.tick.ServerTickEvent.Post e)->tick(e.getServer()));
         NeoForge.EVENT_BUS.addListener((net.neoforged.neoforge.event.entity.player.PlayerEvent.PlayerLoggedOutEvent e)->{if(e.getEntity() instanceof ServerPlayer p)end(p.getUUID());});
         NeoForge.EVENT_BUS.addListener(net.neoforged.bus.api.EventPriority.LOWEST,(net.neoforged.neoforge.event.entity.living.LivingDeathEvent e)->{if(e.getEntity() instanceof ServerPlayer p&&AuthServer.authenticated(p)){Session s=sessions.get(p.getUUID());if(s!=null&&store.settings().deaths()&&(s.lastDeathEntity!=p||s.lastDeathTick!=p.tickCount)){s.lastDeathEntity=p;s.lastDeathTick=p.tickCount;s.deaths++;}}});
-        NeoForge.EVENT_BUS.addListener((net.neoforged.neoforge.event.server.ServerStoppingEvent e)->stop());
     }
-    private static void start(){
+    static void start(){
         sessions.clear();lastCheckpoint=0;
         try{
             store=new PlayerStatistics(ServerDatabase.get(),ServerDatabase.settings().statistics());
@@ -33,6 +31,7 @@ final class ServerPlayerStatistics {
     }
     private static void tick(MinecraftServer server){
         if(store==null)return;
+        var settings=store.settings();if(!settings.firstJoin()&&!settings.lastActivity()&&!settings.totalTime()&&!settings.session()&&!settings.deaths())return;
         for(var player:server.getPlayerList().getPlayers())if(AuthServer.authenticated(player)&&!sessions.containsKey(player.getUUID())){
             var session=new Session();sessions.put(player.getUUID(),session);save(player.getUUID(),session,true);
         }
@@ -57,9 +56,9 @@ final class ServerPlayerStatistics {
         });}catch(RejectedExecutionException busy){com.mojang.logging.LogUtils.getLogger().warn("Rivet: player statistics queue is full");}
     }
     private static void end(UUID player){var session=sessions.remove(player);if(session!=null)save(player,session,false);}
-    private static void stop(){
+    static void stop(){
         for(UUID player:List.copyOf(sessions.keySet()))end(player);
         if(writer!=null){writer.shutdown();try{if(!writer.awaitTermination(15,TimeUnit.SECONDS)){writer.shutdownNow();com.mojang.logging.LogUtils.getLogger().warn("Rivet: statistics shutdown timed out; last checkpoint is retained");}}catch(InterruptedException interrupted){writer.shutdownNow();Thread.currentThread().interrupt();}}
-        store=null;
+        store=null;writer=null;sessions.clear();
     }
 }

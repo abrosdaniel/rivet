@@ -8,6 +8,7 @@ import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.fml.common.EventBusSubscriber;
 @EventBusSubscriber(modid="rivet",value=Dist.CLIENT)
 public final class RivetChatIdentityHarness {
+ static boolean complete(){return stage==10;}
  private static boolean connecting;private static int stage;private static long next;
  @SubscribeEvent public static void tick(net.neoforged.neoforge.client.event.ClientTickEvent.Post event){
   if(System.getenv("RIVET_CHAT_IDENTITY_REVIEW")==null||stage==10)return;var mc=Minecraft.getInstance();long now=System.currentTimeMillis();
@@ -111,6 +112,6 @@ public final class RivetChatIdentityHarness {
  }
  private static net.neoforged.neoforge.client.event.RenderNameTagEvent nameplate(){var mc=Minecraft.getInstance();return new net.neoforged.neoforge.client.event.RenderNameTagEvent(mc.player,Component.literal(mc.player.getGameProfile().getName()),mc.getEntityRenderDispatcher().getRenderer(mc.player),new com.mojang.blaze3d.vertex.PoseStack(),mc.renderBuffers().bufferSource(),0,0);}
  private static net.minecraft.network.chat.Style coordinateStyle(Component component){var click=component.getStyle().getClickEvent();if(click!=null&&click.getValue().startsWith("/rivet direction "))return component.getStyle();for(var child:component.getSiblings()){var found=coordinateStyle(child);if(found!=null)return found;}return null;}
- private static void capture(String name){var dir=new java.io.File("/private/tmp/rivet-chat-identity");dir.mkdirs();var mc=Minecraft.getInstance();net.minecraft.client.Screenshot.grab(dir,name+".png",mc.getMainRenderTarget(),msg->{});}
+ private static void capture(String name){var dir=new java.io.File("/private/tmp/rivet-chat-identity");dir.mkdirs();var mc=Minecraft.getInstance();UiCaptureHarness.grab(dir,name+".png",mc.getMainRenderTarget(),msg->{});}
  private static void check(boolean ok,String message){if(!ok)throw new IllegalStateException(message);}
 }

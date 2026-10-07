@@ -64,6 +64,11 @@ class SnapshotCounts(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "RIVET_REORDER_UI_FAILED: step=3"):
             m.validate(self.frames, "checks", self.log, "RIVET_REORDER_UI_OK")
 
+    def test_checks_reject_tab_failure_even_with_completion(self):
+        self.log.write_text("RIVET_TAB_LAYOUT_FAILED frame=2\nRIVET_TAB_LAYOUT_OK: frames=126\n")
+        with self.assertRaisesRegex(ValueError, "RIVET_TAB_LAYOUT_FAILED"):
+            m.validate(self.frames, "checks", self.log, "RIVET_TAB_LAYOUT_OK")
+
     def test_checks_reject_missing_or_invalid_completion(self):
         for text in ["", "RIVET_REORDER_UI_PLAN: frames=135", "RIVET_REORDER_UI_OK", "RIVET_REORDER_UI_OK: frames=0", "RIVET_REORDER_UI_OK: frames=1\nRIVET_REORDER_UI_OK: frames=1"]:
             with self.subTest(text=text):

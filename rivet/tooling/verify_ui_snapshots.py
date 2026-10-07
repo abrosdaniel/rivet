@@ -3,9 +3,10 @@ import pathlib, re, struct, sys, zlib
 
 def validate(directory, count, log, marker):
     text=pathlib.Path(log).read_text(encoding="utf-8", errors="replace")
-    if marker not in text or "_UI_FAILED" in text or "RIVET_NATIVE_FAILED" in text or "Error executing task on Client" in text:
+    failure_pattern = r"RIVET_[A-Z0-9_]*FAILED\b|Error executing task on Client"
+    if marker not in text or re.search(failure_pattern, text):
         lines = text.splitlines()
-        failed = [i for i, line in enumerate(lines) if re.search(r"_UI_FAILED|RIVET_NATIVE_FAILED|Error executing task on Client", line)]
+        failed = [i for i, line in enumerate(lines) if re.search(failure_pattern, line)]
         details = "\n".join("\n".join(lines[i:i+13]) for i in failed) or f"Missing completion marker: {marker}"
         raise ValueError(f"Native UI regression checks did not complete\n{details}\nSee the Minecraft scenario log for the original failure.")
     if count in ("auto", "checks"):

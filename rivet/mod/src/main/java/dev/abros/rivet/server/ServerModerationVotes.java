@@ -14,10 +14,12 @@ final class ServerModerationVotes {
  private static final Map<UUID,String> announced=new HashMap<>();private static String published="";
  private static ModerationVotes votes;private static final AtomicBoolean checking=new AtomicBoolean();private static long lastCheck;
  static void install(){
-  NeoForge.EVENT_BUS.addListener((net.neoforged.neoforge.event.server.ServerStartingEvent e)->{try{votes=new ModerationVotes(ServerDatabase.get(),ServerDatabase.settings().votes());votes.restart();checking.set(false);lastCheck=0;announced.clear();published="";}catch(Exception failure){throw new IllegalStateException("Cannot initialize Rivet moderation votes",failure);}});
+
   NeoForge.EVENT_BUS.addListener((net.neoforged.neoforge.event.tick.ServerTickEvent.Post e)->tick(e.getServer()));
-  NeoForge.EVENT_BUS.addListener((net.neoforged.neoforge.event.server.ServerStoppingEvent e)->votes=null);
+
  }
+ static void start(){try{votes=new ModerationVotes(ServerDatabase.get(),ServerDatabase.settings().votes());votes.restart();checking.set(false);lastCheck=0;announced.clear();published="";}catch(Exception failure){throw new IllegalStateException("Cannot initialize Rivet moderation votes",failure);}}
+ static void stop(){votes=null;checking.set(false);announced.clear();published="";}
  static JsonObject configuration(MinecraftServer server){var j=new JsonObject();if(votes==null)return j;var s=votes.settings();j.addProperty("enabled",s.enabled());j.addProperty("minimumPlayers",s.minimumPlayers());j.addProperty("minimumPlayMinutes",s.minimumPlayMinutes());j.addProperty("durationSeconds",s.durationSeconds());j.addProperty("banMinutes",30);j.addProperty("muteMinutes",15);j.addProperty("maximumPunishmentMinutes",1440);var actions=new JsonArray();if(s.kick())actions.add("kick");if(s.ban())actions.add("ban");if(s.mute()&&voiceAvailable(server))actions.add("mute");j.add("actions",actions);return j;}
  private static boolean voiceAvailable(MinecraftServer server){return PlasmoVoiceAdapter.available();}
  private static boolean protectedPlayer(MinecraftServer server,UUID id,String name){

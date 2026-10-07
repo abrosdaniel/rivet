@@ -21,9 +21,9 @@ public final class ServerFeatures {
     private static final Map<UUID,Long> joined=new HashMap<>();
     private static final Map<UUID,Long> mapConsent=new HashMap<>();
     private static final Map<String,Long> requests=new HashMap<>();
-    private static final ExecutorService STORAGE=new ThreadPoolExecutor(4,4,0L,TimeUnit.MILLISECONDS,new ArrayBlockingQueue<>(256),r->{Thread t=new Thread(r,"Rivet storage");t.setDaemon(true);return t;},new ThreadPoolExecutor.AbortPolicy());
-    private static final ExecutorService CONTROL=new ThreadPoolExecutor(1,1,0L,TimeUnit.MILLISECONDS,new ArrayBlockingQueue<>(64),r->{var thread=new Thread(r,"Rivet server changes");thread.setDaemon(true);return thread;},new ThreadPoolExecutor.AbortPolicy());
-    private static final ExecutorService READS=new ThreadPoolExecutor(2,2,0L,TimeUnit.MILLISECONDS,new ArrayBlockingQueue<>(64),r->{var thread=new Thread(r,"Rivet menu reads");thread.setDaemon(true);return thread;},new ThreadPoolExecutor.AbortPolicy());
+    private static ExecutorService STORAGE;
+    private static ExecutorService CONTROL;
+    private static ExecutorService READS;
     private static final java.util.concurrent.atomic.AtomicBoolean delivering=new java.util.concurrent.atomic.AtomicBoolean();
     static void storage(Runnable task){STORAGE.execute(task);}
     private static final dev.abros.rivet.core.LatencyHistory latencyHistory=new dev.abros.rivet.core.LatencyHistory();
@@ -48,14 +48,12 @@ public final class ServerFeatures {
     private static long lastPrune,lastStatePush;private static final java.util.concurrent.atomic.AtomicBoolean refreshing=new java.util.concurrent.atomic.AtomicBoolean();
     public static void install(){
         Protocol.featureRequest=ServerFeatures::request;
-        ServerPlayerStatistics.install();ServerModerationVotes.install();
         NeoForge.EVENT_BUS.addListener(ServerFeatures::commands);
-        NeoForge.EVENT_BUS.addListener(ServerFeatures::start);
         NeoForge.EVENT_BUS.addListener(ServerFeatures::login);
         NeoForge.EVENT_BUS.addListener(ServerFeatures::logout);
         NeoForge.EVENT_BUS.addListener(ServerFeatures::tick);
     }
-    private static void start(net.neoforged.neoforge.event.server.ServerStartingEvent e){latencyHistory.clear();mapConsent.clear();
+    static void start(net.neoforged.neoforge.event.server.ServerStartingEvent e){STORAGE=new ThreadPoolExecutor(4,4,0L,TimeUnit.MILLISECONDS,new ArrayBlockingQueue<>(256),r->{Thread t=new Thread(r,"Rivet storage");t.setDaemon(true);return t;},new ThreadPoolExecutor.AbortPolicy());CONTROL=new ThreadPoolExecutor(1,1,0L,TimeUnit.MILLISECONDS,new ArrayBlockingQueue<>(64),r->{var thread=new Thread(r,"Rivet server changes");thread.setDaemon(true);return thread;},new ThreadPoolExecutor.AbortPolicy());READS=new ThreadPoolExecutor(2,2,0L,TimeUnit.MILLISECONDS,new ArrayBlockingQueue<>(64),r->{var thread=new Thread(r,"Rivet menu reads");thread.setDaemon(true);return thread;},new ThreadPoolExecutor.AbortPolicy());latencyHistory.clear();mapConsent.clear();
         timerPending=false;failures.clear();originalMotd=e.getServer().getMotd();lastPrune=0;lastStatePush=0;
         menuClients.clear();subscriptions.clear();clients.clear();joined.clear();requests.clear();restartAt=0;lastPush=0;maintenance=false;maintenanceUntil=0;
         var database=ServerDatabase.get();
@@ -68,6 +66,7 @@ public final class ServerFeatures {
         }
         catch(Exception ex){throw new IllegalStateException("Cannot initialize Rivet server features",ex);}
     }
+    static void stop(){ServerTaskStocks.stop();ModuleWorkers.stop(CONTROL,READS,STORAGE);CONTROL=null;READS=null;STORAGE=null;ServerExtras.stop();community=null;reports=null;menuClients.clear();subscriptions.clear();clients.clear();joined.clear();requests.clear();mapConsent.clear();unread.clear();popupSequence.clear();latencyHistory.clear();}
     public static void integrationNotice(ServerPlayer player,String title,String body,String route,String event){
         var store=community;if(store==null||!AuthServer.authenticated(player))return;String id=player.getUUID().toString();
         try{STORAGE.execute(()->{try{store.integrationNotice(id,title,body,route,event);}catch(Exception failure){com.mojang.logging.LogUtils.getLogger().warn("Cannot persist integration notification",failure);}});}catch(RejectedExecutionException full){com.mojang.logging.LogUtils.getLogger().warn("Integration notification queue is full");}

@@ -13,6 +13,7 @@ final class ServerExtras {
     private static dev.abros.rivet.core.CommunityStore database;
     private static JsonObject menu=new JsonObject();
     static void start(Path root,dev.abros.rivet.core.CommunityStore db)throws Exception{database=db;reload();}
+    static void stop(){database=null;menu=new JsonObject();}
     static void reload()throws Exception{
         menu=ServerDatabase.settings().menu();
     }

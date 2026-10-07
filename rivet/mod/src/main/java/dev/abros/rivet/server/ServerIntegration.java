@@ -29,7 +29,7 @@ public final class ServerIntegration {
         bus.addListener(ServerIntegration::tasks);
         dev.abros.rivet.server.compat.CompatibilityRegistry.install();
         ServerDatabase.install();
-        ServerSkins.install();AuthServer.install(bus,container);ServerFeatures.install();ServerSocial.install();ServerUpdateNotice.install();
+        ServerModules.install(bus,container);ServerUpdateNotice.install();
         NeoForge.EVENT_BUS.addListener(ServerIntegration::starting);
         NeoForge.EVENT_BUS.addListener(ServerIntegration::commands);
         NeoForge.EVENT_BUS.addListener((net.neoforged.neoforge.event.server.ServerStoppedEvent event)->{policy=null;NONCES.clear();FEATURES.clear();});

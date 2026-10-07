@@ -20,5 +20,17 @@ public final class SkinWire {
   public static final StreamCodec<FriendlyByteBuf,Response> CODEC=StreamCodec.of((b,p)->b.writeUtf(p.json,32767),b->new Response(b.readUtf(32767)));
   public Type<Response> type(){return TYPE;}
  }
- public static void register(RegisterPayloadHandlersEvent e){var r=e.registrar("3").optional();r.playToServer(Request.TYPE,Request.CODEC,(p,c)->c.enqueueWork(()->{try{server.accept(Json.parse(p.json),c);}catch(Exception ignored){}}));r.playToClient(Response.TYPE,Response.CODEC,(p,c)->c.enqueueWork(()->{try{client.accept(Json.parse(p.json));}catch(Exception ignored){}}));}
+ private static final org.slf4j.Logger LOG=com.mojang.logging.LogUtils.getLogger();
+ private static long lastRequestFailure,lastResponseFailure;
+ public static synchronized void failure(boolean request,Exception error){
+  long now=System.currentTimeMillis(),previous=request?lastRequestFailure:lastResponseFailure;
+  if(previous!=0&&now-previous<30000)return;
+  if(request)lastRequestFailure=now;else lastResponseFailure=now;
+  // Do not log packet contents or exception messages: they may contain private data.
+  String location=java.util.Arrays.stream(error.getStackTrace()).limit(8).map(StackTraceElement::toString).collect(java.util.stream.Collectors.joining("\n  at "));
+  LOG.warn("Rivet skin {} failed: {}\n  at {}\nFurther failures on this side are suppressed for 30 seconds.",request?"request":"response",error.getClass().getSimpleName(),location);
+ }
+ private static void request(String json,IPayloadContext context){try{server.accept(Json.parse(json),context);}catch(Exception error){failure(true,error);}}
+ private static void response(String json){try{client.accept(Json.parse(json));}catch(Exception error){failure(false,error);}}
+ public static void register(RegisterPayloadHandlersEvent e){var r=e.registrar("3").optional();r.playToServer(Request.TYPE,Request.CODEC,(p,c)->c.enqueueWork(()->request(p.json,c)));r.playToClient(Response.TYPE,Response.CODEC,(p,c)->c.enqueueWork(()->response(p.json)));}
 }

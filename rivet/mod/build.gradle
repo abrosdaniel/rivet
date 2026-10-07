@@ -137,3 +137,30 @@ tasks.register('compatibilityTestJar', Jar) {
     }
     from(layout.buildDirectory.dir('compatibility-tests/resources'))
 }
+
+// Feature installation belongs to a composition root, not another feature.
+tasks.register('checkModuleComposition') {
+    def sources = fileTree('src/main/java') { include '**/*.java' }
+    inputs.files(sources)
+    doLast {
+        def owners = [
+            'AuthClient': 'ClientModules.java', 'SkinClient': 'ClientModules.java',
+            'SocialClient': 'ClientModules.java', 'ClientChat': 'ClientModules.java',
+            'ClientNavigation': 'ClientModules.java', 'RivetHud': 'ClientModules.java',
+            'AuthServer': 'ServerModules.java', 'ServerSkins': 'ServerModules.java',
+            'ServerFeatures': 'ServerModules.java', 'ServerSocial': 'ServerModules.java',
+            'ServerChat': 'ServerModules.java', 'ServerNavigation': 'ServerModules.java',
+            'ServerPlayerStatistics': 'ServerModules.java', 'ServerModerationVotes': 'ServerModules.java'
+        ]
+        def violations = []
+        sources.each { source ->
+            def text = source.getText('UTF-8')
+            owners.each { feature, owner ->
+                if (source.name != owner && text =~ /\b${feature}\.install\s*\(/)
+                    violations.add("${source.name}: ${feature} registration belongs to ${owner}")
+            }
+        }
+        if (!violations.empty) throw new GradleException(violations.join('\n'))
+    }
+}
+tasks.named('check') { dependsOn 'checkModuleComposition' }

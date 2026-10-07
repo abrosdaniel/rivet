@@ -26,10 +26,10 @@ import java.util.concurrent.atomic.*;
 
 public final class AuthServer {
     private static final ConfigurationTask.Type TASK=new ConfigurationTask.Type(ResourceLocation.fromNamespaceAndPath("rivet","auth"));
-    private static final ThreadPoolExecutor WORK=new ThreadPoolExecutor(4,4,0,TimeUnit.SECONDS,new ArrayBlockingQueue<>(64),r->{var t=new Thread(r,"Rivet auth");t.setDaemon(true);return t;},new ThreadPoolExecutor.AbortPolicy());
-    private static final ExecutorService OFFICIAL=new ThreadPoolExecutor(2,2,0,TimeUnit.SECONDS,new ArrayBlockingQueue<>(16),r->{var t=new Thread(r,"Rivet official verification");t.setDaemon(true);return t;},new ThreadPoolExecutor.AbortPolicy());
-    private static final ScheduledExecutorService DEADLINES=Executors.newSingleThreadScheduledExecutor(r->{var t=new Thread(r,"Rivet auth deadlines");t.setDaemon(true);return t;});
-    private static final ExecutorService VALIDATION=new ThreadPoolExecutor(1,1,0L,TimeUnit.MILLISECONDS,new ArrayBlockingQueue<>(1),r->{var t=new Thread(r,"Rivet session checks");t.setDaemon(true);return t;},new ThreadPoolExecutor.AbortPolicy());
+    private static ThreadPoolExecutor WORK;
+    private static ExecutorService OFFICIAL;
+    private static ScheduledExecutorService DEADLINES;
+    private static ExecutorService VALIDATION;
     private static final AtomicBoolean validating=new AtomicBoolean();
     private static final Map<Connection,Session> SESSIONS=new ConcurrentHashMap<>();
     private static volatile AuthStore store;private static AuthTls.Identity identity;private static MinecraftServer server;private static Path root;private static volatile String mode="false";private static long lastCheck;
@@ -53,12 +53,14 @@ public final class AuthServer {
     public static boolean enabled(){return !mode.equals("false");}
     public static void install(IEventBus bus,ModContainer container){
         bus.addListener(AuthServer::tasks);AuthProtocol.server=AuthServer::receive;AuthProtocol.upgrade=AuthServer::upgrade;
-        NeoForge.EVENT_BUS.addListener(AuthServer::start);NeoForge.EVENT_BUS.addListener(AuthServer::tick);NeoForge.EVENT_BUS.addListener(AuthServer::commands);
-        NeoForge.EVENT_BUS.addListener((net.neoforged.neoforge.event.server.ServerStoppedEvent e)->{SESSIONS.values().forEach(Session::close);SESSIONS.clear();store=null;identity=null;identities=null;mode="false";});
+        NeoForge.EVENT_BUS.addListener(AuthServer::tick);NeoForge.EVENT_BUS.addListener(AuthServer::commands);
+
     }
-    private static void start(net.neoforged.neoforge.event.server.ServerStartingEvent e){
+    static void stop(){SESSIONS.values().forEach(Session::close);SESSIONS.clear();ModuleWorkers.stop(WORK,OFFICIAL,DEADLINES,VALIDATION);WORK=null;OFFICIAL=null;DEADLINES=null;VALIDATION=null;validating.set(false);store=null;identity=null;identities=null;mode="false";server=null;}
+    static void start(net.neoforged.neoforge.event.server.ServerStartingEvent e){
         server=e.getServer();mode="false";store=null;identity=null;lastCheck=0;
         String requestedMode=ServerDatabase.settings().text("auth.mode");if(requestedMode.equals("false"))return;
+        WORK=new ThreadPoolExecutor(4,4,0,TimeUnit.SECONDS,new ArrayBlockingQueue<>(64),r->{var t=new Thread(r,"Rivet auth");t.setDaemon(true);return t;},new ThreadPoolExecutor.AbortPolicy());OFFICIAL=new ThreadPoolExecutor(2,2,0,TimeUnit.SECONDS,new ArrayBlockingQueue<>(16),r->{var t=new Thread(r,"Rivet official verification");t.setDaemon(true);return t;},new ThreadPoolExecutor.AbortPolicy());DEADLINES=Executors.newSingleThreadScheduledExecutor(r->{var t=new Thread(r,"Rivet auth deadlines");t.setDaemon(true);return t;});VALIDATION=new ThreadPoolExecutor(1,1,0L,TimeUnit.MILLISECONDS,new ArrayBlockingQueue<>(1),r->{var t=new Thread(r,"Rivet session checks");t.setDaemon(true);return t;},new ThreadPoolExecutor.AbortPolicy());
         var database=ServerDatabase.get();
         if(ModList.get().isLoaded("authlogic"))throw new IllegalStateException("Remove AuthLogic before enabling Rivet Auth");
         root=net.neoforged.fml.loading.FMLPaths.GAMEDIR.get();
