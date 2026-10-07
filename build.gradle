@@ -2,7 +2,19 @@ plugins { id 'base' }
 allprojects {
     group = 'dev.abros.rivet'
     version = rootProject.property('rivetVersion')
-    repositories { mavenCentral() }
+    repositories {
+        // ModDev adds NeoForge repositories. These libraries belong to Maven Central;
+        // resolving their version ranges must not query unrelated Maven endpoints.
+        exclusiveContent {
+            forRepository { mavenCentral { name = 'rivetLibraries' } }
+            filter {
+                includeGroup 'org.bouncycastle'
+                includeGroup 'org.postgresql'
+                includeGroup 'com.zaxxer'
+            }
+        }
+        mavenCentral()
+    }
 }
 subprojects {
     apply plugin: 'java-library'
