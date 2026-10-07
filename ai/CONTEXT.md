@@ -394,3 +394,16 @@ local release packaging/schema/checksums pass. Coverage includes source success,
 cache, unavailable/corrupt/short/oversized source, resume, cancellation, public URL
 validation, legacy manifest hashes and fallback after a 16-second source delay.
 No commit, tag, publication or observed remote CI claimed. User previews preserved.
+
+## Windows configuration test repair (2026-10-08)
+User supplied Windows Actions build with two failures. Reproduced both by making
+the built configuration template CRLF and rerunning FeatureModulesTest and
+ServerSettingsTest. Fixture removal assumed LF; boolean migration fixture doubled
+the CR in CRLF. Production loading was not at fault. Normalize fixture input
+before transformations; parameterize both upgrade tests over LF/CRLF, verify
+fixtures actually omit module keys, preserved line endings, owner choices, backup
+content and repeated-load stability. Do not normalize or rewrite owner files.
+All 312 core tests pass with the CRLF resource; regular build/verifyBundle then
+passes with restored LF resources and 322 Java tests. No remote CI result claimed.
+Ignore numbered cloud-sync duplicates when counting XML reports; current Gradle
+HTML summaries and canonical XML reports provide the actual results.

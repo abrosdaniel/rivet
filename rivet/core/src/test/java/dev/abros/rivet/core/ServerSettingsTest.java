@@ -34,12 +34,14 @@ class ServerSettingsTest {
   Path file=root.resolve("config/rivet-server.toml");Files.createDirectories(file.getParent());Files.writeString(file,template.replace("nameplates = \"rivet\"",""));
   assertEquals("rivet",ServerSettings.load(root).text("display.nameplates"));assertTrue(Files.readString(file).contains("nameplates = \"rivet\""));
  }
- @Test void nameplateBooleanUpgradePreservesMeaningCommentsAndBackup()throws Exception{
+ @org.junit.jupiter.params.ParameterizedTest
+ @org.junit.jupiter.params.provider.ValueSource(strings={"\n","\r\n"})
+ void nameplateBooleanUpgradePreservesMeaningCommentsAndBackup(String newline)throws Exception{
   Path file=root.resolve("config/rivet-server.toml");Files.createDirectories(file.getParent());
   for(boolean old:java.util.List.of(true,false)){
-   String original=ServerSettings.template().replace("nameplates = \"rivet\"","nameplates = "+old+" # owner's choice").replace("\n","\r\n");Files.writeString(file,original);
+   String original=ServerSettings.template().replace("\r\n","\n").replace("nameplates = \"rivet\"","nameplates = "+old+" # owner's choice").replace("\n",newline);Files.writeString(file,original);
    String mode=old?"rivet":"base";assertEquals(mode,ServerSettings.load(root).text("display.nameplates"));
-   String upgraded=Files.readString(file);assertTrue(upgraded.contains("nameplates = \""+mode+"\" # owner's choice"));assertFalse(upgraded.replace("\r\n","").contains("\n"));
+   String upgraded=Files.readString(file);assertTrue(upgraded.contains("nameplates = \""+mode+"\" # owner's choice"));assertFalse(upgraded.replace(newline,"").contains("\r"));assertFalse(upgraded.replace(newline,"").contains("\n"));
    try(var files=Files.list(file.getParent())){assertTrue(files.filter(p->p.toString().endsWith(".toml.bak")).anyMatch(p->{try{return Files.readString(p).equals(original);}catch(Exception e){return false;}}));}
    ServerSettings.load(root);assertEquals(upgraded,Files.readString(file));
   }

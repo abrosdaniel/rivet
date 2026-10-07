@@ -6,10 +6,25 @@ import java.util.*;
 import static org.junit.jupiter.api.Assertions.*;
 class FeatureModulesTest {
  @TempDir Path root;
- static String disabled(String... ids)throws Exception{String text;  text=ServerSettings.template();for(String id:ids){int start=text.indexOf("["+id+"]");int end=text.indexOf("\n[",start+1);if(end<0)end=text.length();text=text.substring(0,start)+text.substring(start,end).replace("enabled = true","enabled = false")+text.substring(end);}return text;}
+ static String disabled(String... ids)throws Exception{String text;  text=ServerSettings.template().replace("\r\n","\n");for(String id:ids){int start=text.indexOf("["+id+"]");int end=text.indexOf("\n[",start+1);if(end<0)end=text.length();text=text.substring(0,start)+text.substring(start,end).replace("enabled = true","enabled = false")+text.substring(end);}return text;}
  @Test void validatesDependenciesBeforeStartup()throws Exception{var failure=assertThrows(IllegalArgumentException.class,()->ServerSettings.parse(disabled("tasks")));assertTrue(failure.getMessage().contains("storage.enabled"));assertDoesNotThrow(()->ServerSettings.parse(disabled("tasks","storage")));}
  @Test void personalTasksDoNotDependOnGroups()throws Exception{var policy=ServerSettings.parse(disabled("groups")).modules();assertDoesNotThrow(()->policy.communityRequest(Json.parse("{\"section\":\"home\",\"op\":\"workList\"}")));assertThrows(CommunityFailure.class,()->policy.communityRequest(Json.parse("{\"section\":\"home\",\"op\":\"workList\",\"group\":\"foreign\"}")));assertFalse(policy.sections(CommunityStore.defaults()).getAsJsonArray("sections").contains(new com.google.gson.JsonPrimitive("groups")));}
  @Test void directRequestsCannotBypassDisabledModules()throws Exception{var policy=ServerSettings.parse(disabled("reports","server","storage","tasks","events","groups")).modules();for(String action:List.of("report","reply","moderate","maintenance","restart","scheduledAnnouncements","pinAnnouncement"))assertThrows(CommunityFailure.class,()->policy.serverRequest(Json.parse("{\"action\":\""+action+"\"}")),action);for(String op:List.of("workGet","plusTaskStatus","toolsAttendance","plusReminder","plusItemSave"))assertThrows(CommunityFailure.class,()->policy.communityRequest(Json.parse("{\"section\":\"home\",\"op\":\""+op+"\"}")),op);assertDoesNotThrow(()->policy.serverRequest(Json.parse("{\"action\":\"players\"}")));}
  @Test void moduleChangesNeedRestart()throws Exception{var original=ServerSettings.parse(ServerSettings.template());var changed=ServerSettings.parse(disabled("groups"));assertTrue(original.liveFrom(changed).modules().enabled("groups"));assertFalse(changed.modules().enabled("groups"));}
- @Test void upgradesPopulateEditableSettingsAndKeepOwnersChoices()throws Exception{String old=disabled("chat");for(String id:FeatureModules.OPTIONAL){int start=old.indexOf("["+id+"]");int end=old.indexOf("\n[",start+1);if(end<0)end=old.length();old=old.substring(0,start)+old.substring(start,end).replaceFirst("enabled = true\n", "")+old.substring(end);}var file=root.resolve("config/rivet-server.toml");Files.createDirectories(file.getParent());Files.writeString(file,old);var loaded=ServerSettings.load(root);assertFalse(loaded.flag("chat.enabled"));for(String id:FeatureModules.OPTIONAL)assertTrue(loaded.modules().enabled(id));String upgraded=Files.readString(file);assertTrue(upgraded.contains("[storage]"));ServerSettings.load(root);assertEquals(upgraded,Files.readString(file));try(var files=Files.list(file.getParent())){assertTrue(files.anyMatch(p->p.toString().endsWith(".toml.bak")));}}
+ @org.junit.jupiter.params.ParameterizedTest
+ @org.junit.jupiter.params.provider.ValueSource(strings={"\n","\r\n"})
+ void upgradesPopulateEditableSettingsAndKeepOwnersChoices(String newline)throws Exception{
+  String old=disabled("chat");
+  for(String id:FeatureModules.OPTIONAL){
+   int start=old.indexOf("["+id+"]"),end=old.indexOf("\n[",start+1);if(end<0)end=old.length();
+   String section=old.substring(start,end),without=section.replaceFirst("enabled = true\n", "");
+   assertNotEquals(section,without,"Fixture must omit "+id+".enabled");
+   old=old.substring(0,start)+without+old.substring(end);
+  }
+  old=old.replace("\n",newline);var file=root.resolve("config/rivet-server.toml");Files.createDirectories(file.getParent());Files.writeString(file,old);
+  var loaded=ServerSettings.load(root);assertFalse(loaded.flag("chat.enabled"));for(String id:FeatureModules.OPTIONAL)assertTrue(loaded.modules().enabled(id));
+  String upgraded=Files.readString(file);assertTrue(upgraded.contains("[storage]"));assertFalse(upgraded.replace(newline,"").contains("\r"));assertFalse(upgraded.replace(newline,"").contains("\n"));
+  ServerSettings.load(root);assertEquals(upgraded,Files.readString(file));
+  String original=old;try(var files=Files.list(file.getParent())){var backups=files.filter(p->p.toString().endsWith(".toml.bak")).toList();assertEquals(1,backups.size());assertEquals(original,Files.readString(backups.getFirst()));}
+ }
 }
