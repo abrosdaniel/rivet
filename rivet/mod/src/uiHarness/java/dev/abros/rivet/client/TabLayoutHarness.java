@@ -20,7 +20,7 @@ public final class TabLayoutHarness {
  @SubscribeEvent public static void render(ScreenEvent.Render.Post event){
   if(System.getenv("RIVET_TAB_LAYOUT_CHECK")==null||finished)return;
   var mc=Minecraft.getInstance();
-  if(!started){if(!(mc.screen instanceof TitleScreen))return;started=true;}
+  if(!started){if(!(mc.screen instanceof TitleScreen))return;started=true;verifyMetadata();}
   if(System.currentTimeMillis()<next)return;
   try{
    if(mc.screen instanceof Preview preview){
@@ -46,14 +46,14 @@ public final class TabLayoutHarness {
    if(frame==COUNTS.length*3*2*3){
     check(RivetTab.pingText(-1).equals("—"),"Unknown latency displayed as a negative number");
     check(RivetTab.pingText(10000).equals("10000 мс"),"Exact latency lost digits");
-    check(!SocialClient.scrollTab(-1,true),"TAB intercepted scrolling inside another screen");
+    check(!RivetTab.scrollTab(-1,true),"TAB intercepted scrolling inside another screen");
     var previous=ServerMenuClient.state.deepCopy();
     try{
      ServerMenuClient.state.addProperty("tabMode","compatible");
-     check(!SocialClient.canScrollTab(true,false),"Compatible TAB intercepted the hotbar wheel");
+     check(!RivetTab.canScrollTab(true,false),"Compatible TAB intercepted the hotbar wheel");
      ServerMenuClient.state.addProperty("tabMode","rivet");
-     check(!SocialClient.canScrollTab(false,false),"Closed TAB intercepted the hotbar wheel");
-     check(SocialClient.canScrollTab(true,false),"Rivet TAB did not scroll");
+     check(!RivetTab.canScrollTab(false,false),"Closed TAB intercepted the hotbar wheel");
+     check(RivetTab.canScrollTab(true,false),"Rivet TAB did not scroll");
     }finally{ServerMenuClient.state=previous;}
     RivetTab.reset();check(RivetTab.hits.isEmpty()&&RivetTab.rowsViewport==null,"Connection reset kept stale TAB targets");
     SkinWireDiagnosticsHarness.verify();finished=true;System.out.println("RIVET_TAB_LAYOUT_OK: frames="+frame+" sparse/full lists, GUI 1/2/3, heads, density, scrolling");mc.stop();return;}
@@ -63,10 +63,30 @@ public final class TabLayoutHarness {
    mc.setScreen(new Preview(COUNTS[n/18],n%2==1));next=System.currentTimeMillis()+100;
   }catch(Throwable ex){finished=true;System.out.println("RIVET_TAB_LAYOUT_FAILED frame="+frame);ex.printStackTrace();mc.stop();}
  }
+ private static void verifyMetadata(){
+  var mc=Minecraft.getInstance();var player=new PlayerInfo(new com.mojang.authlib.GameProfile(UUID.randomUUID(),"ColourCheck"),false);
+  var data=new com.google.gson.JsonObject();data.addProperty("prefix","<#9147FF>&l[Стример]&r");data.addProperty("suffix","&#1E90FF&o@ruslaanchik&r");SocialClient.players.put(player.getProfile().getId(),data);
+  try{
+   var meta=RivetTab.metadata(player);check(meta.getString().equals("[Стример] · @ruslaanchik"),"Metadata labels/separator changed");
+   check(styled(meta,"[Стример]",0x9147FF,true,false),"Prefix colour or bold lost");
+   check(styled(meta,"@ruslaanchik",0x1E90FF,false,true),"Suffix colour or italic lost");
+   for(int width:new int[]{0,2,30,60,100,500}){
+    var fitted=UiKit.fit(mc.font,meta,width);check(mc.font.width(fitted)<=width,"Rich metadata exceeds available width");
+    if(!fitted.getString().isEmpty()&&!fitted.getString().equals("…"))check(styled(fitted,"[",0x9147FF,true,false),"Clipping removed prefix styling");
+   }
+   check(UiKit.fit(mc.font,meta,500).equals(meta),"Unclipped metadata changed");
+   data.addProperty("prefix","&cRed&r");data.addProperty("suffix","§bBlue§r");meta=RivetTab.metadata(player);
+   check(styled(meta,"Red",0xFF5555,false,false)&&styled(meta,"Blue",0x55FFFF,false,false),"Legacy colour lost");
+   System.out.println("RIVET_TAB_METADATA_OK hex + legacy + styles + bounded rich clipping");
+  }finally{SocialClient.players.remove(player.getProfile().getId());}
+ }
+ private static boolean styled(Component component,String text,int colour,boolean bold,boolean italic){
+  var found=new boolean[1];component.visit((style,part)->{if(part.contains(text)&&style.getColor()!=null&&style.getColor().getValue()==colour&&style.isBold()==bold&&style.isItalic()==italic)found[0]=true;return Optional.empty();},net.minecraft.network.chat.Style.EMPTY);return found[0];
+ }
  private static void check(boolean valid,String message){if(!valid)throw new IllegalStateException(message);}
  private static final class Preview extends Screen{
   final List<PlayerInfo> players=new ArrayList<>();final boolean scrolled;
-  Preview(int count,boolean scrolled){super(Component.literal("TAB layout regression"));this.scrolled=scrolled;for(int i=0;i<count;i++)players.add(new PlayerInfo(new com.mojang.authlib.GameProfile(UUID.nameUUIDFromBytes(("tab-player-"+i).getBytes(java.nio.charset.StandardCharsets.UTF_8)),"LongPlayerName"+i),false){@Override public int getLatency(){return 10000;}});}
+  Preview(int count,boolean scrolled){super(Component.literal("TAB layout regression"));this.scrolled=scrolled;for(int i=0;i<count;i++)players.add(new PlayerInfo(new com.mojang.authlib.GameProfile(UUID.nameUUIDFromBytes(("tab-player-"+i).getBytes(java.nio.charset.StandardCharsets.UTF_8)),"LongPlayerName"+i),false){@Override public int getLatency(){return 10000;}});for(var player:players){var data=new com.google.gson.JsonObject();data.addProperty("prefix","<#9147FF>[Стример]&r");data.addProperty("suffix","<#1E90FF>@ruslaanchik&r");SocialClient.players.put(player.getProfile().getId(),data);}}
   @Override public void render(GuiGraphics graphics,int x,int y,float delta){RivetTab.draw(graphics,x,y,players);}
  }
 }

@@ -10,14 +10,14 @@ public final class UiTheme {
  private static final Map<AbstractWidget,HoverState> motion=new WeakHashMap<>();
  private static final ThreadLocal<Screen> RENDER_SCREEN=new ThreadLocal<>();
  static void rendering(Screen screen,Runnable render){Screen previous=RENDER_SCREEN.get();RENDER_SCREEN.set(screen);try{render.run();}finally{if(previous==null)RENDER_SCREEN.remove();else RENDER_SCREEN.set(previous);}}
- public static boolean stylesButtons(Screen s,net.minecraft.client.gui.components.AbstractButton widget){if(RENDER_SCREEN.get()!=null)s=RENDER_SCREEN.get();return owns(s)||(s instanceof net.minecraft.client.gui.screens.TitleScreen&&widget.getClass().getPackageName().equals("dev.abros.rivet.client"));}
+ public static boolean stylesButtons(Screen s,net.minecraft.client.gui.components.AbstractButton widget){if(widget instanceof CoreVersionButton)return false;if(RENDER_SCREEN.get()!=null)s=RENDER_SCREEN.get();return owns(s);}
  public static boolean owns(Screen s){return s!=null&&s.getClass().getPackageName().equals("dev.abros.rivet.client");}
  static float hover(AbstractWidget w){float target=w.isHoveredOrFocused()?1:0;if(!AccessibilityScreen.animations())return target;long now=System.nanoTime();var state=motion.get(w);if(state==null){motion.put(w,new HoverState(target,now));return target;}float step=Math.min(1,(now-state.at)/(AccessibilityScreen.motionMillis()*1000000f));state.at=now;state.value+=Math.copySign(Math.min(Math.abs(target-state.value),step),target-state.value);return state.value;}
 
  static int mix(int a,int b,float t){int out=0;for(int shift=0;shift<=24;shift+=8)out|=((int)(((a>>>shift)&255)*(1-t)+((b>>>shift)&255)*t))<<shift;return out;}
  static void panel(GuiGraphics g,int x,int y,int w,int h,int color){UiKit.surface(g,x,y,w,h,AccessibilityScreen.background(color));}
 
- public static void shell(Screen s,GuiGraphics g){if(s instanceof CommunityScreen||s instanceof TaskScreen||s instanceof ReportQueueScreen||s instanceof ServerMenuScreen||s instanceof ServerInfoScreen||s instanceof FeatureListScreen f&&f.kind.equals("players"))UiWorkspace.fit(s.width,s.height).draw(g);}
+ public static void shell(Screen s,GuiGraphics g){if(s instanceof CommunityScreen||s instanceof TaskScreen||s instanceof ReportQueueScreen||s instanceof ServerMenuScreen||s instanceof FeatureListScreen f&&f.kind.equals("players"))UiWorkspace.fit(s.width,s.height).draw(g);}
 
  public static void button(AbstractButton b,GuiGraphics g){
   var font=Minecraft.getInstance().font;int x=b.getX(),y=b.getY(),w=b.getWidth(),h=b.getHeight();String text=b.getMessage().getString();var style=UiActions.style(b);

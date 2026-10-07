@@ -4,7 +4,7 @@ Optional integrations with other mods must activate automatically when the mod i
 
 # Release versions
 
-Use MAJOR.MINOR.PATCH based on user impact: PATCH for fixes, optimization, tests and documentation; MINOR for new features/settings while preserving existing configuration and data; MAJOR for incompatible changes requiring owners to manually change configuration, data or their pack. Validate wire protocols and negotiated features separately; release numbers alone do not establish compatibility. Prefer explicit bounded requirements (>=1.2.0 <2.0.0) or exact requirements (=1.2.0) in new seeds. Preserve legacy bare-release requirements as minimum releases within their major.
+Use MAJOR.MINOR.PATCH based on user impact: PATCH for fixes, optimization, tests and documentation; MINOR for new features/settings while preserving existing configuration and data; MAJOR for incompatible changes requiring owners to manually change configuration, data or their pack. Validate wire protocols and negotiated features separately; release numbers alone do not establish compatibility. A client must be in the server’s MAJOR branch and its full MAJOR.MINOR.PATCH version must be at least the server version.
 
 # Server configuration updates
 

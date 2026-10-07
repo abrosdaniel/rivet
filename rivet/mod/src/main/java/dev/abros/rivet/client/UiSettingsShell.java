@@ -23,7 +23,7 @@ final class UiSettingsShell {
    body=new NativeLayout.Box(b.x()+sidebar,b.y(),Math.max(0,b.width()-sidebar),b.height());
   }
   var footer=outer.footer();
-  add.accept(UiActions.button(Component.literal("Сбросить раздел"),UiActions.Tone.NORMAL,"",v->reset.run()).bounds(body.x(),footer.bottom()-20,Math.min(112,Math.max(0,body.width()-102)),20).build());
+  add.accept(UiActions.button(Component.literal(section<0?"Очистить поиск":"Сбросить раздел"),UiActions.Tone.NORMAL,"",v->reset.run()).bounds(body.x(),footer.bottom()-20,Math.min(112,Math.max(0,body.width()-102)),20).build());
   UiActions.close(new NativeLayout.Box(footer.right()-96,footer.bottom()-20,96,20),add,close);
   return new UiDialog(outer.frame(),outer.header(),body,footer);
  }

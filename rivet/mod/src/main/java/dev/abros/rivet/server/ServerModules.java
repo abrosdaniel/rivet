@@ -10,12 +10,16 @@ import java.util.List;
 /** Owns server feature resources after configuration and PostgreSQL are ready. */
 final class ServerModules {
  private static final ModuleRuntime<ServerStartingEvent> runtime=new ModuleRuntime<>(List.of(
+  new ModuleRuntime.Module<>("pack",List.of("base"),e->ServerDatabase.settings().flag("pack.enabled"),e->ServerPack.start(),e->ServerPack.stop()),
   module("base",List.of(),e->ServerDatabase.get(),e->{}),
   new ModuleRuntime.Module<>("auth",List.of("base"),e->!ServerDatabase.settings().text("auth.mode").equals("false"),AuthServer::start,e->AuthServer.stop()),
-  module("skins",List.of("base"),e->ServerSkins.start(),e->ServerSkins.stop()),
+  new ModuleRuntime.Module<>("skins",List.of("base"),e->ServerDatabase.settings().flag("skins.enabled"),e->ServerSkins.start(),e->ServerSkins.stop()),
   module("social",List.of("base"),ServerFeatures::start,e->ServerFeatures.stop()),
+  new ModuleRuntime.Module<>("server",List.of("social"),e->ServerDatabase.settings().modules().enabled("server"),ServerManagement::start,e->ServerManagement.stop()),
+  new ModuleRuntime.Module<>("storage",List.of("social"),e->ServerDatabase.settings().modules().enabled("storage"),e->ServerTaskStocks.start(e.getServer(),ServerFeatures.communityStore()),e->ServerTaskStocks.stop()),
+  new ModuleRuntime.Module<>("reports",List.of("social"),e->ServerDatabase.settings().modules().enabled("reports"),e->ServerReportsModule.start(),e->ServerReportsModule.stop()),
   module("statistics",List.of("social"),e->ServerPlayerStatistics.start(),e->ServerPlayerStatistics.stop()),
-  module("votes",List.of("social"),e->ServerModerationVotes.start(),e->ServerModerationVotes.stop()),
+  new ModuleRuntime.Module<>("votes",List.of("social"),e->ServerDatabase.settings().flag("votes.enabled"),e->ServerModerationVotes.start(),e->ServerModerationVotes.stop()),
   module("display",List.of("social"),e->ServerSocial.start(),e->ServerSocial.stop()),
   new ModuleRuntime.Module<>("chat",List.of("display"),e->ServerDatabase.settings().flag("chat.enabled"),e->ServerChat.start(),e->ServerChat.stop())
  ));
@@ -24,8 +28,8 @@ final class ServerModules {
   return new ModuleRuntime.Module<>(id,requires,e->true,start,stop);
  }
  static void install(IEventBus bus,ModContainer container){
-  AuthServer.install(bus,container);ServerSkins.install();ServerFeatures.install();
-  ServerPlayerStatistics.install();ServerModerationVotes.install();ServerSocial.install();ServerChat.install();ServerNavigation.install();
+  ServerPack.install();AuthServer.install(bus,container);ServerSkins.install();ServerFeatures.install();
+  ServerManagement.install();ServerReportsModule.install();ServerTaskStocks.install();ServerPlayerStatistics.install();ServerModerationVotes.install();ServerSocial.install();ServerChat.install();ServerNavigation.install();
   NeoForge.EVENT_BUS.addListener((ServerStartingEvent e)->{
    try{runtime.start(e);}catch(Exception failure){throw new IllegalStateException("Cannot start Rivet modules",failure);}
   });

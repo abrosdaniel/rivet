@@ -11,7 +11,7 @@ final class UiNavigation {
  private static Screen outside;
  private static final Deque<Screen> history=new ArrayDeque<>();
  private static boolean returning,forward;
- static boolean mainPage(Screen screen,Screen parent){return (parent==null||pages.containsValue(screen))&&(screen instanceof CommunityScreen menu&&menu.itemId.isEmpty()||screen instanceof TaskScreen tasks&&tasks.personal()||screen instanceof FeatureListScreen list&&list.navigationPage()||screen instanceof ServerMenuScreen||screen instanceof ServerInfoScreen);}
+ static boolean mainPage(Screen screen,Screen parent){return (parent==null||pages.containsValue(screen))&&(screen instanceof CommunityScreen menu&&menu.itemId.isEmpty()||screen instanceof TaskScreen tasks&&tasks.personal()||screen instanceof FeatureListScreen list&&list.navigationPage()||screen instanceof ServerMenuScreen);}
  static UiActions.Command exitCommand(Screen screen,Screen parent){return mainPage(screen,parent)?UiActions.Command.CLOSE:UiActions.Command.BACK;}
  static void back(Screen from,Screen parent){
   if(mainPage(from,parent)){history.clear();boolean wasReturning=returning;returning=true;try{var mc=Minecraft.getInstance();mc.setScreen(mc.level!=null?null:outside);}finally{returning=wasReturning;}return;}
@@ -30,7 +30,7 @@ final class UiNavigation {
   if(from instanceof CommunityScreen menu&&!menu.leavePage()||from instanceof TaskScreen tasks&&!tasks.leavePage()||from instanceof CommunityForm form&&!form.leavePage())return;
   if(from instanceof FeatureListScreen list)list.leavePage();
   if(from instanceof CommunityScreen menu&&menu.itemId.isEmpty())pages.put(menu.section,from);else if(from instanceof TaskScreen tasks&&tasks.personal())pages.put("tasks",from);else if(from instanceof FeatureListScreen list&&list.navigationPage())pages.put("players",from);
-  Screen next=pages.get(key);if(next==null){if(key.equals("players")){FeatureListScreen.open(null,"players");next=mc.screen;}else{next=key.equals("tasks")?new TaskScreen(null,"",""):key.equals("info")?new ServerInfoScreen(null):Set.of("help","admin").contains(key)?new ServerMenuScreen(null,key):new CommunityScreen(null,key,"");mc.setScreen(next);}pages.put(key,next);}else{mc.setScreen(next);if(next instanceof CommunityScreen menu)menu.invalidate();else if(next instanceof TaskScreen tasks)tasks.invalidate(tasks.personal()?"home":"groups","");else if(next instanceof FeatureListScreen list)list.invalidate();}
+  Screen next=pages.get(key);if(next==null){if(key.equals("players")){FeatureListScreen.open(null,"players");next=mc.screen;}else{next=key.equals("tasks")?new TaskScreen(null,"",""):Set.of("help","admin").contains(key)?new ServerMenuScreen(null,key):new CommunityScreen(null,key,"");mc.setScreen(next);}pages.put(key,next);}else{mc.setScreen(next);if(next instanceof CommunityScreen menu)menu.invalidate();else if(next instanceof TaskScreen tasks)tasks.invalidate(tasks.personal()?"home":"groups","");else if(next instanceof FeatureListScreen list)list.invalidate();}
  }finally{forward=wasForward;}
  }
  static void opening(ScreenEvent.Opening event){

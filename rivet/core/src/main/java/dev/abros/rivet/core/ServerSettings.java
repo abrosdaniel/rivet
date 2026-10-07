@@ -32,7 +32,7 @@ public final class ServerSettings {
         if(Files.size(file)>65536)throw invalid("размер файла превышает 64 КиБ");
         String original=Files.readString(file);
         var settings=parse(original); // Validate before changing an owner's file.
-        String expanded=expand(original);
+        String expanded=expand(upgradeNameplates(original));
         if(!expanded.equals(original)){
             parse(expanded);
             if(expanded.getBytes(java.nio.charset.StandardCharsets.UTF_8).length>65536)throw invalid("дополненный файл превышает 64 КиБ");
@@ -89,6 +89,32 @@ public final class ServerSettings {
         }
         var result=new StringBuilder(original);for(var entry:insertions.descendingMap().entrySet())result.insert(entry.getKey(),entry.getValue());return result.toString();
     }
+    /** Preserve the meaning of older booleans and the owner's TOML formatting. */
+    private static String upgradeNameplates(String original){
+        var out=new StringBuilder();String section="",quote="";
+        for(String line:original.split("(?<=\n)",-1)){
+            if(quote.isEmpty()){
+                String trimmed=line.strip();
+                if(trimmed.matches("\\[([^\\[].*)]\\s*(?:#.*)?")){
+                    var parsed=flatten(new TomlParser().parse(trimmed+"\n__rivet_section_probe = true\n"));
+                    String path=parsed.keySet().iterator().next();section=path.substring(0,path.lastIndexOf('.'));
+                }else{
+                    var match=java.util.regex.Pattern.compile("^(\\s*[^=]+?\\s*=\\s*)(true|false)(\\s*(?:#.*)?(?:\\r?\\n)?)$").matcher(line);
+                    if(match.matches()&&!trimmed.startsWith("#")){
+                        String header=section.isEmpty()?"":"["+section+"]\n";
+                        var parsed=flatten(new TomlParser().parse(header+line));
+                        if(parsed.containsKey("display.nameplates")){
+                            String newline=line.endsWith("\r\n")?"\r\n":"\n";
+                            out.append("# nameplates: \"rivet\", \"base\" или \"hidden\" (клиенты Rivet)."+newline);
+                            line=match.group(1)+"\""+(match.group(2).equals("true")?"rivet":"base")+"\""+match.group(3);
+                        }
+                    }
+                }
+            }
+            out.append(line);quote=multilineQuote(line,quote);
+        }
+        return out.toString();
+    }
     private record ConfigHeader(String section,int offset){}
     private static String multilineQuote(String line,String quote){
         for(int n=0;n<line.length();n++){
@@ -109,9 +135,12 @@ public final class ServerSettings {
         Map<String,Object> values,defaults;
         try{values=flatten(new TomlParser().parse(text));defaults=flatten(new TomlParser().parse(template()));}
         catch(Exception failure){throw invalid("ошибка TOML: проверьте кавычки, типы и повторяющиеся параметры (значения скрыты)");}
+        // Preserve old boolean semantics while the file is upgraded to explicit modes.
+        if(values.get("display.nameplates") instanceof Boolean old)values.put("display.nameplates",old?"rivet":"base");
         // Obsolete punishment defaults are ignored, so existing production configs still load.
+        values.remove("project.repository");values.remove("project.requirePack");
         values.remove("chat.allowItems");values.remove("integrations.luckperms");values.remove("display.chatMode");values.remove("votes.actions.banMinutes");values.remove("votes.actions.muteMinutes");
-        for(var e:defaults.entrySet())if(!values.containsKey(e.getKey())&&List.of("statistics.","skins.","votes.","community.","menu.","updates.","retention.","chat.","display.","tasks.","spark.").stream().anyMatch(e.getKey()::startsWith))values.put(e.getKey(),e.getValue());
+        for(var e:defaults.entrySet())if(!values.containsKey(e.getKey())&&List.of("statistics.","skins.","votes.","community.","menu.","updates.","retention.","chat.","display.","tasks.","spark.","groups.","storage.","board.","events.","polls.","ideas.","reports.","server.","pack.").stream().anyMatch(e.getKey()::startsWith))values.put(e.getKey(),e.getValue());
         var missing=new TreeSet<>(defaults.keySet());missing.removeAll(values.keySet());
         if(!missing.isEmpty())throw invalid("отсутствуют обязательные параметры: "+String.join(", ",missing)+"; сверяйтесь с SERVER_GUIDE.md");
         var unknown=new TreeSet<>(values.keySet());unknown.removeAll(defaults.keySet());
@@ -130,7 +159,14 @@ public final class ServerSettings {
     public boolean flag(String key){return (Boolean)values.get(key);}
     public int number(String key){return Math.toIntExact(((Number)values.get(key)).longValue());}
     private void range(String key,int min,int max){long n=((Number)values.get(key)).longValue();if(n<min||n>max)throw invalid(key+": допустимо "+min+"–"+max);}
+    public FeatureModules modules(){return FeatureModules.from(this);}
     private void validate(){
+        modules();
+        range("pack.network.port",1,65535);range("pack.network.publicPort",1,65535);
+        range("pack.downloads.totalMiB",0,1000000);range("pack.downloads.clientMiB",0,1000000);range("pack.downloads.concurrent",0,Integer.MAX_VALUE);
+        String packDirectory=text("pack.directory");
+        if(packDirectory.isBlank()||Path.of(packDirectory).isAbsolute()||Path.of(packDirectory).normalize().startsWith(".."))throw invalid("pack.directory: ожидается относительная папка внутри сервера");
+        if(text("pack.network.bind").isBlank()||text("pack.network.host").length()>253||text("pack.network.host").contains("/")||text("pack.network.host").chars().anyMatch(Character::isWhitespace))throw invalid("pack.network: ожидается адрес без протокола и пути");
         range("retention.reportDays",1,365);range("retention.trashDays",1,365);range("retention.auditEntries",100,100000);skins();range("connection.handshakeTimeout",3,60);range("auth.minPasswordLength",6,128);
         range("tasks.maxPerOwner",0,Integer.MAX_VALUE);range("tasks.maxSubtasks",0,Integer.MAX_VALUE);range("tasks.maxComments",0,Integer.MAX_VALUE);
         range("spark.minTps",1,20);range("spark.maxMspt",1,1000);range("spark.durationSeconds",1,3600);range("spark.cooldownSeconds",1,86400);
@@ -139,6 +175,7 @@ public final class ServerSettings {
         if(text("menu.help").length()>2000)throw invalid("menu.help: максимум 2000 символов");
         String env=text("database.passwordEnv");if(!env.isEmpty()&&!env.matches("[A-Za-z_][A-Za-z0-9_]*"))throw invalid("database.passwordEnv: неверное имя переменной");
         for(String key:List.of("display.tab"))if(!Set.of("auto","rivet","compatible").contains(text(key)))throw invalid(key+": auto, rivet или compatible");
+        if(!Set.of("rivet","base","hidden").contains(text("display.nameplates")))throw invalid("display.nameplates: rivet, base или hidden в кавычках");
         for(String key:List.of("chat.localName","chat.globalName"))if(text(key).codePointCount(0,text(key).length())>40||text(key).codePoints().anyMatch(Character::isISOControl))throw invalid(key+": до 40 символов, без переводов строк");
         for(String key:List.of("chat.localColor","chat.globalColor","chat.groupColor"))if(!text(key).matches("#[0-9a-fA-F]{6}"))throw invalid(key+": ожидается цвет #RRGGBB в кавычках");
         ChatFormat.parse(text("chat.format"),false);ChatFormat.parse(text("chat.channelFormat"),true);

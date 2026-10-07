@@ -26,12 +26,31 @@ class ServerSettingsTest {
    assertFalse(ServerSettings.parse(disabled).flag("chat.enabled"));
   }
  }
- @Test void displayPolicyDefaultsAndValidatesServerModes()throws Exception{String t=ServerSettings.template();var old=ServerSettings.parse(t.substring(0,t.indexOf("[display]")));assertEquals("auto",old.text("display.tab"));assertEquals("compatible",ServerSettings.parse(t.replace("tab = \"auto\"","tab = \"compatible\"")).text("display.tab"));assertThrows(IllegalArgumentException.class,()->ServerSettings.parse(t.replace("tab = \"auto\"","tab = \"unknown\"")));assertNotNull(ServerSettings.parse(t+"chatMode = \"compatible\"\n"));}
+ @Test void displayPolicyDefaultsAndValidatesServerModes()throws Exception{String t=ServerSettings.template();var old=ServerSettings.parse(t.substring(0,t.indexOf("[display]")));assertEquals("auto",old.text("display.tab"));assertEquals("compatible",ServerSettings.parse(t.replace("tab = \"auto\"","tab = \"compatible\"")).text("display.tab"));assertThrows(IllegalArgumentException.class,()->ServerSettings.parse(t.replace("tab = \"auto\"","tab = \"unknown\"")));assertNotNull(ServerSettings.parse(t.replace("[display]","[display]\nchatMode = \"compatible\"")));}
  @Test void nameplatesAreControlledByServerAndAddedToOlderConfigs()throws Exception{
-  String template=ServerSettings.template();assertTrue(ServerSettings.parse(template).flag("display.nameplates"));
-  assertFalse(ServerSettings.parse(template.replace("nameplates = true","nameplates = false")).flag("display.nameplates"));
-  Path file=root.resolve("config/rivet-server.toml");Files.createDirectories(file.getParent());Files.writeString(file,template.replace("nameplates = true",""));
-  assertTrue(ServerSettings.load(root).flag("display.nameplates"));assertTrue(Files.readString(file).contains("nameplates = true"));
+  String template=ServerSettings.template();assertEquals("rivet",ServerSettings.parse(template).text("display.nameplates"));
+  for(String mode:java.util.List.of("base","hidden"))assertEquals(mode,ServerSettings.parse(template.replace("nameplates = \"rivet\"","nameplates = \""+mode+"\"")).text("display.nameplates"));
+  assertThrows(IllegalArgumentException.class,()->ServerSettings.parse(template.replace("nameplates = \"rivet\"","nameplates = \"unknown\"")));
+  Path file=root.resolve("config/rivet-server.toml");Files.createDirectories(file.getParent());Files.writeString(file,template.replace("nameplates = \"rivet\"",""));
+  assertEquals("rivet",ServerSettings.load(root).text("display.nameplates"));assertTrue(Files.readString(file).contains("nameplates = \"rivet\""));
+ }
+ @Test void nameplateBooleanUpgradePreservesMeaningCommentsAndBackup()throws Exception{
+  Path file=root.resolve("config/rivet-server.toml");Files.createDirectories(file.getParent());
+  for(boolean old:java.util.List.of(true,false)){
+   String original=ServerSettings.template().replace("nameplates = \"rivet\"","nameplates = "+old+" # owner's choice").replace("\n","\r\n");Files.writeString(file,original);
+   String mode=old?"rivet":"base";assertEquals(mode,ServerSettings.load(root).text("display.nameplates"));
+   String upgraded=Files.readString(file);assertTrue(upgraded.contains("nameplates = \""+mode+"\" # owner's choice"));assertFalse(upgraded.replace("\r\n","").contains("\n"));
+   try(var files=Files.list(file.getParent())){assertTrue(files.filter(p->p.toString().endsWith(".toml.bak")).anyMatch(p->{try{return Files.readString(p).equals(original);}catch(Exception e){return false;}}));}
+   ServerSettings.load(root);assertEquals(upgraded,Files.readString(file));
+  }
+ }
+ @Test void nameplateUpgradeRespectsQuotedKeysAndMultilineText()throws Exception{
+  Path file=root.resolve("config/rivet-server.toml");Files.createDirectories(file.getParent());
+  String t=ServerSettings.template().replace("nameplates = \"rivet\"","\"nameplates\" = false").replace("[display]","[\"display\"]");
+  String help="help = "+String.valueOf((char)39).repeat(3)+"\n[display]\nnameplates = false\n"+String.valueOf((char)39).repeat(3);
+  t=t.replace("help = \"Откройте меню командой /rivet. За помощью обратитесь к администрации сервера.\"",help);
+  Files.writeString(file,t);assertEquals("base",ServerSettings.load(root).text("display.nameplates"));assertTrue(Files.readString(file).contains(help));assertTrue(Files.readString(file).contains("\"nameplates\" = \"base\""));
+  t=ServerSettings.template();t="display.nameplates = true\n"+t.substring(0,t.indexOf("[display]"));Files.writeString(file,t);ServerSettings.load(root);assertTrue(Files.readString(file).contains("display.nameplates = \"rivet\""));
  }
  @Test void obsoleteItemSharingSettingIsIgnored()throws Exception{String template=ServerSettings.template();assertDoesNotThrow(()->ServerSettings.parse(template.replace("[chat]","[chat]\nallowItems = true")));assertDoesNotThrow(()->ServerSettings.parse(template.replace("[chat]","[chat]\nallowItems = false")));}
  @Test void chatLabelsAndSharingPermissions()throws Exception{String t=ServerSettings.template();var s=ServerSettings.parse(t.replace("localName = \"Рядом\"","localName = \"Соседи\""));assertEquals("Соседи",s.text("chat.localName"));assertFalse(ServerSettings.template().contains("allowItems ="));assertTrue(s.flag("chat.coordinates"));assertThrows(IllegalArgumentException.class,()->ServerSettings.parse(t.replace("localName = \"Рядом\"","localName = \""+"x".repeat(41)+"\"")));}
@@ -47,7 +66,7 @@ class ServerSettingsTest {
  @Test void configurationErrorsPointToKeysWithoutExposingValues()throws Exception{
   String t=ServerSettings.template();
   var missing=assertThrows(IllegalArgumentException.class,()->ServerSettings.parse(t.replace("mode = \"false\"","")));assertTrue(missing.getMessage().contains("auth.mode"));
-  var typo=assertThrows(IllegalArgumentException.class,()->ServerSettings.parse(t+"\nunknown = 'secret-marker'\n"));assertTrue(typo.getMessage().contains("display.unknown"));assertFalse(typo.getMessage().contains("secret-marker"));
+  var typo=assertThrows(IllegalArgumentException.class,()->ServerSettings.parse(t+"\nunknown = 'secret-marker'\n"));assertTrue(typo.getMessage().contains("pack.downloads.unknown"));assertFalse(typo.getMessage().contains("secret-marker"));
   var unsafe=assertThrows(IllegalArgumentException.class,()->ServerSettings.parse(t+"\n\"private secret-marker\" = true\n"));assertFalse(unsafe.getMessage().contains("secret-marker"));
  }
  @Test void legacyIntegrationSwitchIsIgnored()throws Exception{assertNotNull(ServerSettings.parse(ServerSettings.template()+"\n[integrations]\nluckperms = false\n"));assertNotNull(ServerSettings.parse(ServerSettings.template()+"\n[integrations]\nluckperms = true\n"));}
@@ -79,5 +98,11 @@ class ServerSettingsTest {
   text=ServerSettings.template();int start=text.indexOf("[chat]"),end=text.indexOf("[display]");
   String dotted=text.substring(start,end).replace("[chat]", "").lines().map(line->line.contains(" = ")&&!line.stripLeading().startsWith("#")?"chat."+line:line).collect(java.util.stream.Collectors.joining("\n"));
   text=dotted.replace("chat.localRadius = 100", "")+"\n"+text.substring(0,start)+text.substring(end);Files.writeString(file,text);assertEquals(100,ServerSettings.load(root).number("chat.localRadius"));assertFalse(Files.readString(file).contains("[chat]"));
+ }
+ @Test void removedGithubProjectSettingsAreNeverAddedButExistingOwnerTextSurvives()throws Exception{
+  String template=ServerSettings.template();assertFalse(template.contains("[project]"));
+  String original="[project]\nrepository = 'https://github.com/owner/old-pack'\nrequirePack = true\n\n"+template;
+  Path file=root.resolve("config/rivet-server.toml");Files.createDirectories(file.getParent());Files.writeString(file,original);
+  assertNotNull(ServerSettings.load(root));assertEquals(original,Files.readString(file));
  }
 }

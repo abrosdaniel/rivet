@@ -1,9 +1,0 @@
-name: Rivet project
-on: [push, pull_request, workflow_dispatch]
-permissions:
-  contents: write
-jobs:
-  project:
-    uses: abrosdaniel/rivet/.github/workflows/seed.yml@main
-    with:
-      tooling-ref: main

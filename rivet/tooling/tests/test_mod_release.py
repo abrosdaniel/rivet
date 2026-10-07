@@ -22,12 +22,6 @@ class ModRelease(unittest.TestCase):
         self.root = Path(self.temp.name)
         (self.root / "gradle.properties").write_text("rivetVersion=1.0.0\nneoVersion=21.1.250\n")
         subprocess.run(["git", "init", str(self.root)], check=True, capture_output=True)
-        for name in ["rivet.json", ".github/workflows/rivet.yml"]:
-            p = self.root / "template" / name
-            p.parent.mkdir(parents=True, exist_ok=True)
-            p.write_text("example")
-        subprocess.run(["git", "-C", str(self.root), "add", "template"], check=True)
-        (self.root / "template/untracked.txt").write_text("excluded")
         self.artifact = self.root / "tested"
         self.artifact.mkdir()
         with zipfile.ZipFile(self.artifact / "rivet-1.0.0-mc1.21.1-neoforge.jar", "w") as jar:
@@ -46,28 +40,15 @@ class ModRelease(unittest.TestCase):
         current["version"] = "2.0.0"
         m.validate_protocol_change(current, previous)
 
-    def test_template_uses_main_for_workflow_and_tools_even_in_release_ci(self):
-        workflow = self.root / "template/.github/workflows/rivet.yml"
-        workflow.write_text("uses: abrosdaniel/rivet/.github/workflows/seed.yml@v1.0.0\nwith:\n  tooling-ref: v1.0.0\n")
-        with patch.dict(os.environ, GITHUB_SHA="a"*40):
-            files = m.package(self.root, self.artifact, self.root / "out")
-        with zipfile.ZipFile(files[1]) as archive:
-            text = archive.read(".github/workflows/rivet.yml").decode()
-            self.assertIn("seed.yml@main", text)
-            self.assertIn("tooling-ref: main", text)
-            self.assertFalse(any(name.startswith(("tooling/", "schemas/", "channels/")) for name in archive.namelist()))
-
-    def test_archive_and_hashes_are_reproducible(self):
+    def test_artifact_hashes_are_reproducible(self):
         files = m.package(self.root, self.artifact, self.root / "out")
-        with zipfile.ZipFile(files[1]) as archive:
-            self.assertIn(".github/workflows/rivet.yml", archive.namelist())
-            self.assertNotIn("untracked.txt", archive.namelist())
+        self.assertFalse((self.root / "out/template.zip").exists())
         first = files[1].read_bytes()
         m.package(self.root, self.artifact, self.root / "out")
         self.assertEqual(first, files[1].read_bytes())
-        for line in files[3].read_text().splitlines():
+        for line in files[2].read_text().splitlines():
             digest, name = line.split("  ")
-            self.assertEqual(digest, hashlib.sha256((files[3].parent / name).read_bytes()).hexdigest())
+            self.assertEqual(digest, hashlib.sha256((files[2].parent / name).read_bytes()).hexdigest())
 
     def test_missing_bundle_is_rejected(self):
         with self.assertRaises(ValueError):
@@ -127,7 +108,7 @@ class Publishing(unittest.TestCase):
 
     def test_publishes_only_after_all_assets_verified(self):
         self.publish()
-        self.assertEqual(len(self.uploaded), 4)
+        self.assertEqual(len(self.uploaded), 3)
         self.assertEqual(self.commands[-1][:3], ("gh", "release", "edit"))
         core = json.loads(self.uploaded["core.json"])
         from jsonschema import Draft202012Validator

@@ -105,7 +105,7 @@ final class CommunityScreen extends ScrollScreen {
     boolean leavePage(){if(!model.leave())return false;for(var child:expanded.values())if(!child.leavePage())return false;ServerMenuClient.cancelReads(surface());return true;}
 
     void refreshPermissions(){refreshUi();}
-    private static final Map<String,String> NAMES=Map.ofEntries(Map.entry("profile","Мой профиль"),Map.entry("settings","Настройки"),Map.entry("home","Главная"),Map.entry("tasks","Мои задачи"),Map.entry("players","Игроки"),Map.entry("board","Доска объявлений"),Map.entry("groups","Объединения"),Map.entry("events","События"),Map.entry("polls","Голосования"),Map.entry("ideas","Предложения"),Map.entry("notifications","Уведомления"),Map.entry("info","Сервер"),Map.entry("help","Помощь"),Map.entry("admin","Администрирование"));
+    private static final Map<String,String> NAMES=Map.ofEntries(Map.entry("profile","Мой профиль"),Map.entry("settings","Настройки"),Map.entry("home","Главная"),Map.entry("tasks","Мои задачи"),Map.entry("players","Игроки"),Map.entry("board","Доска объявлений"),Map.entry("groups","Объединения"),Map.entry("events","События"),Map.entry("polls","Голосования"),Map.entry("ideas","Предложения"),Map.entry("notifications","Уведомления"),Map.entry("help","Помощь"),Map.entry("admin","Администрирование"));
     CommunityScreen(Screen parent,String section,String id){super(Component.literal(name(section)));this.parent=parent;this.section=section;itemId=id;model=new dev.abros.rivet.core.CommunityWorkspace(section,id,ServerMenuClient::request,System::currentTimeMillis);}
     static String name(String section){if(section.equals("groups")&&ServerMenuClient.state.has("communityConfig"))return Json.opt(ServerMenuClient.state.getAsJsonObject("communityConfig"),"groupsTitle",NAMES.get(section));return NAMES.getOrDefault(section,section);}
     static void open(Screen parent,String section){net.minecraft.client.Minecraft.getInstance().setScreen(new CommunityScreen(parent,section,""));}
@@ -119,7 +119,6 @@ final class CommunityScreen extends ScrollScreen {
     private int controlsWidth(){return UiSearchToolbar.contentWidth(contentWidth());}
     private int homeTop(){return UiWorkspace.fit(width,height).page().y();}
     private boolean home(){return section.equals("home")&&itemId.isEmpty();}
-    private int groupScroll;
     private boolean sideProfile(){return home()&&height>=360&&UiWorkspace.fit(width,height).page().right()-left()>=490;}
     private int contentWidth(){if(inlineParent!=null)return inlineParent.masterDetail().detail().width()-8;if(splitLayout())return listWidth();return UiWorkspace.fit(width,height).page().right()-left()-(sideProfile()?224:0);}
     private Button button(String label,int x,int y,int w,Runnable callback){return button(label,UiActions.Tone.NORMAL,"",x,y,w,callback);}
@@ -134,11 +133,11 @@ final class CommunityScreen extends ScrollScreen {
 
         }
         if(home()){
-            if(TaskScreen.available()){
-                button("Поиск по серверу",UiActions.Tone.NORMAL,UiIcons.SEARCH,left(),homeTop(),Math.max(1,controlsWidth()-30),()->minecraft.setScreen(new GlobalSearchScreen(this)));if(contentWidth()>=190)button("⋯",left()+controlsWidth()-24,homeTop(),24,()->{if(sideProfile())minecraft.setScreen(new HomeWidgetsScreen(this));else profileActions();}).setTooltip(Tooltip.create(Component.literal(sideProfile()?"Виджеты главной":"Профиль, виджеты и настройки")));
+            {
+                button("Поиск по серверу",UiActions.Tone.NORMAL,UiIcons.SEARCH,left(),homeTop(),Math.max(1,controlsWidth()-30),()->minecraft.setScreen(new GlobalSearchScreen(this)));if(contentWidth()>=190)button("⋯",left()+controlsWidth()-24,homeTop(),24,this::profileActions).setTooltip(Tooltip.create(Component.literal("Профиль, виджеты и настройки")));
             }
             if(sideProfile()){
-                int px=profileLeft(),by=homeTop()+108;
+                int px=profileLeft(),by=homeTop()+ProfilePanel.actionsTop(data);
                 var profileActions=new ArrayList<UiActions.Action>();
                 if(SkinClient.available())profileActions.add(UiActions.action("Скины",()->SkinsScreen.open(this),true));
                 if(plus())profileActions.add(UiActions.action("О себе",()->minecraft.setScreen(new PersonalProfileScreen(this)),true));
@@ -147,7 +146,6 @@ final class CommunityScreen extends ScrollScreen {
                 for(int n=0;n<tracks.length;n++)tracks[n]=n==tracks.length-1?dev.abros.rivet.core.NativeLayout.Track.flex(1):dev.abros.rivet.core.NativeLayout.Track.fixed(font.width(profileActions.get(n).label())+16);
                 UiActions.row(new dev.abros.rivet.core.NativeLayout.Box(px+9,by,194,20),this::addRenderableWidget,tracks,profileActions.toArray(UiActions.Action[]::new));
                 if(AuthClient.available())button("Безопасность",px+9,by+24,194,()->AuthAccountScreen.open(this));
-                groupWidgets();
             }
         }
         int top=contentTop();
@@ -159,7 +157,7 @@ final class CommunityScreen extends ScrollScreen {
             if(!itemId.isEmpty())detailControls(this,left(),40,contentWidth());else if(splitLayout())detailWidgets();
         }
         if(itemId.isEmpty()){
-            if(!home()&&!section.equals("notifications"))button((trash?"Удалённые":archive?"Архив":"Активные")+" ▾",left()+Math.max(0,controlsWidth()-(controlsWidth()-6)/2),toolbarBottom(),(controlsWidth()-6)/2,()->{if(!model.busy())minecraft.setScreen(new ChoicePopup(this,"Записи",List.of("Активные","Архив","Удалённые · 30 дней"),i->{archive=i==1;trash=i==2;resetList();}).anchorLabel((trash?"Удалённые":archive?"Архив":"Активные")+" ▾").current(trash?2:archive?1:0));});
+            if(!home()&&!section.equals("notifications"))button((trash?"Удалённые":archive?"Архив":"Активные")+" ▾",left()+Math.max(0,controlsWidth()-(controlsWidth()-6)/2),toolbarBottom(),(controlsWidth()-6)/2,()->{if(!model.busy())minecraft.setScreen(new ChoicePopup(this,"Записи",List.of("Активные","Архив",trashLabel()),i->{archive=i==1;trash=i==2;resetList();}).anchorLabel((trash?"Удалённые":archive?"Архив":"Активные")+" ▾").current(trash?2:archive?1:0));});
             if(data.has("canCreate")&&data.get("canCreate").getAsBoolean()&&Set.of("board","groups","events","polls","ideas").contains(section))button(createLabel(),UiActions.Tone.PRIMARY,UiIcons.PLUS,left(),toolbarBottom(),(controlsWidth()-6)/2,this::create);
             if(section.equals("notifications"))button("Прочитать всё",left(),height-54,125,()->send("read",new JsonObject()));
         }
@@ -167,7 +165,7 @@ final class CommunityScreen extends ScrollScreen {
         if(!loaded){loaded=true;load();}
     }
     private int toolbarBottom(){return 42+UiSearchToolbar.height(controlsWidth(),height,!query.isBlank()||mine||participating||archive||trash||!sort.equals("default"));}
-    private int contentTop(){return home()?homeTop()+(TaskScreen.available()?28:0):itemId.isEmpty()?toolbarBottom()+(section.equals("notifications")?4:26):bodyTop();}
+    private int contentTop(){return home()?homeTop()+28:itemId.isEmpty()?toolbarBottom()+(section.equals("notifications")?4:26):bodyTop();}
     private JsonArray displayEntries(){
         var result=new JsonArray();
         if(home()&&data.has("pinnedAnnouncement")){var pin=data.getAsJsonObject("pinnedAnnouncement");if(pin.get("until").getAsLong()>System.currentTimeMillis()&&!Json.str(pin,"text").isBlank()){
@@ -178,7 +176,7 @@ final class CommunityScreen extends ScrollScreen {
         if(home()){
             if(data.has("tasks"))for(var task:data.getAsJsonArray("tasks")){var t=task.getAsJsonObject();var row=t.deepCopy();row.addProperty("id","local:task:"+Json.str(t,"id"));row.addProperty("section","task");row.addProperty("preview",Json.opt(t,"groupName","")+" · "+Json.opt(t,"description",""));long due=t.get("dueAt").getAsLong();row.addProperty("attention",due>0?(due<System.currentTimeMillis()?"Просрочено · ":"Срок · ")+local(due):"Моя задача");result.add(row);}
             if(!sideProfile()){
-                var profile=new JsonObject();profile.addProperty("id","local:profile");profile.addProperty("section","profile");profile.addProperty("title",Json.opt(ServerMenuClient.state,"name","Мой профиль"));profile.addProperty("attention","Мой профиль");profile.addProperty("preview","Сессия: "+dev.abros.rivet.core.DisplayCounts.text(ServerMenuClient.state,"sessionSeconds","0")+" с");result.add(profile);
+                var profile=new JsonObject();profile.addProperty("id","local:profile");profile.addProperty("section","profile");profile.addProperty("title",Json.opt(ServerMenuClient.state,"name","Мой профиль"));profile.addProperty("attention","Мой профиль");if(ServerMenuClient.state.has("sessionSeconds"))profile.addProperty("preview","Сессия: "+ServerMenuClient.state.get("sessionSeconds").getAsLong()+" с");result.add(profile);
 
             }
         }if(home()){if(data.has("invitations"))for(var invitation:data.getAsJsonArray("invitations"))result.add(invitation);if(data.has("groups"))for(var group:data.getAsJsonArray("groups"))result.add(groupCard(group.getAsJsonObject()));return HomeLayout.arrange(result);}return result;
@@ -196,16 +194,14 @@ final class CommunityScreen extends ScrollScreen {
     }
 
 
+    private String trashLabel(){return data.has("trashDays")?"Удалённые · "+data.get("trashDays").getAsInt()+" дн.":"Удалённые";}
+    private String deleteMessage(){return data.has("trashDays")?"Удалить? Восстановление доступно "+data.get("trashDays").getAsInt()+" дн.":"Удалить? Срок восстановления задаёт сервер.";}
     static String statusLabel(String value){return status(value);}
     private String createLabel(){return switch(section){case "board"->"Разместить";case "groups"->"Создать";case "events"->"Назначить";case "polls"->"Создать";case "ideas"->"Предложить";default->"Создать";};}
-    private String subtitle(){return switch(section){case "home"->"Ваши события, задачи и объединения";case "board"->"Предложения игроков";case "groups"->"Найдите объединение или соберите свое";case "events"->"Встречи, участие и совместные планы";case "polls"->"Ваш голос в решениях сообщества";case "ideas"->"Идеи игроков";case "notifications"->"Ответы, приглашения и напоминания";default->name(section);};}
     private String emptyText(){return switch(section){case "home"->"Вы пока не записаны на ближайшие события.";case "board"->"Объявлений пока нет. Нажмите «Разместить объявление», чтобы предложить помощь или разместить запрос.";case "groups"->"Объединений пока нет. Нажмите «Создать объединение», чтобы собрать свою команду.";case "events"->"Ближайших событий нет. Новые встречи появятся здесь после публикации организатором.";case "polls"->"Сейчас нет голосований.";case "ideas"->"Предложений пока нет. Нажмите «Предложить идею», чтобы поделиться идеей для сервера.";case "notifications"->"Всё прочитано. Новые ответы и приглашения появятся здесь.";default->"Пока нет записей.";};}
     private int accent(){return switch(section){case "board"->UiPalette.color(0xFFE2BE75);case "groups"->UiPalette.color(0xFF79CBA6);case "events"->UiPalette.color(0xFF82B6F2);case "polls"->UiPalette.color(0xFFB49AE8);case "ideas"->UiPalette.color(0xFFF0A77C);default->UiPalette.color(0xFF8BC7CB);};}
     private void profileActions(){var labels=new ArrayList<String>();var actions=new ArrayList<Runnable>();if(TaskScreen.available()){labels.add("Мои задачи");actions.add(()->minecraft.setScreen(new TaskScreen(this,"","")));}if(ServerMenuClient.supports("player-tools")){labels.add("Организаторы событий");actions.add(()->minecraft.setScreen(new FollowingScreen(this)));labels.add("Общедоступные места");actions.add(()->minecraft.setScreen(new PlacesScreen(this)));labels.add("Карта объединения");actions.add(()->minecraft.setScreen(new MapSharingScreen(this)));}if(plus()){labels.add("О себе");actions.add(()->minecraft.setScreen(new PersonalProfileScreen(this)));}if(SkinClient.available()){labels.add("Скины");actions.add(()->SkinsScreen.open(this));}labels.add("Виджеты главной");actions.add(()->minecraft.setScreen(new HomeWidgetsScreen(this)));labels.add("Настройки Rivet");actions.add(()->minecraft.setScreen(new AccessibilityScreen(this)));if(AuthClient.available()){labels.add("Безопасность");actions.add(()->AuthAccountScreen.open(this));}minecraft.setScreen(new ChoicePopup(this,"Мой профиль",labels,i->actions.get(i).run()));}
-    private int groupTop(){return AuthClient.available()?256:228;}
-    private int groupRows(){return Math.max(1,(height-40-groupTop())/76);}
     private JsonObject groupCard(JsonObject option){var row=new JsonObject();row.addProperty("id",Json.str(option,"value"));row.addProperty("section","groups");row.addProperty("title",Json.str(option,"label"));row.addProperty("attention","В сети: "+dev.abros.rivet.core.DisplayCounts.text(option,"onlineCount","—")+" / "+dev.abros.rivet.core.DisplayCounts.text(option,"membersCount","—"));row.addProperty("preview",option.has("nextEvent")?Json.str(option,"nextEvent"):"Нет ближайших встреч");row.addProperty("footer",option.has("applicationsCount")&&option.get("applicationsCount").getAsInt()>0?"Заявок: "+option.get("applicationsCount").getAsInt():option.has("nextEventAt")?local(option.get("nextEventAt").getAsLong()):"Открыть объединение");return row;}
-    private void groupWidgets(){if(home()||!data.has("groups"))return;var groups=data.getAsJsonArray("groups");groupScroll=Math.max(0,Math.min(groupScroll,Math.max(0,groups.size()-groupRows())));for(int n=groupScroll;n<Math.min(groups.size(),groupScroll+groupRows());n++){var row=groupCard(groups.get(n).getAsJsonObject());addRenderableWidget(new CommunityCard(navigation.right()-232,groupTop()+(n-groupScroll)*76,212,70,row,()->openEntry(row)));}}
     @Override public void renderBackground(GuiGraphics g,int x,int y,float d){
         super.renderBackground(g,x,y,d);
         if(splitLayout())renderDetailPane(g);
@@ -222,7 +218,6 @@ final class CommunityScreen extends ScrollScreen {
             Ui.text(g,font,font.plainSubstrByWidth(heading,contentWidth()-104),left()+10,46,UiKit.text(),false);Ui.text(g,font,font.plainSubstrByWidth(info,contentWidth()-20),left()+10,62,accent());
         }
     }
-    private void navigate(String key){UiNavigation.open(this,key);}
     private dev.abros.rivet.core.CommunityWorkspace.Filters filters(){return new dev.abros.rivet.core.CommunityWorkspace.Filters(query,memberFilter,sort,trash,archive,mine,participating);}
     private void resetList(){if(model.busy())return;model.reset();expanded.clear();resetScroll();load();}
     private void load(){model.load(filters());status=model.status();}
@@ -258,7 +253,7 @@ final class CommunityScreen extends ScrollScreen {
     static String local(long epoch){return DateTimeFormatter.ofPattern("dd.MM.yyyy HH:mm z").format(Instant.ofEpochMilli(epoch).atZone(AccessibilityScreen.zone()));}
     void detail(JsonObject j){
         moreActions.clear();dangerousActions.clear();rowCards.clear();
-        if(Json.str(j,"status").equals("deleted")){text("Удалено. Восстановление доступно до "+local(j.get("deletedAt").getAsLong()+30L*86400000));if(can(j,"restore"))action("Восстановить",()->send("restore",new JsonObject()));return;}
+        if(Json.str(j,"status").equals("deleted")){text(j.has("restoreUntil")?"Удалено. Восстановление доступно до "+local(j.get("restoreUntil").getAsLong()):"Удалено. Срок восстановления задаёт сервер.");if(can(j,"restore"))action("Восстановить",()->send("restore",new JsonObject()));return;}
         if(!section.equals("groups")||groupTab.equals("overview")){int intro=beginCard();text(Json.str(j,"description"));if(Set.of("board","events","groups").contains(section))LocationActions.render(this,j);endCard(intro);}
         boolean manage=j.get("manage").getAsBoolean();
         switch(section){case "board" -> BoardSection.render(this,j);case "ideas" -> IdeasSection.render(this,j);case "polls" -> PollsSection.render(this,j);case "events" -> EventsSection.render(this,j);case "groups" -> GroupsSection.render(this,j);}
@@ -266,9 +261,9 @@ final class CommunityScreen extends ScrollScreen {
         if(plus())secondary("Поделиться в чате…",()->minecraft.setScreen(new ChatScreen("/rivet share "+section+" "+itemId)));
         if(can(j,"edit"))secondary("Редактировать",()->edit(j));
         else if(Set.of("board","events","groups").contains(section)&&can(j,"location"))secondary("Место…",()->{var preset=new JsonObject();preset.add("location",j.has("location")?j.get("location"):JsonNull.INSTANCE);form("Место","location",List.of(),preset);});
-        if(!owner(j))secondary("Пожаловаться",()->minecraft.setScreen(new ReportScreen(surface(),name(section)+": "+Json.str(j,"title")+" ["+itemId+"]\n")));
+        if(!owner(j)&&ServerMenuClient.module("reports"))secondary("Пожаловаться",()->minecraft.setScreen(new ReportScreen(surface(),name(section)+": "+Json.str(j,"title")+" ["+itemId+"]\n")));
         if(j.has("history"))secondary("История изменений",()->{var labels=new ArrayList<String>();for(var change:j.getAsJsonArray("history")){var h=change.getAsJsonObject();labels.add(local(h.get("at").getAsLong())+" · "+Json.str(h,"author")+" · "+operationLabel(Json.str(h,"operation")));}minecraft.setScreen(new ChoicePopup(surface(),"Последние изменения",labels,i->{var h=j.getAsJsonArray("history").get(i).getAsJsonObject();if(h.has("changes"))minecraft.setScreen(ChangePreviewScreen.history(surface(),h.getAsJsonArray("changes")));}));});
-        if(can(j,"delete"))secondaryDanger("Удалить…",()->confirm("Удалить? Восстановление доступно 30 дней.","delete",new JsonObject()));
+        if(can(j,"delete"))secondaryDanger("Удалить…",()->confirm(deleteMessage(),"delete",new JsonObject()));
         if(can(j,"hide"))secondary("Скрыть запись",()->form("Модерация","hide",List.of(new Field("text","Причина",500)),new JsonObject()));
     }
     void secondary(String label,Runnable action){moreActions.add(new Row(label,action));}
@@ -291,7 +286,6 @@ final class CommunityScreen extends ScrollScreen {
     record Field(String key,String label,int limit,JsonArray options){Field(String key,String label,int limit){this(key,label,limit,null);}}
     @Override protected void onScrollEnd(){nextPage();}
     @Override public boolean mouseScrolled(double x,double y,double dx,double dy){
-        if(!home()&&sideProfile()&&data.has("groups")&&x>=navigation.right()-232&&y>=groupTop()&&y<groupTop()+groupRows()*76){int max=Math.max(0,data.getAsJsonArray("groups").size()-groupRows());groupScroll=Math.max(0,Math.min(max,groupScroll+(dy<0?1:dy>0?-1:0)));refreshUi();return true;}
         if(navigation.scroll(x,y,dy)){refreshUi();return true;}
         if(splitLayout()&&x>=detailLeft()&&y>=42&&y<UiWorkspace.fit(width,height).page().bottom()){scrollDetail(-dy*3);return true;}
         return super.mouseScrolled(x,y,dx,dy);

@@ -13,7 +13,7 @@ final class UiActions {
  }
  private static final Map<Button,Command> commands=new WeakHashMap<>();
  static Button command(Command command,NativeLayout.Box slot,Consumer<AbstractWidget> add,Runnable run){
-  var b=button(Component.literal(switch(command){case REFRESH->"Обновить";case RETRY->"Повторить";case BACK->"Назад";case CLOSE->"Закрыть";case LIST->"К списку";}),Tone.NORMAL,command.icon,ignored->run.run()).bounds(slot.x(),slot.y(),Math.min(COMMAND_WIDTH,slot.width()),CONTROL_HEIGHT).build();
+  var b=button(Client.tr(command.label),Tone.NORMAL,command.icon,ignored->run.run()).bounds(slot.x(),slot.y(),Math.min(COMMAND_WIDTH,slot.width()),CONTROL_HEIGHT).build();
   commands.put(b,command);add.accept(b);return b;
  }
  static Command commandOf(Button button){return commands.get(button);}

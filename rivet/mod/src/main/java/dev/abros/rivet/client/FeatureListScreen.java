@@ -7,7 +7,7 @@ import net.minecraft.client.gui.components.*;
 import net.minecraft.client.gui.screens.*;
 import net.minecraft.network.chat.Component;
 import java.time.*;
-import java.time.format.DateTimeFormatter;
+
 
 /** Paged server lists; response routing stays bound to the requesting screen. */
 final class FeatureListScreen extends ScrollScreen {
@@ -55,8 +55,8 @@ final class FeatureListScreen extends ScrollScreen {
             int half=(wPanel-30)/2;boolean online=selectedPlayer.has("online")&&selectedPlayer.get("online").getAsBoolean();
             boolean self=Json.str(selectedPlayer,"uuid").equals(Json.opt(ServerMenuClient.state,"uuid",""));
             if(!self){if(online&&actions.contains(new JsonPrimitive("tell")))addRenderableWidget(UiActions.button(Component.literal("Написать"),UiActions.Tone.NORMAL,"",b->PlayerActionsScreen.openChat(this,Json.str(selectedPlayer,"name"))).bounds(x+12,actionY,half,20).build());
-            addRenderableWidget(UiActions.button(Component.literal("Пожаловаться"),UiActions.Tone.NORMAL,"",b->minecraft.setScreen(new ReportScreen(this,"Игрок: "+Json.str(selectedPlayer,"name")+"\n"))).bounds(x+18+half,actionY,half,20).build());
-            addRenderableWidget(UiActions.button(Component.literal("Пригласить в объединение"),UiActions.Tone.NORMAL,"",b->CommunityScreen.invite(this,selectedPlayer)).bounds(x+12,actionY+26,wPanel-24,20).build());
+            if(ServerMenuClient.module("reports"))addRenderableWidget(UiActions.button(Component.literal("Пожаловаться"),UiActions.Tone.NORMAL,"",b->minecraft.setScreen(new ReportScreen(this,"Игрок: "+Json.str(selectedPlayer,"name")+"\n"))).bounds(x+18+half,actionY,half,20).build());
+            if(ServerMenuClient.module("groups"))addRenderableWidget(UiActions.button(Component.literal("Пригласить в объединение"),UiActions.Tone.NORMAL,"",b->CommunityScreen.invite(this,selectedPlayer)).bounds(x+12,actionY+26,wPanel-24,20).build());
             }
             addRenderableWidget(UiActions.button(Component.literal("Профиль игрока…"),UiActions.Tone.NORMAL,"",b->minecraft.setScreen(new PlayerActionsScreen(this,selectedPlayer,actions))).bounds(x+12,actionY+(self?0:52),wPanel-24,20).build());
 
@@ -67,7 +67,6 @@ final class FeatureListScreen extends ScrollScreen {
 
     }
     private String label(JsonObject j){return switch(kind){case "players" -> Json.str(j,"name")+(j.has("online")&&j.get("online").getAsBoolean()?" · ●":"");case "links" -> Json.str(j,"name");case "history" -> Json.str(j,"actor")+" · "+Json.str(j,"action");default -> Client.tr("server.status."+Json.opt(j,"status","open")).getString()+" · "+Json.str(j,"player")+" · "+Json.str(j,"message");};}
-    static String localTime(String time){return DateTimeFormatter.ofPattern("dd.MM.yyyy HH:mm z").format(Instant.parse(time).atZone(AccessibilityScreen.zone()));}
     private void detail(JsonObject j){
         if(kind.equals("players")){if(selection!=null){minecraft.setScreen(parent);selection.accept(j);}else if(splitPlayers()){selectedPlayer=j;rebuildWidgets();}else minecraft.setScreen(new PlayerActionsScreen(this,j,actions));return;}
         if(kind.equals("links")){handleComponentClicked(Component.literal(Json.str(j,"name")).withStyle(s->s.withClickEvent(new net.minecraft.network.chat.ClickEvent(net.minecraft.network.chat.ClickEvent.Action.OPEN_URL,Json.str(j,"url")))).getStyle());return;}

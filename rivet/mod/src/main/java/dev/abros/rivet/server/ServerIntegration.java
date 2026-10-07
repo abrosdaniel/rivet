@@ -18,9 +18,8 @@ import java.util.concurrent.*;
 import java.util.function.Consumer;
 
 public final class ServerIntegration {
-    private static volatile ServerProjectPolicy policy;
     private static final ConfigurationTask.Type TYPE=new ConfigurationTask.Type(ResourceLocation.fromNamespaceAndPath("rivet","verify_pack"));
-    private record Pending(String nonce,ServerProjectPolicy policy){}
+    private record Pending(String nonce,String hash){}
     private static final Map<Object,Pending> NONCES=Collections.synchronizedMap(new WeakHashMap<>());
 
     private static final Map<Object,Set<String>> FEATURES=Collections.synchronizedMap(new WeakHashMap<>());
@@ -29,62 +28,29 @@ public final class ServerIntegration {
         bus.addListener(ServerIntegration::tasks);
         dev.abros.rivet.server.compat.CompatibilityRegistry.install();
         ServerDatabase.install();
-        ServerModules.install(bus,container);ServerUpdateNotice.install();
+        ServerModules.install(bus,container);
         NeoForge.EVENT_BUS.addListener(ServerIntegration::starting);
-        NeoForge.EVENT_BUS.addListener(ServerIntegration::commands);
-        NeoForge.EVENT_BUS.addListener((net.neoforged.neoforge.event.server.ServerStoppedEvent event)->{policy=null;NONCES.clear();FEATURES.clear();});
+        NeoForge.EVENT_BUS.addListener((net.neoforged.neoforge.event.server.ServerStoppedEvent event)->{NONCES.clear();FEATURES.clear();});
         Protocol.serverReply=ServerIntegration::reply;
     }
     private static void starting(net.neoforged.neoforge.event.server.ServerAboutToStartEvent event){
-        policy=null;NONCES.clear();FEATURES.clear();
-        try {
-            var root=net.neoforged.fml.loading.FMLPaths.GAMEDIR.get().toAbsolutePath().normalize();
-            var remote=new Remote();remote.cacheMetadata(root.resolve("rivet/cache/http"));
-            policy=ServerProjectPolicy.load(new RepositoryClient(root,remote),ServerDatabase.settings().text("project.repository"),ServerDatabase.settings().flag("project.requirePack"));
-            if(policy.release()!=null&&!Versions.supportsRequirement(dev.abros.rivet.Rivet.VERSION,policy.requiredRivetVersion())){
-                com.mojang.logging.LogUtils.getLogger().error("Rivet: проект требует версию {}, на сервере установлена {}. Установите указанную версию Rivet или исправьте rivetVersion в проекте.",policy.requiredRivetVersion(),dev.abros.rivet.Rivet.VERSION);
-                throw new IllegalStateException("Ветка Rivet сервера не совпадает с rivetVersion проекта");
-            }
-            if(!policy.problem().isEmpty())com.mojang.logging.LogUtils.getLogger().warn("Rivet: {}. Проверка сборки выключена.",policy.problem());
-            else if(policy.offline())com.mojang.logging.LogUtils.getLogger().warn("Rivet: GitHub недоступен; используется сохранённый снимок проекта {}, версия {}, проверенный {}.",policy.repository(),policy.version(),policy.release().checkedAt());
-            else if(!policy.repository().isEmpty())com.mojang.logging.LogUtils.getLogger().info("Rivet: проект {}, версия {}; проверка сборки: {}.",policy.repository(),policy.version(),policy.required());
-        } catch(Exception failure) {
-            com.mojang.logging.LogUtils.getLogger().error("Rivet: не удалось подготовить проект. Запуск сервера ОСТАНОВЛЕН: {}",failure.getMessage());
-            throw new IllegalStateException("Rivet: проверьте project и requireProjectPack в config/rivet-server.toml. "+failure.getMessage(),failure);
-        }
+        NONCES.clear();FEATURES.clear();
     }
     public static boolean luckPermsEnabled(){return net.neoforged.fml.ModList.get().isLoaded("luckperms");}
     public static String helpText(){return ServerDatabase.settings().text("menu.help");}
-    public static String project(){var current=policy;return current==null?"":current.repository();}
-    public static String packVersion(){var current=policy;return current==null?"":current.version();}
-    public static String requiredHash(){var current=policy;return current==null||!current.required()?"":current.hash();}
+    public static String requiredHash(){return ServerPack.requiredHash();}
 
-    private static void commands(net.neoforged.neoforge.event.RegisterCommandsEvent event){
-        event.getDispatcher().register(Commands.literal("rivet").then(Commands.literal("project")
-            .requires(source->ServerCommands.allowed(source,"rivet.diagnostics"))
-            .then(Commands.literal("status").executes(context->{
-                var current=policy;
-                String text=current==null?"Rivet: проект ещё не загружен.":
-                    "Проект: "+(current.repository().isEmpty()?"не задан":current.repository())+
-                    "\nПроверка сборки: "+(current.required()?"включена":"выключена")+
-                    "\nПринятая версия: "+(current.version().isEmpty()?"—":current.version())+
-                    "\nПоследняя попытка проверки: "+current.checkedAt()+
-                    "\nРезультат: "+(!current.problem().isEmpty()?current.problem():current.release()==null?"проект не задан":current.offline()?"сохранённый снимок от "+current.release().checkedAt():"загружено с GitHub")+
-                    "\nТребования обновляются при перезапуске сервера.";
-                context.getSource().sendSuccess(()->Component.literal(text),false);return 1;
-            }))));
-    }
     private static void tasks(RegisterConfigurationTasksEvent event){
         var server=net.neoforged.neoforge.server.ServerLifecycleHooks.getCurrentServer();
         if(server!=null&&event.getListener() instanceof net.minecraft.server.network.ServerConfigurationPacketListenerImpl listener&&!ServerFeatures.mayJoin(listener.getOwner(),server)){event.getListener().disconnect(ServerFeatures.maintenanceMessage());return;}
-        var current=policy;if(current==null)return;
+        String current=requiredHash();
         boolean available=event.getListener().hasChannel(Protocol.Hello.TYPE)&&event.getListener().hasChannel(Protocol.ClientState.TYPE);
-        if(!available){if(current.required()||AuthServer.enabled())event.getListener().disconnect(Component.literal("Для этого сервера требуется Rivet "+ConnectionCompatibility.branch(dev.abros.rivet.Rivet.VERSION)));return;}
+        if(!available){if(!current.isEmpty()||AuthServer.enabled())event.getListener().disconnect(Component.literal("Для этого сервера требуется Rivet "+ConnectionCompatibility.branch(dev.abros.rivet.Rivet.VERSION)));return;}
         var pending=new Pending(UUID.randomUUID().toString(),current);var listener=event.getListener();
         event.register(new ICustomConfigurationTask(){
             public ConfigurationTask.Type type(){return TYPE;}
             public void run(Consumer<CustomPacketPayload> sender){
-                NONCES.put(listener,pending);JsonObject hello=new JsonObject();hello.addProperty("coreVersion",dev.abros.rivet.Rivet.VERSION);hello.add("protocols",WireProtocols.current());hello.add("features",ConnectionCompatibility.features());hello.addProperty("protocolVersion",WireProtocols.version("pack"));hello.addProperty("nonce",pending.nonce());hello.addProperty("repository",current.repository());hello.addProperty("serverId",current.serverId());hello.addProperty("requiredVersion",current.version());hello.addProperty("requiredLockSha256",current.hash());sender.accept(new Protocol.Hello(Json.GSON.toJson(hello)));
+                NONCES.put(listener,pending);JsonObject hello=new JsonObject();hello.addProperty("coreVersion",dev.abros.rivet.Rivet.VERSION);hello.add("protocols",WireProtocols.current());hello.add("features",ConnectionCompatibility.features());hello.addProperty("protocolVersion",WireProtocols.version("pack"));hello.addProperty("nonce",pending.nonce());hello.addProperty("requiredHash",current);sender.accept(new Protocol.Hello(Json.GSON.toJson(hello)));
                 CompletableFuture.delayedExecutor(ServerDatabase.settings().number("connection.handshakeTimeout"),TimeUnit.SECONDS).execute(()->{if(server!=null)server.execute(()->{if(NONCES.remove(listener,pending))listener.disconnect(Component.literal("Rivet: handshake timeout"));});});
             }
         });
@@ -94,8 +60,8 @@ public final class ServerIntegration {
         String compatibility=ConnectionCompatibility.failure(dev.abros.rivet.Rivet.VERSION,Json.opt(state,"coreVersion",""),state.getAsJsonObject("protocols"));
         if(!compatibility.isEmpty()){com.mojang.logging.LogUtils.getLogger().warn("Rivet: rejected incompatible client {}, server {}",Json.opt(state,"coreVersion",""),dev.abros.rivet.Rivet.VERSION);context.disconnect(Component.literal(compatibility));return;}
         var features=ConnectionCompatibility.common(state.get("features"));
-        if(AuthServer.enabled()&&!features.contains("auth")||pending.policy().required()&&!features.contains("pack")){context.disconnect(Component.literal("В клиенте Rivet отсутствуют необходимые серверу функции"));return;}
-        String failure=pending.policy().verify(state);if(!failure.isEmpty()){context.disconnect(Component.literal(failure));return;}
+        if(AuthServer.enabled()&&!features.contains("auth")||!pending.hash().isEmpty()&&!features.contains("pack")){context.disconnect(Component.literal("В клиенте Rivet отсутствуют необходимые серверу функции"));return;}
+        String failure=pending.hash().isEmpty()||pending.hash().equals(Json.opt(state,"packHash",""))?"":"Обновите файлы сборки перед подключением к серверу";if(!failure.isEmpty()){context.disconnect(Component.literal(failure));return;}
         if(context.listener() instanceof net.minecraft.server.network.ServerConfigurationPacketListenerImpl listener)ServerFeatures.record(listener.getOwner().getId(),state);
         FEATURES.put(context.connection(),features);
         context.finishCurrentTask(TYPE);

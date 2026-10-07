@@ -21,7 +21,7 @@ public final class CommunityUiHarness {
   if(!smokeStarted){if(!(event.getScreen() instanceof TitleScreen))return;smokeStarted=true;if(System.getenv("RIVET_UI_FROM")!=null)smokeStep=Integer.parseInt(System.getenv("RIVET_UI_FROM"));smokeAt=System.currentTimeMillis()+1500;return;}
   if(System.currentTimeMillis()<smokeAt)return;smokeAt=System.currentTimeMillis()+900;
   try{
-   if(smokeStep>0){var dir=new java.io.File(output);dir.mkdirs();net.minecraft.client.Screenshot.grab(dir,String.format("menu-%02d.png",smokeStep),mc.getMainRenderTarget(),message->{});}
+   if(smokeStep>0){var dir=new java.io.File(output);dir.mkdirs();UiCaptureHarness.grab(dir,String.format("menu-%02d.png",smokeStep),mc.getMainRenderTarget(),message->{});}
    switch(smokeStep++){
     case 0 -> {mc.options.guiScale().set(1);mc.resizeDisplay();open("normal");}
     case 1 -> mc.setScreen(new CommunityScreen(null,"groups",""));
@@ -48,10 +48,10 @@ public final class CommunityUiHarness {
     case 22 -> mc.setScreen(new NotificationPopup(new CommunityScreen(null,"home","")));
     case 23 -> {mc.options.guiScale().set(2);mc.resizeDisplay();mc.setScreen(new PlayerActionsScreen(null,player(),actions()));}
     case 24 -> mc.setScreen(new AccessibilityScreen(mc.screen));
-    case 25 -> {clickLabel("Поведение");clickLabel("Обычная ▾");}
+    case 25 -> {((AccessibilityScreen)mc.screen).revealSetting("density");clickPrefix("Плотность интерфейса:");}
     case 26 -> mc.setScreen(new VoiceDiagnosticsScreen(null));
     case 27 -> mc.setScreen(new ServerMenuScreen(null,"admin"));
-    case 28 -> clickSummary("Сервер");
+    case 28 -> adminTab("Сервер");
     case 29 -> mc.setScreen(new ModerationVoteScreen(null,player()));
     case 30 -> mc.setScreen(new ModerationVoteScreen(null,null));
     case 31 -> mc.setScreen(new PlayerAdministrationScreen(null,player()));
@@ -75,20 +75,20 @@ public final class CommunityUiHarness {
     case 49 -> {clickLabel("Действия");clickLabel("Написать");}
     case 50 -> {if(!(mc.screen instanceof TextScreen))throw new IllegalStateException("Player actions chat without a connection was not blocked");System.out.println("RIVET_UI_CHAT_GUARD_OK");}
     case 51 -> {mc.options.guiScale().set(1);mc.resizeDisplay();open("normal");mc.setScreen(new ServerMenuScreen(null,"admin"));}
-    case 52 -> clickSummary("Сервер");
+    case 52 -> adminTab("Сервер");
     case 53 -> {ServerMenuClient.state.addProperty("maintenance",true);ServerMenuClient.state.addProperty("maintenanceUntil",System.currentTimeMillis()+1800000);ServerMenuClient.state.addProperty("maintenanceReason","Обновление сборки");ServerMenuClient.state.addProperty("restartAt",System.currentTimeMillis()+300000);ServerMenuClient.state.addProperty("pinned",true);ServerMenuClient.state.addProperty("pinnedText","Встреча на спавне");}
     case 54 -> {clickSummary("Объявления");clickSummary("Сообщение на главной");}
     case 55 -> {mc.screen.onClose();}
-    case 56 -> {mc.screen.onClose();mc.screen.onClose();mc.screen.keyPressed(267,0,0);clickSummary("Журнал действий");}
+    case 56 -> {mc.screen.onClose();mc.screen.onClose();adminTab("Инструменты");clickSummary("Журнал действий");}
     case 57 -> {if(!(mc.screen instanceof FeatureListScreen))throw new IllegalStateException("History destination missing");mc.screen.onClose();clickSummary("Данные сообщества");if(mc.screen.children().stream().noneMatch(c->c instanceof UiSummaryCard card&&card.getMessage().getString().startsWith("Все разделы.")))throw new IllegalStateException("Section export missing");}
     case 58 -> {open("normal");ServerMenuClient.state.addProperty("admin",false);ServerMenuClient.state.addProperty("staff",true);ServerMenuClient.state.add("capabilities",Json.GSON.toJsonTree(Map.of("rivet.reports",true)));mc.setScreen(new ServerMenuScreen(null,"admin"));}
-    case 59 -> {for(var child:mc.screen.children())if(child instanceof Button b&&b.getX()>20&&List.of("Сервер","Журнал").contains(b.getMessage().getString()))throw new IllegalStateException("Limited moderator sees unrelated administration tabs");System.out.println("RIVET_UI_SCOPED_PERMISSIONS_OK");}
+    case 59 -> {for(var child:mc.screen.children())if(child instanceof TabButton b&&List.of("Сервер","Диагностика","Инструменты").contains(b.getMessage().getString()))throw new IllegalStateException("Limited moderator sees unrelated administration tabs");System.out.println("RIVET_UI_SCOPED_PERMISSIONS_OK");}
     case 60 -> {open("normal");mc.options.guiScale().set(2);mc.resizeDisplay();mc.setScreen(new PlayerActionsScreen(null,player(),actions(),true));}
     case 61 -> clickLabel(Client.tr("server.command.kill").getString());
     case 62 -> {if(!(mc.screen instanceof UiConfirmDialog))throw new IllegalStateException("Kill needs confirmation");mc.setScreen(new ReportScreen(new CommunityScreen(null,"home",""),"Игрок: ABROSxd\n"));}
     case 63 -> {for(var child:mc.screen.children())if(child instanceof net.minecraft.client.gui.components.MultiLineEditBox e)e.setValue("Первая строка жалобы\nВторая строка с подробностями");}
-    case 64 -> clickLabel("Отправить");
-    case 65 -> {if(mc.screen instanceof ReportScreen)throw new IllegalStateException("Report did not send directly");mc.setScreen(new ModerationVoteScreen(mc.screen,player()));}
+    case 64 -> clickLabel(Client.tr("server.reviewReport").getString());
+    case 65 -> {if(!(mc.screen instanceof ReviewScreen))throw new IllegalStateException("Report review missing");mc.screen.onClose();if(!(mc.screen instanceof ReportScreen))throw new IllegalStateException("Report cancellation lost its form");mc.setScreen(new ModerationVoteScreen(mc.screen,player()));}
     case 66 -> clickPrefix("Мера:");
     case 67 -> clickLabel("Временный бан");
     case 68 -> {mc.setScreen(new CommunityScreen(null,"groups",""));}
@@ -103,8 +103,8 @@ public final class CommunityUiHarness {
     case 77 -> {if(!(mc.screen instanceof CommunityPreferences))throw new IllegalStateException("Notification settings missing");System.out.println("RIVET_UI_REVISED_FORMS_OK");}
     case 78 -> {mc.options.guiScale().set(1);mc.resizeDisplay();open("empty");}
     case 79 -> {var field=CommunityScreen.class.getDeclaredField("rows");field.setAccessible(true);if(((java.util.List<?>)field.get(mc.screen)).size()!=1)throw new IllegalStateException("Empty home repeats its message");open("manygroups");}
-    case 80 -> {mc.screen.mouseScrolled(mc.screen.width-100,290,0,-5);}
-    case 81 -> {var field=CommunityScreen.class.getDeclaredField("groupScroll");field.setAccessible(true);if(field.getInt(mc.screen)<=0)throw new IllegalStateException("Groups do not scroll");mc.options.guiScale().set(2);mc.resizeDisplay();}
+    case 80 -> {var area=((ScrollScreen)mc.screen).scrollLayout().viewport();mc.screen.mouseScrolled(area.x()+area.width()/2,area.y()+area.height()/2,0,-5);}
+    case 81 -> {if(((ScrollScreen)mc.screen).firstRow<=0)throw new IllegalStateException("Home groups do not scroll");mc.options.guiScale().set(2);mc.resizeDisplay();}
     case 82 -> {for(var child:mc.screen.children())if(child instanceof CommunityCard c&&c.getY()+c.getHeight()>mc.screen.height-40)throw new IllegalStateException("Home card overlaps footer");mc.screen.mouseScrolled(mc.screen.width-50,120,0,-5);}
     case 83 -> {mc.options.guiScale().set(1);mc.resizeDisplay();open("normal");mc.setScreen(new CommunityPreferences(mc.screen,Json.GSON.toJsonTree(Map.of("muted",List.of())).getAsJsonObject()));ServerMenuClient.previewTransport=j->{if(Json.opt(j,"op","").equals("preferences"))java.util.concurrent.CompletableFuture.delayedExecutor(1500,java.util.concurrent.TimeUnit.MILLISECONDS).execute(()->mc.execute(()->request(j)));else request(j);};}
     case 84 -> clickLabel("Да");
@@ -115,8 +115,9 @@ public final class CommunityUiHarness {
     case 89 -> {open("normal");mc.setScreen(new AccessibilityScreen(mc.screen));var c=AccessibilityScreen.class.getDeclaredField("contrast");c.setAccessible(true);var o=AccessibilityScreen.class.getDeclaredField("opaque");o.setAccessible(true);boolean oldC=c.getBoolean(null),oldO=o.getBoolean(null);try{for(boolean high:new boolean[]{false,true}){c.setBoolean(null,high);o.setBoolean(null,false);if(AccessibilityScreen.background(0xC01C242C)!=0xC01C242C)throw new IllegalStateException("Contrast overrides transparency");o.setBoolean(null,true);if(AccessibilityScreen.background(0xC01C242C)!=0xFF1C242C)throw new IllegalStateException("Opaque panels remain transparent");}}finally{c.setBoolean(null,oldC);o.setBoolean(null,oldO);}System.out.println("RIVET_PANEL_OPACITY_OK");}
     default -> {System.out.println("RIVET_UI_SMOKE_COMPLETE");if(System.getenv("RIVET_UI_KEEP_OPEN")!=null){smokeStep=-1;NextUiHarness.openPreview();}else mc.stop();}
    }
-  }catch(Exception failure){failure.printStackTrace();mc.stop();}
+  }catch(Exception failure){System.out.println("RIVET_UI_SMOKE_FAILED step="+smokeStep);smokeStep=-1;failure.printStackTrace();mc.stop();}
  }
+ static void adminTab(String label){var mc=Minecraft.getInstance();for(var child:mc.screen.children())if(child instanceof TabButton button&&button.getMessage().getString().equals(label)){button.onPress();return;}for(var child:mc.screen.children())if(child instanceof Button button&&button.getY()==42&&button.getMessage().getString().endsWith(" ▾")){button.onPress();clickLabel(label);return;}throw new IllegalStateException("Admin tab missing: "+label);}
  private static void clickSummary(String label){for(var child:Minecraft.getInstance().screen.children())if(child instanceof UiSummaryCard card&&card.getMessage().getString().startsWith(label+".")){card.onPress();return;}throw new IllegalStateException("Admin summary not found: "+label);}
  private static void clickPrefix(String label){for(var child:Minecraft.getInstance().screen.children())if(child instanceof Button button&&button.getMessage().getString().startsWith(label)){button.onPress();return;}throw new IllegalStateException("No button: "+label);}
  private static void clickCard(){for(var child:Minecraft.getInstance().screen.children())if(child instanceof CommunityCard card&&!card.getMessage().getString().startsWith("Нарушение правил")){card.onPress();return;}throw new IllegalStateException("No card");}

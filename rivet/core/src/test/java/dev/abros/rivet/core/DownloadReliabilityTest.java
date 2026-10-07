@@ -15,7 +15,7 @@ import static org.junit.jupiter.api.Assertions.*;
 class DownloadReliabilityTest {
  @TempDir Path game;
  static final String URL="https://1.1.1.1/mod.jar";
- Manifest.FileEntry file(){return new Manifest.FileEntry("mod","mods/test.jar","1",List.of(URL),Hashes.sha256("good".getBytes()),4,"enforce");}
+ Cache.Artifact file(){return new Cache.Artifact("mods/test.jar",List.of(URL),Hashes.sha256("good".getBytes()),4);}
  static HttpResponse<InputStream> response(HttpRequest request,int status,Map<String,List<String>> headers,InputStream body){
   return new HttpResponse<>(){
    public int statusCode(){return status;}public HttpRequest request(){return request;}
@@ -61,10 +61,6 @@ class DownloadReliabilityTest {
    var second=pool.submit(()->new Cache(game,remote).obtain(file(),new AtomicBoolean()));release.countDown();assertEquals(first.get(3,TimeUnit.SECONDS),second.get(3,TimeUnit.SECONDS));assertEquals(1,calls.get());
   }finally{release.countDown();}
  }
- @Test void repeatedBytesDoNotCompleteProgressBeforeVerification(){
-  var messages=new ArrayList<String>();var meter=new DownloadProgress(10,messages::add);meter.source("x",1);meter.position("x",10,8,8);meter.position("x",10,0,0);meter.position("x",10,4,4);meter.source("y",1);
-  assertTrue(messages.getLast().startsWith("DOWNLOAD|4|10|"));meter.position("x",10,10,6);meter.source("y",1);assertTrue(messages.getLast().startsWith("DOWNLOAD|9|10|"));meter.verified("x",10);assertTrue(messages.getLast().startsWith("DOWNLOAD|10|10|"));
- }
  @Test void retryPolicyAndDateHeaders(){assertFalse(Remote.retryable(403));assertFalse(Remote.retryable(404));assertTrue(Remote.retryable(429));assertTrue(Remote.retryable(502));assertEquals(60,Remote.retryDelay("999"));assertEquals(0,Remote.retryDelay("-2"));assertEquals(0,Remote.retryDelay("Wed, 21 Oct 2015 07:28:00 GMT"));}
  @Test void hostCooldownIsSharedButDoesNotBlockOtherHosts()throws Exception{
   var firstCancel=new AtomicBoolean();var requests=new AtomicInteger();
@@ -91,7 +87,7 @@ class DownloadReliabilityTest {
  }
  @Test void throttledSourceImmediatelyUsesOtherMirror()throws Exception{
   var calls=new ArrayList<String>();var remote=new Remote(){@Override HttpResponse<InputStream> send(HttpRequest r){calls.add(r.uri().getHost());return r.uri().getHost().equals("8.8.4.4")?response(r,429,Map.of("Retry-After",List.of("60")),InputStream.nullInputStream()):response(r,200,Map.of(),new ByteArrayInputStream("good".getBytes()));}};
-  var entry=new Manifest.FileEntry("mod","mods/test.jar","1",List.of("https://8.8.4.4/mod.jar",URL),file().sha256(),4,"enforce");
+  var entry=new Cache.Artifact("mods/test.jar",List.of("https://8.8.4.4/mod.jar",URL),file().sha256(),4);
   assertEquals("good",Files.readString(new Cache(game,remote).obtain(entry,new AtomicBoolean())));assertEquals(List.of("8.8.4.4","1.1.1.1"),calls);
  }
  public static final class LockHolder {

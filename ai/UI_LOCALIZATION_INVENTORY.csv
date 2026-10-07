@@ -1,0 +1,2016 @@
+file,line,literal
+rivet/mod/src/main/java/dev/abros/rivet/client/AccessibilityScreen.java,11,Настройки Rivet
+rivet/mod/src/main/java/dev/abros/rivet/client/AccessibilityScreen.java,28,Не удалось сохранить настройки
+rivet/mod/src/main/java/dev/abros/rivet/client/AccessibilityScreen.java,32,Тема интерфейса
+rivet/mod/src/main/java/dev/abros/rivet/client/AccessibilityScreen.java,32,Не удалось сохранить тему
+rivet/mod/src/main/java/dev/abros/rivet/client/AccessibilityScreen.java,33,Прозрачные панели
+rivet/mod/src/main/java/dev/abros/rivet/client/AccessibilityScreen.java,33,Выключены
+rivet/mod/src/main/java/dev/abros/rivet/client/AccessibilityScreen.java,33,Включены
+rivet/mod/src/main/java/dev/abros/rivet/client/AccessibilityScreen.java,33,Включены
+rivet/mod/src/main/java/dev/abros/rivet/client/AccessibilityScreen.java,33,Выключены
+rivet/mod/src/main/java/dev/abros/rivet/client/AccessibilityScreen.java,34,Плотность интерфейса
+rivet/mod/src/main/java/dev/abros/rivet/client/AccessibilityScreen.java,34,Компактная
+rivet/mod/src/main/java/dev/abros/rivet/client/AccessibilityScreen.java,34,Сбалансированная
+rivet/mod/src/main/java/dev/abros/rivet/client/AccessibilityScreen.java,34,Просторная
+rivet/mod/src/main/java/dev/abros/rivet/client/AccessibilityScreen.java,34,Компактная
+rivet/mod/src/main/java/dev/abros/rivet/client/AccessibilityScreen.java,34,Сбалансированная
+rivet/mod/src/main/java/dev/abros/rivet/client/AccessibilityScreen.java,34,Просторная
+rivet/mod/src/main/java/dev/abros/rivet/client/AccessibilityScreen.java,37,Масштаб GUI Minecraft
+rivet/mod/src/main/java/dev/abros/rivet/client/AccessibilityScreen.java,37,Автоматически
+rivet/mod/src/main/java/dev/abros/rivet/client/AccessibilityScreen.java,37,Автоматически
+rivet/mod/src/main/java/dev/abros/rivet/client/AccessibilityScreen.java,38,Часовой пояс
+rivet/mod/src/main/java/dev/abros/rivet/client/AccessibilityScreen.java,38,Серверный
+rivet/mod/src/main/java/dev/abros/rivet/client/AccessibilityScreen.java,38,Местный
+rivet/mod/src/main/java/dev/abros/rivet/client/AccessibilityScreen.java,38,Местное время
+rivet/mod/src/main/java/dev/abros/rivet/client/AccessibilityScreen.java,38,Время сервера
+rivet/mod/src/main/java/dev/abros/rivet/client/AccessibilityScreen.java,39,Контрастность
+rivet/mod/src/main/java/dev/abros/rivet/client/AccessibilityScreen.java,39,Повышенная
+rivet/mod/src/main/java/dev/abros/rivet/client/AccessibilityScreen.java,39,Обычная
+rivet/mod/src/main/java/dev/abros/rivet/client/AccessibilityScreen.java,39,Обычная
+rivet/mod/src/main/java/dev/abros/rivet/client/AccessibilityScreen.java,39,Повышенная
+rivet/mod/src/main/java/dev/abros/rivet/client/AccessibilityScreen.java,40,Анимации
+rivet/mod/src/main/java/dev/abros/rivet/client/AccessibilityScreen.java,40,Выключены
+rivet/mod/src/main/java/dev/abros/rivet/client/AccessibilityScreen.java,40,Лёгкие
+rivet/mod/src/main/java/dev/abros/rivet/client/AccessibilityScreen.java,40,Выразительные
+rivet/mod/src/main/java/dev/abros/rivet/client/AccessibilityScreen.java,40,Выключены
+rivet/mod/src/main/java/dev/abros/rivet/client/AccessibilityScreen.java,40,Лёгкие
+rivet/mod/src/main/java/dev/abros/rivet/client/AccessibilityScreen.java,40,Выразительные
+rivet/mod/src/main/java/dev/abros/rivet/client/AccessibilityScreen.java,42,Профиль оформления
+rivet/mod/src/main/java/dev/abros/rivet/client/AccessibilityScreen.java,42,Выбрать…
+rivet/mod/src/main/java/dev/abros/rivet/client/AccessibilityScreen.java,42,Компактный
+rivet/mod/src/main/java/dev/abros/rivet/client/AccessibilityScreen.java,42,Минимальный
+rivet/mod/src/main/java/dev/abros/rivet/client/AccessibilityScreen.java,42,Подробный
+rivet/mod/src/main/java/dev/abros/rivet/client/AccessibilityScreen.java,42,Применить профиль?
+rivet/mod/src/main/java/dev/abros/rivet/client/AccessibilityScreen.java,42,"Изменятся плотность, состав виджета, TAB и подсказки. Тема, расположение и серверные настройки сохранятся."
+rivet/mod/src/main/java/dev/abros/rivet/client/AccessibilityScreen.java,45,Построить мост
+rivet/mod/src/main/java/dev/abros/rivet/client/AccessibilityScreen.java,45,7K2P · В работе
+rivet/mod/src/main/java/dev/abros/rivet/client/AccessibilityScreen.java,45,Подготовить материалы
+rivet/mod/src/main/java/dev/abros/rivet/client/AccessibilityScreen.java,45,Ответственный: вы · Завтра
+rivet/mod/src/main/java/dev/abros/rivet/client/AccessibilityScreen.java,49,Тема интерфейса
+rivet/mod/src/main/java/dev/abros/rivet/client/AccessibilityScreen.java,50,Не удалось восстановить тему
+rivet/mod/src/main/java/dev/abros/rivet/client/AdminDashboardScreen.java,12,Диагностика Rivet
+rivet/mod/src/main/java/dev/abros/rivet/client/AdminDashboardScreen.java,12,Сводка обращений
+rivet/mod/src/main/java/dev/abros/rivet/client/AdminDashboardScreen.java,15,Обновляем сводку…
+rivet/mod/src/main/java/dev/abros/rivet/client/AdminDashboardScreen.java,16,База данных доступна · 
+rivet/mod/src/main/java/dev/abros/rivet/client/AdminDashboardScreen.java,16, мс
+rivet/mod/src/main/java/dev/abros/rivet/client/AdminDashboardScreen.java,16,Проверка соединения и чтения выполнена сервером
+rivet/mod/src/main/java/dev/abros/rivet/client/AdminDashboardScreen.java,16,Сборка сервера опубликована
+rivet/mod/src/main/java/dev/abros/rivet/client/AdminDashboardScreen.java,16,Обязательная сборка не опубликована
+rivet/mod/src/main/java/dev/abros/rivet/client/AdminDashboardScreen.java,16,Очереди свободны
+rivet/mod/src/main/java/dev/abros/rivet/client/AdminDashboardScreen.java,16,Есть ожидающие запросы · обычная нагрузка
+rivet/mod/src/main/java/dev/abros/rivet/client/AdminDashboardScreen.java,16,Очереди растут · проверьте нагрузку и доступность базы
+rivet/mod/src/main/java/dev/abros/rivet/client/AdminDashboardScreen.java,16,Откройте журнал сервера: там причины и подробности ошибок
+rivet/mod/src/main/java/dev/abros/rivet/client/AdminDashboardScreen.java,16,Идёт голосование о наказании
+rivet/mod/src/main/java/dev/abros/rivet/client/AdminDashboardScreen.java,16,Перезапуск через 
+rivet/mod/src/main/java/dev/abros/rivet/client/AdminDashboardScreen.java,16,Обслуживание ещё 
+rivet/mod/src/main/java/dev/abros/rivet/client/AdminDashboardScreen.java,16, мин.
+rivet/mod/src/main/java/dev/abros/rivet/client/AdminDashboardScreen.java,16,Плановая очистка · количество записей
+rivet/mod/src/main/java/dev/abros/rivet/client/AdminDashboardScreen.java,16,Обращения: 
+rivet/mod/src/main/java/dev/abros/rivet/client/AdminDashboardScreen.java,16, · Корзина: 
+rivet/mod/src/main/java/dev/abros/rivet/client/AdminDashboardScreen.java,16, · Журнал: 
+rivet/mod/src/main/java/dev/abros/rivet/client/AdminDashboardScreen.java,16,Последние ошибки: 
+rivet/mod/src/main/java/dev/abros/rivet/client/AdminDashboardScreen.java,16,Возможности: 
+rivet/mod/src/main/java/dev/abros/rivet/client/AdminDashboardScreen.java,16,Причина: 
+rivet/mod/src/main/java/dev/abros/rivet/client/AdminDashboardScreen.java,16,Нет дополнительных данных
+rivet/mod/src/main/java/dev/abros/rivet/client/AdminDashboardScreen.java,16,Назначьте ответственного → ответьте игроку → закройте обращение.
+rivet/mod/src/main/java/dev/abros/rivet/client/AdminDashboardScreen.java,16,Очередь обращений
+rivet/mod/src/main/java/dev/abros/rivet/client/AdminDashboardScreen.java,16,Технические данные ▾
+rivet/mod/src/main/java/dev/abros/rivet/client/AdminDashboardScreen.java,16,Содержимое сводки
+rivet/mod/src/main/java/dev/abros/rivet/client/AdminDashboardScreen.java,16,Главное
+rivet/mod/src/main/java/dev/abros/rivet/client/AdminDashboardScreen.java,16,Технические данные
+rivet/mod/src/main/java/dev/abros/rivet/client/AdminDashboardScreen.java,17,Нет данных
+rivet/mod/src/main/java/dev/abros/rivet/client/AdminDashboardScreen.java,18,Нет ответа. Обновите данные.
+rivet/mod/src/main/java/dev/abros/rivet/client/AdminDashboardScreen.java,20,Последние ошибки
+rivet/mod/src/main/java/dev/abros/rivet/client/AdminDashboardScreen.java,20,Очередь записи
+rivet/mod/src/main/java/dev/abros/rivet/client/AdminDashboardScreen.java,20,Очередь чтения
+rivet/mod/src/main/java/dev/abros/rivet/client/AdminDashboardScreen.java,20,Открыты
+rivet/mod/src/main/java/dev/abros/rivet/client/AdminDashboardScreen.java,20,Без ответственного
+rivet/mod/src/main/java/dev/abros/rivet/client/AdminDashboardScreen.java,20,Высокий приоритет
+rivet/mod/src/main/java/dev/abros/rivet/client/AdminDashboardScreen.java,21,Rivet / БД · 10 мин · макс. 
+rivet/mod/src/main/java/dev/abros/rivet/client/AdminDashboardScreen.java,21, мс
+rivet/mod/src/main/java/dev/abros/rivet/client/AuthAccountScreen.java,13,Безопасность аккаунта
+rivet/mod/src/main/java/dev/abros/rivet/client/AuthAccountScreen.java,17,Создать приглашение для 
+rivet/mod/src/main/java/dev/abros/rivet/client/AuthAccountScreen.java,17,Передавайте приглашение только после проверки владельца аккаунта. Оно позволяет установить новый пароль.
+rivet/mod/src/main/java/dev/abros/rivet/client/AuthAccountScreen.java,23,Код восстановления
+rivet/mod/src/main/java/dev/abros/rivet/client/AuthAccountScreen.java,23,Скопировать код
+rivet/mod/src/main/java/dev/abros/rivet/client/AuthAccountScreen.java,23,Скопировано. Передайте владельцу лично
+rivet/mod/src/main/java/dev/abros/rivet/client/AuthAccountScreen.java,23,Приглашение истекло
+rivet/mod/src/main/java/dev/abros/rivet/client/AuthAccountScreen.java,25,Текущий пароль сервера
+rivet/mod/src/main/java/dev/abros/rivet/client/AuthAccountScreen.java,25,Текущий пароль сервера
+rivet/mod/src/main/java/dev/abros/rivet/client/AuthAccountScreen.java,26,Подтвердить привязку
+rivet/mod/src/main/java/dev/abros/rivet/client/AuthAccountScreen.java,26,Подтвердить отвязку
+rivet/mod/src/main/java/dev/abros/rivet/client/AuthAccountScreen.java,27,Введите текущий пароль сервера
+rivet/mod/src/main/java/dev/abros/rivet/client/AuthAccountScreen.java,28,Проверка…
+rivet/mod/src/main/java/dev/abros/rivet/client/AuthAccountScreen.java,31,Текущий пароль
+rivet/mod/src/main/java/dev/abros/rivet/client/AuthAccountScreen.java,31,Текущий пароль
+rivet/mod/src/main/java/dev/abros/rivet/client/AuthAccountScreen.java,31,Новый пароль
+rivet/mod/src/main/java/dev/abros/rivet/client/AuthAccountScreen.java,31,Новый пароль · от 
+rivet/mod/src/main/java/dev/abros/rivet/client/AuthAccountScreen.java,31, символов
+rivet/mod/src/main/java/dev/abros/rivet/client/AuthAccountScreen.java,31,Повтор нового пароля
+rivet/mod/src/main/java/dev/abros/rivet/client/AuthAccountScreen.java,31,Повтор нового пароля
+rivet/mod/src/main/java/dev/abros/rivet/client/AuthAccountScreen.java,31,Изменить пароль и отозвать все сеансы
+rivet/mod/src/main/java/dev/abros/rivet/client/AuthAccountScreen.java,31,Нужно не менее 
+rivet/mod/src/main/java/dev/abros/rivet/client/AuthAccountScreen.java,31, символов
+rivet/mod/src/main/java/dev/abros/rivet/client/AuthAccountScreen.java,31,Пароли не совпадают
+rivet/mod/src/main/java/dev/abros/rivet/client/AuthAccountScreen.java,31,Проверка…
+rivet/mod/src/main/java/dev/abros/rivet/client/AuthAccountScreen.java,32, (это устройство)
+rivet/mod/src/main/java/dev/abros/rivet/client/AuthAccountScreen.java,32, · Отозвать
+rivet/mod/src/main/java/dev/abros/rivet/client/AuthAccountScreen.java,33,Отвязать Minecraft-аккаунт
+rivet/mod/src/main/java/dev/abros/rivet/client/AuthAccountScreen.java,33,Привязать Minecraft-аккаунт
+rivet/mod/src/main/java/dev/abros/rivet/client/AuthAccountScreen.java,33,Подтвердите действие паролем сервера
+rivet/mod/src/main/java/dev/abros/rivet/client/AuthAccountScreen.java,34,Сменить пароль
+rivet/mod/src/main/java/dev/abros/rivet/client/AuthAccountScreen.java,34,Отозвать все устройства и сеансы
+rivet/mod/src/main/java/dev/abros/rivet/client/AuthAccountScreen.java,37,Отозвать доступ?
+rivet/mod/src/main/java/dev/abros/rivet/client/AuthAccountScreen.java,37,Сеансы выбранного устройства будут завершены.
+rivet/mod/src/main/java/dev/abros/rivet/client/AuthAccountScreen.java,42,Сброс доступа: 
+rivet/mod/src/main/java/dev/abros/rivet/client/AuthAccountScreen.java,42,Осталось секунд: 
+rivet/mod/src/main/java/dev/abros/rivet/client/AuthClient.java,37,Rivet: ключ сервера изменился. Свяжитесь с владельцем; пароль не отправлен.
+rivet/mod/src/main/java/dev/abros/rivet/client/AuthClient.java,42,Не удалось защитить соединение Minecraft
+rivet/mod/src/main/java/dev/abros/rivet/client/AuthClient.java,43,Не удалось начать Auth
+rivet/mod/src/main/java/dev/abros/rivet/client/AuthClient.java,45,Ошибка настройки TLS
+rivet/mod/src/main/java/dev/abros/rivet/client/AuthClient.java,47,Не удалось сохранить доверие к серверу
+rivet/mod/src/main/java/dev/abros/rivet/client/AuthClient.java,50,Защищённое подключение…
+rivet/mod/src/main/java/dev/abros/rivet/client/AuthClient.java,55,Не удалось подготовить Rivet Auth (
+rivet/mod/src/main/java/dev/abros/rivet/client/AuthClient.java,55,). Подробности в latest.log
+rivet/mod/src/main/java/dev/abros/rivet/client/AuthClient.java,62,Защищённое соединение Auth прервано
+rivet/mod/src/main/java/dev/abros/rivet/client/AuthClient.java,67,Вход на сервер…
+rivet/mod/src/main/java/dev/abros/rivet/client/AuthClient.java,72,Ошибка Auth
+rivet/mod/src/main/java/dev/abros/rivet/client/AuthClient.java,85,Не удалось подтвердить Minecraft-аккаунт. Вход по паролю остаётся доступен.
+rivet/mod/src/main/java/dev/abros/rivet/client/AuthClient.java,87,Ошибка защищённого запроса Auth
+rivet/mod/src/main/java/dev/abros/rivet/client/AuthClient.java,88,Слишком много запросов Auth
+rivet/mod/src/main/java/dev/abros/rivet/client/AuthClient.java,93,Вход отменён
+rivet/mod/src/main/java/dev/abros/rivet/client/AuthScreen.java,18,Rivet · Вход
+rivet/mod/src/main/java/dev/abros/rivet/client/AuthScreen.java,20,Восстановление доступа
+rivet/mod/src/main/java/dev/abros/rivet/client/AuthScreen.java,20,Добро пожаловать
+rivet/mod/src/main/java/dev/abros/rivet/client/AuthScreen.java,20,С возвращением
+rivet/mod/src/main/java/dev/abros/rivet/client/AuthScreen.java,21,Сохранить новый пароль
+rivet/mod/src/main/java/dev/abros/rivet/client/AuthScreen.java,21,Создать аккаунт и войти
+rivet/mod/src/main/java/dev/abros/rivet/client/AuthScreen.java,21,Войти на сервер
+rivet/mod/src/main/java/dev/abros/rivet/client/AuthScreen.java,27,"Новый пароль, "
+rivet/mod/src/main/java/dev/abros/rivet/client/AuthScreen.java,27,–128 символов
+rivet/mod/src/main/java/dev/abros/rivet/client/AuthScreen.java,27,Ваш пароль
+rivet/mod/src/main/java/dev/abros/rivet/client/AuthScreen.java,28,Придумайте пароль · от 
+rivet/mod/src/main/java/dev/abros/rivet/client/AuthScreen.java,28, символов
+rivet/mod/src/main/java/dev/abros/rivet/client/AuthScreen.java,28,Введите пароль
+rivet/mod/src/main/java/dev/abros/rivet/client/AuthScreen.java,29,Повторите пароль
+rivet/mod/src/main/java/dev/abros/rivet/client/AuthScreen.java,29,Повторите новый пароль
+rivet/mod/src/main/java/dev/abros/rivet/client/AuthScreen.java,30,Код от администратора
+rivet/mod/src/main/java/dev/abros/rivet/client/AuthScreen.java,30,Код приглашения от администратора
+rivet/mod/src/main/java/dev/abros/rivet/client/AuthScreen.java,31,Запомнить меня · 30 дней
+rivet/mod/src/main/java/dev/abros/rivet/client/AuthScreen.java,33,Вернуться ко входу
+rivet/mod/src/main/java/dev/abros/rivet/client/AuthScreen.java,33,Не помню пароль
+rivet/mod/src/main/java/dev/abros/rivet/client/AuthScreen.java,33,Попросите администратора выдать приглашение для восстановления.
+rivet/mod/src/main/java/dev/abros/rivet/client/AuthScreen.java,34,Войти через аккаунт Minecraft
+rivet/mod/src/main/java/dev/abros/rivet/client/AuthScreen.java,34,Проверяем аккаунт Minecraft…
+rivet/mod/src/main/java/dev/abros/rivet/client/AuthScreen.java,35,Отключиться
+rivet/mod/src/main/java/dev/abros/rivet/client/AuthScreen.java,39,Отключиться
+rivet/mod/src/main/java/dev/abros/rivet/client/AuthScreen.java,39,Проверяем…
+rivet/mod/src/main/java/dev/abros/rivet/client/AuthScreen.java,45,"Введите пароль, чтобы продолжить."
+rivet/mod/src/main/java/dev/abros/rivet/client/AuthScreen.java,46,Нужно не менее 
+rivet/mod/src/main/java/dev/abros/rivet/client/AuthScreen.java,46, символов.
+rivet/mod/src/main/java/dev/abros/rivet/client/AuthScreen.java,47,Пароли не совпадают. Проверьте повторный ввод.
+rivet/mod/src/main/java/dev/abros/rivet/client/AuthScreen.java,48,"Введите приглашение, полученное от администратора."
+rivet/mod/src/main/java/dev/abros/rivet/client/AuthScreen.java,49,Компьютер
+rivet/mod/src/main/java/dev/abros/rivet/client/AuthScreen.java,50,Проверяем данные…
+rivet/mod/src/main/java/dev/abros/rivet/client/AuthScreen.java,52,Пароль изменён. Войдите с новым паролем.
+rivet/mod/src/main/java/dev/abros/rivet/client/AuthScreen.java,53,Ответ задерживается. Повторите попытку или отключитесь.
+rivet/mod/src/main/java/dev/abros/rivet/client/AuthScreen.java,58,Новый пароль
+rivet/mod/src/main/java/dev/abros/rivet/client/AuthScreen.java,58,Создание аккаунта
+rivet/mod/src/main/java/dev/abros/rivet/client/AuthScreen.java,58,Вход в аккаунт
+rivet/mod/src/main/java/dev/abros/rivet/client/AuthScreen.java,58,Защищённое подключение · вход до загрузки мира
+rivet/mod/src/main/java/dev/abros/rivet/client/BoardSection.java,9,Куплю
+rivet/mod/src/main/java/dev/abros/rivet/client/BoardSection.java,9,Продам
+rivet/mod/src/main/java/dev/abros/rivet/client/BoardSection.java,9,Обменяю
+rivet/mod/src/main/java/dev/abros/rivet/client/BoardSection.java,9,Условия: 
+rivet/mod/src/main/java/dev/abros/rivet/client/BoardSection.java,10,Действует до: 
+rivet/mod/src/main/java/dev/abros/rivet/client/BoardSection.java,10,Категория: 
+rivet/mod/src/main/java/dev/abros/rivet/client/BoardSection.java,11,Откликнуться
+rivet/mod/src/main/java/dev/abros/rivet/client/BoardSection.java,11,Отклик
+rivet/mod/src/main/java/dev/abros/rivet/client/BoardSection.java,11,Сообщение
+rivet/mod/src/main/java/dev/abros/rivet/client/BoardSection.java,12,Ответ: 
+rivet/mod/src/main/java/dev/abros/rivet/client/BoardSection.java,12,Ответить: 
+rivet/mod/src/main/java/dev/abros/rivet/client/BoardSection.java,12,Ответ на отклик
+rivet/mod/src/main/java/dev/abros/rivet/client/BoardSection.java,12,Ответ на отклик
+rivet/mod/src/main/java/dev/abros/rivet/client/BoardSection.java,12,Ответ
+rivet/mod/src/main/java/dev/abros/rivet/client/BoardSection.java,13,Отозвать мой отклик
+rivet/mod/src/main/java/dev/abros/rivet/client/BoardSection.java,13,Отклик принят. Отменить и уведомить автора?
+rivet/mod/src/main/java/dev/abros/rivet/client/BoardSection.java,13,Отозвать отклик?
+rivet/mod/src/main/java/dev/abros/rivet/client/BoardSection.java,14,Закрыть объявление
+rivet/mod/src/main/java/dev/abros/rivet/client/BoardSection.java,14,Закрыть объявление?
+rivet/mod/src/main/java/dev/abros/rivet/client/BoardSection.java,14,Отметить выполненным
+rivet/mod/src/main/java/dev/abros/rivet/client/BoardSection.java,14,Отметить выполненным?
+rivet/mod/src/main/java/dev/abros/rivet/client/ChangePreviewScreen.java,7,Проверить изменения
+rivet/mod/src/main/java/dev/abros/rivet/client/ChangePreviewScreen.java,8,Было: 
+rivet/mod/src/main/java/dev/abros/rivet/client/ChangePreviewScreen.java,8,Станет: 
+rivet/mod/src/main/java/dev/abros/rivet/client/ChangePreviewScreen.java,8,Подтвердить
+rivet/mod/src/main/java/dev/abros/rivet/client/ChangePreviewScreen.java,8,Вернуться к правкам
+rivet/mod/src/main/java/dev/abros/rivet/client/ChatChannelIndicator.java,14,Рядом
+rivet/mod/src/main/java/dev/abros/rivet/client/ChatChannelIndicator.java,14, · радиус 
+rivet/mod/src/main/java/dev/abros/rivet/client/ChatChannelIndicator.java,14, блоков
+rivet/mod/src/main/java/dev/abros/rivet/client/ChatChannelIndicator.java,15,Общий чат
+rivet/mod/src/main/java/dev/abros/rivet/client/ChatChannelIndicator.java,16,Чат объединений выключен
+rivet/mod/src/main/java/dev/abros/rivet/client/ChatChannelIndicator.java,16,Объединение · выберите название
+rivet/mod/src/main/java/dev/abros/rivet/client/ChatHints.java,11,!текст → общий чат: вас услышат все
+rivet/mod/src/main/java/dev/abros/rivet/client/ChatHints.java,11,"[pos] → координаты · нажмите, чтобы идти"
+rivet/mod/src/main/java/dev/abros/rivet/client/ChatHints.java,11,Чат объединений выключен сервером
+rivet/mod/src/main/java/dev/abros/rivet/client/ChatHints.java,11,!текст → общий чат
+rivet/mod/src/main/java/dev/abros/rivet/client/ChatHints.java,11,#Название: текст → чат объединения
+rivet/mod/src/main/java/dev/abros/rivet/client/ChatHints.java,11,↑↓ → выбрать объединение · Tab → вставить
+rivet/mod/src/main/java/dev/abros/rivet/client/ChatHints.java,11,[pos] → координаты
+rivet/mod/src/main/java/dev/abros/rivet/client/ChatHints.java,11,[pos] → отправить ваши координаты
+rivet/mod/src/main/java/dev/abros/rivet/client/ChatHints.java,11,"Нажмите на координаты в чате, чтобы начать маршрут"
+rivet/mod/src/main/java/dev/abros/rivet/client/ChatHints.java,11,текст → 
+rivet/mod/src/main/java/dev/abros/rivet/client/ChatHints.java,11,Рядом
+rivet/mod/src/main/java/dev/abros/rivet/client/ChatHints.java,11,текст → общий чат
+rivet/mod/src/main/java/dev/abros/rivet/client/ChatHints.java,11,!текст → общий чат
+rivet/mod/src/main/java/dev/abros/rivet/client/ChatHints.java,11,#Название: текст → чат объединения
+rivet/mod/src/main/java/dev/abros/rivet/client/ChatHints.java,11,Чат объединений выключен сервером
+rivet/mod/src/main/java/dev/abros/rivet/client/ChatHints.java,11,"[pos] → координаты · нажмите, чтобы идти"
+rivet/mod/src/main/java/dev/abros/rivet/client/ChatHints.java,12,Общий чат
+rivet/mod/src/main/java/dev/abros/rivet/client/ChatHints.java,12,Объединение
+rivet/mod/src/main/java/dev/abros/rivet/client/ChatHints.java,12, · #Название:
+rivet/mod/src/main/java/dev/abros/rivet/client/ChatHints.java,12,Рядом
+rivet/mod/src/main/java/dev/abros/rivet/client/ChatHints.java,12,Общий чат
+rivet/mod/src/main/java/dev/abros/rivet/client/ChatHints.java,13,Как писать в чат
+rivet/mod/src/main/java/dev/abros/rivet/client/ClientChat.java,29,Игрок
+rivet/mod/src/main/java/dev/abros/rivet/client/ClientChat.java,29,Игрок
+rivet/mod/src/main/java/dev/abros/rivet/client/ClientCompatibilityRegistry.java,18,UDP: неизвестно
+rivet/mod/src/main/java/dev/abros/rivet/client/ClientCompatibilityRegistry.java,18,Микрофон: неизвестно
+rivet/mod/src/main/java/dev/abros/rivet/client/ClientCompatibilityRegistry.java,21,\n  Причина: 
+rivet/mod/src/main/java/dev/abros/rivet/client/CommunityCard.java,22,Событие
+rivet/mod/src/main/java/dev/abros/rivet/client/CommunityCard.java,22,Перенесено · 
+rivet/mod/src/main/java/dev/abros/rivet/client/CommunityCard.java,22,Через 
+rivet/mod/src/main/java/dev/abros/rivet/client/CommunityCard.java,22, мин
+rivet/mod/src/main/java/dev/abros/rivet/client/CommunityCard.java,22,Через 
+rivet/mod/src/main/java/dev/abros/rivet/client/CommunityCard.java,22, ч
+rivet/mod/src/main/java/dev/abros/rivet/client/CommunityCard.java,22,Через 
+rivet/mod/src/main/java/dev/abros/rivet/client/CommunityCard.java,22, дн
+rivet/mod/src/main/java/dev/abros/rivet/client/CommunityCard.java,34,гол.
+rivet/mod/src/main/java/dev/abros/rivet/client/CommunityCard.java,35,Набор открыт
+rivet/mod/src/main/java/dev/abros/rivet/client/CommunityCard.java,35,Набор закрыт
+rivet/mod/src/main/java/dev/abros/rivet/client/CommunityCard.java,35,Голосование · открыть варианты
+rivet/mod/src/main/java/dev/abros/rivet/client/CommunityCard.java,35, откликов
+rivet/mod/src/main/java/dev/abros/rivet/client/CommunityCard.java,35, голосов · 
+rivet/mod/src/main/java/dev/abros/rivet/client/CommunityCard.java,41,Ответ: 
+rivet/mod/src/main/java/dev/abros/rivet/client/CommunityCard.java,43, участников
+rivet/mod/src/main/java/dev/abros/rivet/client/CommunityCard.java,43,Очередь: 
+rivet/mod/src/main/java/dev/abros/rivet/client/CommunityCard.java,43,Вы участвуете
+rivet/mod/src/main/java/dev/abros/rivet/client/CommunityCard.java,43,Вы организатор
+rivet/mod/src/main/java/dev/abros/rivet/client/CommunityCard.java,43,Вы подписаны
+rivet/mod/src/main/java/dev/abros/rivet/client/CommunityForm.java,17,Обычный мир
+rivet/mod/src/main/java/dev/abros/rivet/client/CommunityForm.java,17,Незер
+rivet/mod/src/main/java/dev/abros/rivet/client/CommunityForm.java,17,Энд
+rivet/mod/src/main/java/dev/abros/rivet/client/CommunityForm.java,18,Дождитесь ответа сервера
+rivet/mod/src/main/java/dev/abros/rivet/client/CommunityForm.java,22,Место
+rivet/mod/src/main/java/dev/abros/rivet/client/CommunityForm.java,37,Не назначен
+rivet/mod/src/main/java/dev/abros/rivet/client/CommunityForm.java,41,Добавить игрока…
+rivet/mod/src/main/java/dev/abros/rivet/client/CommunityForm.java,41, · Убрать
+rivet/mod/src/main/java/dev/abros/rivet/client/CommunityForm.java,41,Приглашённые игроки
+rivet/mod/src/main/java/dev/abros/rivet/client/CommunityForm.java,41,Можно пригласить не более 30 игроков
+rivet/mod/src/main/java/dev/abros/rivet/client/CommunityForm.java,43,Не удалось сохранить черновик
+rivet/mod/src/main/java/dev/abros/rivet/client/CommunityForm.java,47,Измерение
+rivet/mod/src/main/java/dev/abros/rivet/client/CommunityForm.java,47,Кто видит место
+rivet/mod/src/main/java/dev/abros/rivet/client/CommunityForm.java,47,Все
+rivet/mod/src/main/java/dev/abros/rivet/client/CommunityForm.java,47,Участники объединения
+rivet/mod/src/main/java/dev/abros/rivet/client/CommunityForm.java,54,Не удалось проверить черновик. Закройте форму и откройте её снова.
+rivet/mod/src/main/java/dev/abros/rivet/client/CommunityForm.java,61,Предыдущая отправка не подтверждена. Проверьте её безопасным повтором.
+rivet/mod/src/main/java/dev/abros/rivet/client/CommunityForm.java,71,Скрыть дополнительные параметры
+rivet/mod/src/main/java/dev/abros/rivet/client/CommunityForm.java,71,Дополнительные параметры
+rivet/mod/src/main/java/dev/abros/rivet/client/CommunityForm.java,72,Место…
+rivet/mod/src/main/java/dev/abros/rivet/client/CommunityForm.java,73,Взять мои координаты
+rivet/mod/src/main/java/dev/abros/rivet/client/CommunityForm.java,74,Параметры ▾
+rivet/mod/src/main/java/dev/abros/rivet/client/CommunityForm.java,74,Параметры записи
+rivet/mod/src/main/java/dev/abros/rivet/client/CommunityForm.java,77,Выбрать игроков…
+rivet/mod/src/main/java/dev/abros/rivet/client/CommunityForm.java,77,Выбрано: 
+rivet/mod/src/main/java/dev/abros/rivet/client/CommunityForm.java,77, · Изменить…
+rivet/mod/src/main/java/dev/abros/rivet/client/CommunityForm.java,77,Снять назначение ответственного
+rivet/mod/src/main/java/dev/abros/rivet/client/CommunityForm.java,77,Очистить список приглашённых
+rivet/mod/src/main/java/dev/abros/rivet/client/CommunityForm.java,79,Выбрать дату и время…
+rivet/mod/src/main/java/dev/abros/rivet/client/CommunityForm.java,79,Убрать срок задачи
+rivet/mod/src/main/java/dev/abros/rivet/client/CommunityForm.java,84,"Обновить запись, сохранив текст"
+rivet/mod/src/main/java/dev/abros/rivet/client/CommunityForm.java,87,Отправка…
+rivet/mod/src/main/java/dev/abros/rivet/client/CommunityForm.java,87,Повторить
+rivet/mod/src/main/java/dev/abros/rivet/client/CommunityForm.java,87,Редактировать
+rivet/mod/src/main/java/dev/abros/rivet/client/CommunityForm.java,87,Место
+rivet/mod/src/main/java/dev/abros/rivet/client/CommunityForm.java,87,Сохранить
+rivet/mod/src/main/java/dev/abros/rivet/client/CommunityForm.java,87,Создать
+rivet/mod/src/main/java/dev/abros/rivet/client/CommunityForm.java,87,Отправить
+rivet/mod/src/main/java/dev/abros/rivet/client/CommunityForm.java,87,Дождитесь ответа сервера
+rivet/mod/src/main/java/dev/abros/rivet/client/CommunityForm.java,87,Обновите запись перед сохранением
+rivet/mod/src/main/java/dev/abros/rivet/client/CommunityForm.java,88,Отмена
+rivet/mod/src/main/java/dev/abros/rivet/client/CommunityForm.java,90,Редактировать
+rivet/mod/src/main/java/dev/abros/rivet/client/CommunityForm.java,90,Заполните: 
+rivet/mod/src/main/java/dev/abros/rivet/client/CommunityForm.java,90,От 
+rivet/mod/src/main/java/dev/abros/rivet/client/CommunityForm.java,90, до 
+rivet/mod/src/main/java/dev/abros/rivet/client/CommunityForm.java,90,Выберите время в будущем
+rivet/mod/src/main/java/dev/abros/rivet/client/CommunityForm.java,90,Да
+rivet/mod/src/main/java/dev/abros/rivet/client/CommunityForm.java,90,Выберите объединение для закрытого события
+rivet/mod/src/main/java/dev/abros/rivet/client/CommunityForm.java,90,Введите целое число
+rivet/mod/src/main/java/dev/abros/rivet/client/CommunityForm.java,90,Проверьте выделенное поле
+rivet/mod/src/main/java/dev/abros/rivet/client/CommunityForm.java,91,Не указано
+rivet/mod/src/main/java/dev/abros/rivet/client/CommunityForm.java,91,Не указано
+rivet/mod/src/main/java/dev/abros/rivet/client/CommunityForm.java,91,Да
+rivet/mod/src/main/java/dev/abros/rivet/client/CommunityForm.java,91,Нет
+rivet/mod/src/main/java/dev/abros/rivet/client/CommunityForm.java,91,Изменено
+rivet/mod/src/main/java/dev/abros/rivet/client/CommunityForm.java,91,Не указано
+rivet/mod/src/main/java/dev/abros/rivet/client/CommunityForm.java,92,Не удалось сохранить состояние отправки. Запрос не отправлен.
+rivet/mod/src/main/java/dev/abros/rivet/client/CommunityForm.java,93,Ошибка
+rivet/mod/src/main/java/dev/abros/rivet/client/CommunityForm.java,93,\nСейчас на сервере: 
+rivet/mod/src/main/java/dev/abros/rivet/client/CommunityForm.java,93,\nВаш вариант: 
+rivet/mod/src/main/java/dev/abros/rivet/client/CommunityForm.java,93,Сохранён ваш вариант. Проверьте изменения перед отправкой.
+rivet/mod/src/main/java/dev/abros/rivet/client/CommunityForm.java,93,Запись изменена другим игроком
+rivet/mod/src/main/java/dev/abros/rivet/client/CommunityForm.java,96,Дождитесь ответа сервера
+rivet/mod/src/main/java/dev/abros/rivet/client/CommunityForm.java,96,Закрыть форму?
+rivet/mod/src/main/java/dev/abros/rivet/client/CommunityForm.java,96,Введённые данные сохранятся в черновике.
+rivet/mod/src/main/java/dev/abros/rivet/client/CommunityForm.java,97,Обновление не удалось. Попробуйте ещё раз.
+rivet/mod/src/main/java/dev/abros/rivet/client/CommunityForm.java,97,Ответ не получен. Повтор безопасен: действие не продублируется.
+rivet/mod/src/main/java/dev/abros/rivet/client/CommunityPreferences.java,12,Настройки уведомлений
+rivet/mod/src/main/java/dev/abros/rivet/client/CommunityPreferences.java,13,Сохранение…
+rivet/mod/src/main/java/dev/abros/rivet/client/CommunityPreferences.java,20,По разделам
+rivet/mod/src/main/java/dev/abros/rivet/client/CommunityPreferences.java,20,Доставка
+rivet/mod/src/main/java/dev/abros/rivet/client/CommunityPreferences.java,24,Нет
+rivet/mod/src/main/java/dev/abros/rivet/client/CommunityPreferences.java,24,Да
+rivet/mod/src/main/java/dev/abros/rivet/client/CommunityPreferences.java,25,Плашки в игре
+rivet/mod/src/main/java/dev/abros/rivet/client/CommunityPreferences.java,25,Звук
+rivet/mod/src/main/java/dev/abros/rivet/client/CommunityPreferences.java,25,Перезапуск сервера
+rivet/mod/src/main/java/dev/abros/rivet/client/CommunityPreferences.java,25,Да
+rivet/mod/src/main/java/dev/abros/rivet/client/CommunityPreferences.java,25,Нет
+rivet/mod/src/main/java/dev/abros/rivet/client/CommunityPreferences.java,26,Тихий час · 1 час
+rivet/mod/src/main/java/dev/abros/rivet/client/CommunityPreferences.java,26,Вкл
+rivet/mod/src/main/java/dev/abros/rivet/client/CommunityPreferences.java,26,Выкл
+rivet/mod/src/main/java/dev/abros/rivet/client/CommunityPreferences.java,27,Оформление и фильтры плашек
+rivet/mod/src/main/java/dev/abros/rivet/client/CommunityPreferences.java,27,Настроить…
+rivet/mod/src/main/java/dev/abros/rivet/client/CommunityPreferences.java,28,Приглашения и отклики
+rivet/mod/src/main/java/dev/abros/rivet/client/CommunityPreferences.java,28,Настроить…
+rivet/mod/src/main/java/dev/abros/rivet/client/CommunityPreferences.java,29,Да
+rivet/mod/src/main/java/dev/abros/rivet/client/CommunityPreferences.java,29,Вкл
+rivet/mod/src/main/java/dev/abros/rivet/client/CommunityPreferences.java,31,Повторить сохранение
+rivet/mod/src/main/java/dev/abros/rivet/client/CommunityPreferences.java,31,Сохранение…
+rivet/mod/src/main/java/dev/abros/rivet/client/CommunityPreferences.java,32,Готово
+rivet/mod/src/main/java/dev/abros/rivet/client/CommunityPreferences.java,34,Не удалось сохранить
+rivet/mod/src/main/java/dev/abros/rivet/client/CommunityPreferences.java,34,Сохранено
+rivet/mod/src/main/java/dev/abros/rivet/client/CommunityPreferences.java,35,Нет ответа. Повторите сохранение.
+rivet/mod/src/main/java/dev/abros/rivet/client/CommunityPreferences.java,36,Настройки действуют на этом клиенте
+rivet/mod/src/main/java/dev/abros/rivet/client/CommunityPreferences.java,36,Уведомления выбранных разделов · сохранение автоматически
+rivet/mod/src/main/java/dev/abros/rivet/client/CommunityScreen.java,67,Загрузить ещё
+rivet/mod/src/main/java/dev/abros/rivet/client/CommunityScreen.java,83,Действия ▾
+rivet/mod/src/main/java/dev/abros/rivet/client/CommunityScreen.java,92,Обзор
+rivet/mod/src/main/java/dev/abros/rivet/client/CommunityScreen.java,92,Участники
+rivet/mod/src/main/java/dev/abros/rivet/client/CommunityScreen.java,92,Задачи
+rivet/mod/src/main/java/dev/abros/rivet/client/CommunityScreen.java,92,События
+rivet/mod/src/main/java/dev/abros/rivet/client/CommunityScreen.java,92,Места
+rivet/mod/src/main/java/dev/abros/rivet/client/CommunityScreen.java,92,Заявки
+rivet/mod/src/main/java/dev/abros/rivet/client/CommunityScreen.java,95,Выберите запись
+rivet/mod/src/main/java/dev/abros/rivet/client/CommunityScreen.java,103,Набор открыт
+rivet/mod/src/main/java/dev/abros/rivet/client/CommunityScreen.java,103,Набор закрыт
+rivet/mod/src/main/java/dev/abros/rivet/client/CommunityScreen.java,108,Мой профиль
+rivet/mod/src/main/java/dev/abros/rivet/client/CommunityScreen.java,108,Настройки
+rivet/mod/src/main/java/dev/abros/rivet/client/CommunityScreen.java,108,Главная
+rivet/mod/src/main/java/dev/abros/rivet/client/CommunityScreen.java,108,Мои задачи
+rivet/mod/src/main/java/dev/abros/rivet/client/CommunityScreen.java,108,Игроки
+rivet/mod/src/main/java/dev/abros/rivet/client/CommunityScreen.java,108,Доска объявлений
+rivet/mod/src/main/java/dev/abros/rivet/client/CommunityScreen.java,108,Объединения
+rivet/mod/src/main/java/dev/abros/rivet/client/CommunityScreen.java,108,События
+rivet/mod/src/main/java/dev/abros/rivet/client/CommunityScreen.java,108,Голосования
+rivet/mod/src/main/java/dev/abros/rivet/client/CommunityScreen.java,108,Предложения
+rivet/mod/src/main/java/dev/abros/rivet/client/CommunityScreen.java,108,Уведомления
+rivet/mod/src/main/java/dev/abros/rivet/client/CommunityScreen.java,108,Сервер
+rivet/mod/src/main/java/dev/abros/rivet/client/CommunityScreen.java,108,Помощь
+rivet/mod/src/main/java/dev/abros/rivet/client/CommunityScreen.java,108,Администрирование
+rivet/mod/src/main/java/dev/abros/rivet/client/CommunityScreen.java,137,Поиск по серверу
+rivet/mod/src/main/java/dev/abros/rivet/client/CommunityScreen.java,137,"Профиль, виджеты и настройки"
+rivet/mod/src/main/java/dev/abros/rivet/client/CommunityScreen.java,142,Скины
+rivet/mod/src/main/java/dev/abros/rivet/client/CommunityScreen.java,143,О себе
+rivet/mod/src/main/java/dev/abros/rivet/client/CommunityScreen.java,144,Настройки
+rivet/mod/src/main/java/dev/abros/rivet/client/CommunityScreen.java,148,Безопасность
+rivet/mod/src/main/java/dev/abros/rivet/client/CommunityScreen.java,160,Удалённые
+rivet/mod/src/main/java/dev/abros/rivet/client/CommunityScreen.java,160,Архив
+rivet/mod/src/main/java/dev/abros/rivet/client/CommunityScreen.java,160,Активные
+rivet/mod/src/main/java/dev/abros/rivet/client/CommunityScreen.java,160,Записи
+rivet/mod/src/main/java/dev/abros/rivet/client/CommunityScreen.java,160,Активные
+rivet/mod/src/main/java/dev/abros/rivet/client/CommunityScreen.java,160,Архив
+rivet/mod/src/main/java/dev/abros/rivet/client/CommunityScreen.java,160,Удалённые
+rivet/mod/src/main/java/dev/abros/rivet/client/CommunityScreen.java,160,Архив
+rivet/mod/src/main/java/dev/abros/rivet/client/CommunityScreen.java,160,Активные
+rivet/mod/src/main/java/dev/abros/rivet/client/CommunityScreen.java,162,Прочитать всё
+rivet/mod/src/main/java/dev/abros/rivet/client/CommunityScreen.java,172,Объявление администрации
+rivet/mod/src/main/java/dev/abros/rivet/client/CommunityScreen.java,172,Закреплено
+rivet/mod/src/main/java/dev/abros/rivet/client/CommunityScreen.java,172,Открыть целиком
+rivet/mod/src/main/java/dev/abros/rivet/client/CommunityScreen.java,174,Наказание: 
+rivet/mod/src/main/java/dev/abros/rivet/client/CommunityScreen.java,174,Нарушение правил
+rivet/mod/src/main/java/dev/abros/rivet/client/CommunityScreen.java,174,"Кик, временный бан или голосовой мут"
+rivet/mod/src/main/java/dev/abros/rivet/client/CommunityScreen.java,174,Нарушения правил
+rivet/mod/src/main/java/dev/abros/rivet/client/CommunityScreen.java,174,Идёт голосование · открыть
+rivet/mod/src/main/java/dev/abros/rivet/client/CommunityScreen.java,174,Открыть голосование
+rivet/mod/src/main/java/dev/abros/rivet/client/CommunityScreen.java,175,Сообщество · голосование
+rivet/mod/src/main/java/dev/abros/rivet/client/CommunityScreen.java,177,Просрочено · 
+rivet/mod/src/main/java/dev/abros/rivet/client/CommunityScreen.java,177,Срок · 
+rivet/mod/src/main/java/dev/abros/rivet/client/CommunityScreen.java,177,Моя задача
+rivet/mod/src/main/java/dev/abros/rivet/client/CommunityScreen.java,179,Мой профиль
+rivet/mod/src/main/java/dev/abros/rivet/client/CommunityScreen.java,179,Мой профиль
+rivet/mod/src/main/java/dev/abros/rivet/client/CommunityScreen.java,179,Сессия: 
+rivet/mod/src/main/java/dev/abros/rivet/client/CommunityScreen.java,179, с
+rivet/mod/src/main/java/dev/abros/rivet/client/CommunityScreen.java,188,Объявление администрации
+rivet/mod/src/main/java/dev/abros/rivet/client/CommunityScreen.java,197,Удалённые · 
+rivet/mod/src/main/java/dev/abros/rivet/client/CommunityScreen.java,197, дн.
+rivet/mod/src/main/java/dev/abros/rivet/client/CommunityScreen.java,197,Удалённые
+rivet/mod/src/main/java/dev/abros/rivet/client/CommunityScreen.java,198,Удалить? Восстановление доступно 
+rivet/mod/src/main/java/dev/abros/rivet/client/CommunityScreen.java,198, дн.
+rivet/mod/src/main/java/dev/abros/rivet/client/CommunityScreen.java,198,Удалить? Срок восстановления задаёт сервер.
+rivet/mod/src/main/java/dev/abros/rivet/client/CommunityScreen.java,200,Разместить
+rivet/mod/src/main/java/dev/abros/rivet/client/CommunityScreen.java,200,Создать
+rivet/mod/src/main/java/dev/abros/rivet/client/CommunityScreen.java,200,Назначить
+rivet/mod/src/main/java/dev/abros/rivet/client/CommunityScreen.java,200,Создать
+rivet/mod/src/main/java/dev/abros/rivet/client/CommunityScreen.java,200,Предложить
+rivet/mod/src/main/java/dev/abros/rivet/client/CommunityScreen.java,200,Создать
+rivet/mod/src/main/java/dev/abros/rivet/client/CommunityScreen.java,201,Вы пока не записаны на ближайшие события.
+rivet/mod/src/main/java/dev/abros/rivet/client/CommunityScreen.java,201,"Объявлений пока нет. Нажмите «Разместить объявление», чтобы предложить помощь или разместить запрос."
+rivet/mod/src/main/java/dev/abros/rivet/client/CommunityScreen.java,201,"Объединений пока нет. Нажмите «Создать объединение», чтобы собрать свою команду."
+rivet/mod/src/main/java/dev/abros/rivet/client/CommunityScreen.java,201,Ближайших событий нет. Новые встречи появятся здесь после публикации организатором.
+rivet/mod/src/main/java/dev/abros/rivet/client/CommunityScreen.java,201,Сейчас нет голосований.
+rivet/mod/src/main/java/dev/abros/rivet/client/CommunityScreen.java,201,"Предложений пока нет. Нажмите «Предложить идею», чтобы поделиться идеей для сервера."
+rivet/mod/src/main/java/dev/abros/rivet/client/CommunityScreen.java,201,Всё прочитано. Новые ответы и приглашения появятся здесь.
+rivet/mod/src/main/java/dev/abros/rivet/client/CommunityScreen.java,201,Пока нет записей.
+rivet/mod/src/main/java/dev/abros/rivet/client/CommunityScreen.java,203,Мои задачи
+rivet/mod/src/main/java/dev/abros/rivet/client/CommunityScreen.java,203,Организаторы событий
+rivet/mod/src/main/java/dev/abros/rivet/client/CommunityScreen.java,203,Общедоступные места
+rivet/mod/src/main/java/dev/abros/rivet/client/CommunityScreen.java,203,Карта объединения
+rivet/mod/src/main/java/dev/abros/rivet/client/CommunityScreen.java,203,О себе
+rivet/mod/src/main/java/dev/abros/rivet/client/CommunityScreen.java,203,Скины
+rivet/mod/src/main/java/dev/abros/rivet/client/CommunityScreen.java,203,Виджеты главной
+rivet/mod/src/main/java/dev/abros/rivet/client/CommunityScreen.java,203,Настройки Rivet
+rivet/mod/src/main/java/dev/abros/rivet/client/CommunityScreen.java,203,Безопасность
+rivet/mod/src/main/java/dev/abros/rivet/client/CommunityScreen.java,203,Мой профиль
+rivet/mod/src/main/java/dev/abros/rivet/client/CommunityScreen.java,204,В сети: 
+rivet/mod/src/main/java/dev/abros/rivet/client/CommunityScreen.java,204,Нет ближайших встреч
+rivet/mod/src/main/java/dev/abros/rivet/client/CommunityScreen.java,204,Заявок: 
+rivet/mod/src/main/java/dev/abros/rivet/client/CommunityScreen.java,204,Открыть объединение
+rivet/mod/src/main/java/dev/abros/rivet/client/CommunityScreen.java,214, участников
+rivet/mod/src/main/java/dev/abros/rivet/client/CommunityScreen.java,215, участников
+rivet/mod/src/main/java/dev/abros/rivet/client/CommunityScreen.java,216,Завершение: 
+rivet/mod/src/main/java/dev/abros/rivet/client/CommunityScreen.java,217, поддержали
+rivet/mod/src/main/java/dev/abros/rivet/client/CommunityScreen.java,230,Сохранено
+rivet/mod/src/main/java/dev/abros/rivet/client/CommunityScreen.java,247,Нарушение правил · голосование игроков
+rivet/mod/src/main/java/dev/abros/rivet/client/CommunityScreen.java,248,У вас пока нет записей в этом разделе.
+rivet/mod/src/main/java/dev/abros/rivet/client/CommunityScreen.java,248,Ничего не найдено. Попробуйте другой запрос.
+rivet/mod/src/main/java/dev/abros/rivet/client/CommunityScreen.java,252,Открыто
+rivet/mod/src/main/java/dev/abros/rivet/client/CommunityScreen.java,252,Закрыто
+rivet/mod/src/main/java/dev/abros/rivet/client/CommunityScreen.java,252,Новое
+rivet/mod/src/main/java/dev/abros/rivet/client/CommunityScreen.java,252,Обсуждается
+rivet/mod/src/main/java/dev/abros/rivet/client/CommunityScreen.java,252,Запланировано
+rivet/mod/src/main/java/dev/abros/rivet/client/CommunityScreen.java,252,В работе
+rivet/mod/src/main/java/dev/abros/rivet/client/CommunityScreen.java,252,Выполнено
+rivet/mod/src/main/java/dev/abros/rivet/client/CommunityScreen.java,252,Отклонено
+rivet/mod/src/main/java/dev/abros/rivet/client/CommunityScreen.java,252,Ожидает ответа
+rivet/mod/src/main/java/dev/abros/rivet/client/CommunityScreen.java,252,Принято
+rivet/mod/src/main/java/dev/abros/rivet/client/CommunityScreen.java,252,Отменено
+rivet/mod/src/main/java/dev/abros/rivet/client/CommunityScreen.java,252,Скрыто
+rivet/mod/src/main/java/dev/abros/rivet/client/CommunityScreen.java,252,В корзине
+rivet/mod/src/main/java/dev/abros/rivet/client/CommunityScreen.java,256,Удалено. Восстановление доступно до 
+rivet/mod/src/main/java/dev/abros/rivet/client/CommunityScreen.java,256,Удалено. Срок восстановления задаёт сервер.
+rivet/mod/src/main/java/dev/abros/rivet/client/CommunityScreen.java,256,Восстановить
+rivet/mod/src/main/java/dev/abros/rivet/client/CommunityScreen.java,261,Поделиться в чате…
+rivet/mod/src/main/java/dev/abros/rivet/client/CommunityScreen.java,262,Редактировать
+rivet/mod/src/main/java/dev/abros/rivet/client/CommunityScreen.java,263,Место…
+rivet/mod/src/main/java/dev/abros/rivet/client/CommunityScreen.java,263,Место
+rivet/mod/src/main/java/dev/abros/rivet/client/CommunityScreen.java,264,Пожаловаться
+rivet/mod/src/main/java/dev/abros/rivet/client/CommunityScreen.java,265,История изменений
+rivet/mod/src/main/java/dev/abros/rivet/client/CommunityScreen.java,265,Последние изменения
+rivet/mod/src/main/java/dev/abros/rivet/client/CommunityScreen.java,266,Удалить…
+rivet/mod/src/main/java/dev/abros/rivet/client/CommunityScreen.java,267,Скрыть запись
+rivet/mod/src/main/java/dev/abros/rivet/client/CommunityScreen.java,267,Модерация
+rivet/mod/src/main/java/dev/abros/rivet/client/CommunityScreen.java,267,Причина
+rivet/mod/src/main/java/dev/abros/rivet/client/CommunityScreen.java,271,Действия
+rivet/mod/src/main/java/dev/abros/rivet/client/CommunityScreen.java,271,Действия ▾
+rivet/mod/src/main/java/dev/abros/rivet/client/CommunityScreen.java,272,Название
+rivet/mod/src/main/java/dev/abros/rivet/client/CommunityScreen.java,272,Описание
+rivet/mod/src/main/java/dev/abros/rivet/client/CommunityScreen.java,272,Тип
+rivet/mod/src/main/java/dev/abros/rivet/client/CommunityScreen.java,272,Редактировать запись
+rivet/mod/src/main/java/dev/abros/rivet/client/CommunityScreen.java,273,Создано
+rivet/mod/src/main/java/dev/abros/rivet/client/CommunityScreen.java,273,Отредактировано
+rivet/mod/src/main/java/dev/abros/rivet/client/CommunityScreen.java,273,Отозван отклик
+rivet/mod/src/main/java/dev/abros/rivet/client/CommunityScreen.java,273,Отозвана заявка
+rivet/mod/src/main/java/dev/abros/rivet/client/CommunityScreen.java,273,Отменено приглашение
+rivet/mod/src/main/java/dev/abros/rivet/client/CommunityScreen.java,273,Удалено
+rivet/mod/src/main/java/dev/abros/rivet/client/CommunityScreen.java,273,Восстановлено
+rivet/mod/src/main/java/dev/abros/rivet/client/CommunityScreen.java,273,Изменено руководство / роль
+rivet/mod/src/main/java/dev/abros/rivet/client/CommunityScreen.java,273,Обновлено
+rivet/mod/src/main/java/dev/abros/rivet/client/CommunityScreen.java,274,Вы
+rivet/mod/src/main/java/dev/abros/rivet/client/CommunityScreen.java,278,Название
+rivet/mod/src/main/java/dev/abros/rivet/client/CommunityScreen.java,278,Описание
+rivet/mod/src/main/java/dev/abros/rivet/client/CommunityScreen.java,279,"Срок (дней, 1–90)"
+rivet/mod/src/main/java/dev/abros/rivet/client/CommunityScreen.java,279,Без категории
+rivet/mod/src/main/java/dev/abros/rivet/client/CommunityScreen.java,279,Категория
+rivet/mod/src/main/java/dev/abros/rivet/client/CommunityScreen.java,280,Тип
+rivet/mod/src/main/java/dev/abros/rivet/client/CommunityScreen.java,281,Начало · местное время
+rivet/mod/src/main/java/dev/abros/rivet/client/CommunityScreen.java,281,Места (0 — до 300)
+rivet/mod/src/main/java/dev/abros/rivet/client/CommunityScreen.java,281,Длительность в минутах (1–1440)
+rivet/mod/src/main/java/dev/abros/rivet/client/CommunityScreen.java,282,Завершение · местное время
+rivet/mod/src/main/java/dev/abros/rivet/client/CommunityScreen.java,282,Варианты через | (2–8)
+rivet/mod/src/main/java/dev/abros/rivet/client/CommunityScreen.java,282,Нет
+rivet/mod/src/main/java/dev/abros/rivet/client/CommunityScreen.java,282,Да
+rivet/mod/src/main/java/dev/abros/rivet/client/CommunityScreen.java,282,Несколько вариантов
+rivet/mod/src/main/java/dev/abros/rivet/client/CommunityScreen.java,282,Разрешить изменить голос
+rivet/mod/src/main/java/dev/abros/rivet/client/CommunityScreen.java,282,Показывать результаты сразу
+rivet/mod/src/main/java/dev/abros/rivet/client/CommunityScreen.java,283,Без объединения
+rivet/mod/src/main/java/dev/abros/rivet/client/CommunityScreen.java,283,Объединение
+rivet/mod/src/main/java/dev/abros/rivet/client/CommunityScreen.java,283,Новое объявление
+rivet/mod/src/main/java/dev/abros/rivet/client/CommunityScreen.java,283,Новое объединение
+rivet/mod/src/main/java/dev/abros/rivet/client/CommunityScreen.java,283,Новое событие
+rivet/mod/src/main/java/dev/abros/rivet/client/CommunityScreen.java,283,Новое голосование
+rivet/mod/src/main/java/dev/abros/rivet/client/CommunityScreen.java,283,Новое предложение
+rivet/mod/src/main/java/dev/abros/rivet/client/CommunityScreen.java,283,Новая запись
+rivet/mod/src/main/java/dev/abros/rivet/client/CommunityScreen.java,300,Не удалось загрузить записи
+rivet/mod/src/main/java/dev/abros/rivet/client/CommunityScreen.java,300,Загружаем записи…
+rivet/mod/src/main/java/dev/abros/rivet/client/CommunityScreen.java,300,Здесь пока нет записей
+rivet/mod/src/main/java/dev/abros/rivet/client/CommunityScreen.java,300,Ничего не найдено
+rivet/mod/src/main/java/dev/abros/rivet/client/CommunityScreen.java,300,Получаем актуальные данные с сервера.
+rivet/mod/src/main/java/dev/abros/rivet/client/CommunityScreen.java,300,У вас пока нет записей в этом разделе.
+rivet/mod/src/main/java/dev/abros/rivet/client/CommunityScreen.java,300,Сбросьте поиск или измените запрос.
+rivet/mod/src/main/java/dev/abros/rivet/client/CommunityScreen.java,301,Входящие
+rivet/mod/src/main/java/dev/abros/rivet/client/CommunityScreen.java,301,Уведомления
+rivet/mod/src/main/java/dev/abros/rivet/client/CommunityTools.java,10,Кто видит событие
+rivet/mod/src/main/java/dev/abros/rivet/client/CommunityTools.java,10,Все
+rivet/mod/src/main/java/dev/abros/rivet/client/CommunityTools.java,10,Участники объединения
+rivet/mod/src/main/java/dev/abros/rivet/client/CommunityTools.java,10,Приглашённые
+rivet/mod/src/main/java/dev/abros/rivet/client/CommunityTools.java,11,Приглашённые игроки
+rivet/mod/src/main/java/dev/abros/rivet/client/CommunityTools.java,12,Повторение
+rivet/mod/src/main/java/dev/abros/rivet/client/CommunityTools.java,12,Один раз
+rivet/mod/src/main/java/dev/abros/rivet/client/CommunityTools.java,12,Каждую неделю
+rivet/mod/src/main/java/dev/abros/rivet/client/CommunityTools.java,12,Раз в две недели
+rivet/mod/src/main/java/dev/abros/rivet/client/CommunityTools.java,12,Каждый месяц
+rivet/mod/src/main/java/dev/abros/rivet/client/CommunityTools.java,13,Встреч в серии (2–26)
+rivet/mod/src/main/java/dev/abros/rivet/client/CommunityTools.java,16,Тип объявления
+rivet/mod/src/main/java/dev/abros/rivet/client/CommunityTools.java,16,Обычное
+rivet/mod/src/main/java/dev/abros/rivet/client/CommunityTools.java,16,Куплю
+rivet/mod/src/main/java/dev/abros/rivet/client/CommunityTools.java,16,Продам
+rivet/mod/src/main/java/dev/abros/rivet/client/CommunityTools.java,16,Обменяю
+rivet/mod/src/main/java/dev/abros/rivet/client/CommunityTools.java,17,Предмет
+rivet/mod/src/main/java/dev/abros/rivet/client/CommunityTools.java,17,Количество
+rivet/mod/src/main/java/dev/abros/rivet/client/CommunityTools.java,17,Условия обмена / оплаты
+rivet/mod/src/main/java/dev/abros/rivet/client/CommunityTools.java,22,+ Задача
+rivet/mod/src/main/java/dev/abros/rivet/client/CommunityTools.java,22,+ Место
+rivet/mod/src/main/java/dev/abros/rivet/client/CommunityTools.java,25,Открыть задачу
+rivet/mod/src/main/java/dev/abros/rivet/client/CommunityTools.java,27,Статус: 
+rivet/mod/src/main/java/dev/abros/rivet/client/CommunityTools.java,27,Готово
+rivet/mod/src/main/java/dev/abros/rivet/client/CommunityTools.java,27,В работе
+rivet/mod/src/main/java/dev/abros/rivet/client/CommunityTools.java,27,Открыта
+rivet/mod/src/main/java/dev/abros/rivet/client/CommunityTools.java,28,Ответственный не назначен
+rivet/mod/src/main/java/dev/abros/rivet/client/CommunityTools.java,28,Ответственный: 
+rivet/mod/src/main/java/dev/abros/rivet/client/CommunityTools.java,28,Просрочено · 
+rivet/mod/src/main/java/dev/abros/rivet/client/CommunityTools.java,28,Срок: 
+rivet/mod/src/main/java/dev/abros/rivet/client/CommunityTools.java,29,Статус…
+rivet/mod/src/main/java/dev/abros/rivet/client/CommunityTools.java,29,Открыта
+rivet/mod/src/main/java/dev/abros/rivet/client/CommunityTools.java,29,В работе
+rivet/mod/src/main/java/dev/abros/rivet/client/CommunityTools.java,29,Готово
+rivet/mod/src/main/java/dev/abros/rivet/client/CommunityTools.java,31,Изменить
+rivet/mod/src/main/java/dev/abros/rivet/client/CommunityTools.java,31,Удалить
+rivet/mod/src/main/java/dev/abros/rivet/client/CommunityTools.java,31,Удалить 
+rivet/mod/src/main/java/dev/abros/rivet/client/CommunityTools.java,31,задачу
+rivet/mod/src/main/java/dev/abros/rivet/client/CommunityTools.java,31,место
+rivet/mod/src/main/java/dev/abros/rivet/client/CommunityTools.java,35,Задач пока нет. Они доступны участникам объединения.
+rivet/mod/src/main/java/dev/abros/rivet/client/CommunityTools.java,35,Мест пока нет.
+rivet/mod/src/main/java/dev/abros/rivet/client/CommunityTools.java,40,Название
+rivet/mod/src/main/java/dev/abros/rivet/client/CommunityTools.java,40,Описание
+rivet/mod/src/main/java/dev/abros/rivet/client/CommunityTools.java,41,Ответственный
+rivet/mod/src/main/java/dev/abros/rivet/client/CommunityTools.java,41,Срок (необязательно)
+rivet/mod/src/main/java/dev/abros/rivet/client/CommunityTools.java,42,Новая задача
+rivet/mod/src/main/java/dev/abros/rivet/client/CommunityTools.java,42,Новое место
+rivet/mod/src/main/java/dev/abros/rivet/client/CommunityTools.java,42,Редактировать
+rivet/mod/src/main/java/dev/abros/rivet/client/CompatibilityClient.java,24,Проверить доступ
+rivet/mod/src/main/java/dev/abros/rivet/client/CompatibilityClient.java,29,Проверка доступа
+rivet/mod/src/main/java/dev/abros/rivet/client/CompatibilityClient.java,31,"\n\nНеподтверждённые записи не изменяются. Если игрок всё ещё не имеет доступа, удалите старую запись и добавьте его по серверному нику."
+rivet/mod/src/main/java/dev/abros/rivet/client/CompatibilityClient.java,32,Проверка доступа
+rivet/mod/src/main/java/dev/abros/rivet/client/CompatibilityClient.java,33,Исправить доступ?
+rivet/mod/src/main/java/dev/abros/rivet/client/CompatibilityClient.java,38,Соединение изменилось
+rivet/mod/src/main/java/dev/abros/rivet/client/CompatibilityClient.java,39,Сервер не ответил. Повторите действие
+rivet/mod/src/main/java/dev/abros/rivet/client/CompatibilityClient.java,43,Адаптер сейчас недоступен
+rivet/mod/src/main/java/dev/abros/rivet/client/CoordinateLinkTooltip.java,8,Место от 
+rivet/mod/src/main/java/dev/abros/rivet/client/CoordinateLinkTooltip.java,11,Место от 
+rivet/mod/src/main/java/dev/abros/rivet/client/CoordinateLinkTooltip.java,11,".\nНажмите, чтобы начать навигацию."
+rivet/mod/src/main/java/dev/abros/rivet/client/CoordinateLinkTooltip.java,12,\nЦель в другом измерении.
+rivet/mod/src/main/java/dev/abros/rivet/client/CoreVersionsPopup.java,20,Версия Rivet
+rivet/mod/src/main/java/dev/abros/rivet/client/CoreVersionsPopup.java,37,Подготовка…
+rivet/mod/src/main/java/dev/abros/rivet/client/CoreVersionsPopup.java,37,Повторить
+rivet/mod/src/main/java/dev/abros/rivet/client/CoreVersionsPopup.java,37,Установить
+rivet/mod/src/main/java/dev/abros/rivet/client/CoreVersionsPopup.java,48,Других версий нет
+rivet/mod/src/main/java/dev/abros/rivet/client/CoreVersionsPopup.java,49,Не удалось проверить версии. Можно повторить попытку.
+rivet/mod/src/main/java/dev/abros/rivet/client/CoreVersionsPopup.java,50,Проверка занята. Повторите попытку.
+rivet/mod/src/main/java/dev/abros/rivet/client/CoreVersionsPopup.java,60,Обновление Rivet
+rivet/mod/src/main/java/dev/abros/rivet/client/CoreVersionsPopup.java,61,Установлена версия 
+rivet/mod/src/main/java/dev/abros/rivet/client/CoreVersionsPopup.java,62,Получение версий…
+rivet/mod/src/main/java/dev/abros/rivet/client/CoreVersionsPopup.java,62,Нет доступных версий
+rivet/mod/src/main/java/dev/abros/rivet/client/CoreVersionsPopup.java,63,Проверка доступных версий…
+rivet/mod/src/main/java/dev/abros/rivet/client/CoreVersionsPopup.java,63,Выберите версию для установки.
+rivet/mod/src/main/java/dev/abros/rivet/client/CoreVersionsPopup.java,63,Установить 
+rivet/mod/src/main/java/dev/abros/rivet/client/CoreVersionsPopup.java,63,. Потребуется перезапуск игры.
+rivet/mod/src/main/java/dev/abros/rivet/client/DateTimeScreen.java,12,Дата и время
+rivet/mod/src/main/java/dev/abros/rivet/client/DateTimeScreen.java,19,Сегодня
+rivet/mod/src/main/java/dev/abros/rivet/client/DateTimeScreen.java,19,Завтра
+rivet/mod/src/main/java/dev/abros/rivet/client/DateTimeScreen.java,20,Час: 
+rivet/mod/src/main/java/dev/abros/rivet/client/DateTimeScreen.java,20,Час
+rivet/mod/src/main/java/dev/abros/rivet/client/DateTimeScreen.java,21,Мин: 
+rivet/mod/src/main/java/dev/abros/rivet/client/DateTimeScreen.java,21,Минуты
+rivet/mod/src/main/java/dev/abros/rivet/client/DateTimeScreen.java,22,Выбрать
+rivet/mod/src/main/java/dev/abros/rivet/client/DateTimeScreen.java,22,Отмена
+rivet/mod/src/main/java/dev/abros/rivet/client/DateTimeScreen.java,24,Пн
+rivet/mod/src/main/java/dev/abros/rivet/client/DateTimeScreen.java,24,Вт
+rivet/mod/src/main/java/dev/abros/rivet/client/DateTimeScreen.java,24,Ср
+rivet/mod/src/main/java/dev/abros/rivet/client/DateTimeScreen.java,24,Чт
+rivet/mod/src/main/java/dev/abros/rivet/client/DateTimeScreen.java,24,Пт
+rivet/mod/src/main/java/dev/abros/rivet/client/DateTimeScreen.java,24,Сб
+rivet/mod/src/main/java/dev/abros/rivet/client/DateTimeScreen.java,24,Вс
+rivet/mod/src/main/java/dev/abros/rivet/client/DirectionCue.java,17,Место
+rivet/mod/src/main/java/dev/abros/rivet/client/DirectionCue.java,33,Точка маршрута
+rivet/mod/src/main/java/dev/abros/rivet/client/DirectionCue.java,35,"↑  120 м · 10, 10"
+rivet/mod/src/main/java/dev/abros/rivet/client/DirectionCue.java,35,Другое измерение: 
+rivet/mod/src/main/java/dev/abros/rivet/client/DirectionCue.java,40, м
+rivet/mod/src/main/java/dev/abros/rivet/client/DirectionCue.java,53,Остановить маршрут
+rivet/mod/src/main/java/dev/abros/rivet/client/EventsSection.java,9,Начало: 
+rivet/mod/src/main/java/dev/abros/rivet/client/EventsSection.java,9,Длительность: 
+rivet/mod/src/main/java/dev/abros/rivet/client/EventsSection.java,9, мин.
+rivet/mod/src/main/java/dev/abros/rivet/client/EventsSection.java,9,Пересекается с вашим участием:
+rivet/mod/src/main/java/dev/abros/rivet/client/EventsSection.java,9,Участников: 
+rivet/mod/src/main/java/dev/abros/rivet/client/EventsSection.java,9,Очередь: 
+rivet/mod/src/main/java/dev/abros/rivet/client/EventsSection.java,10,Ваше место в очереди: 
+rivet/mod/src/main/java/dev/abros/rivet/client/EventsSection.java,11,До начала: 
+rivet/mod/src/main/java/dev/abros/rivet/client/EventsSection.java,11, мин.
+rivet/mod/src/main/java/dev/abros/rivet/client/EventsSection.java,13,Отменить участие
+rivet/mod/src/main/java/dev/abros/rivet/client/EventsSection.java,13,Участвовать
+rivet/mod/src/main/java/dev/abros/rivet/client/EventsSection.java,13,Участвовать несмотря на пересечение?
+rivet/mod/src/main/java/dev/abros/rivet/client/EventsSection.java,16,Напомнить: 
+rivet/mod/src/main/java/dev/abros/rivet/client/EventsSection.java,16,выключено
+rivet/mod/src/main/java/dev/abros/rivet/client/EventsSection.java,16,в начале
+rivet/mod/src/main/java/dev/abros/rivet/client/EventsSection.java,16, мин.
+rivet/mod/src/main/java/dev/abros/rivet/client/EventsSection.java,16,Напомнить о событии
+rivet/mod/src/main/java/dev/abros/rivet/client/EventsSection.java,16,За час
+rivet/mod/src/main/java/dev/abros/rivet/client/EventsSection.java,16,За 15 минут
+rivet/mod/src/main/java/dev/abros/rivet/client/EventsSection.java,16,За 5 минут
+rivet/mod/src/main/java/dev/abros/rivet/client/EventsSection.java,16,В начале
+rivet/mod/src/main/java/dev/abros/rivet/client/EventsSection.java,16,Не напоминать
+rivet/mod/src/main/java/dev/abros/rivet/client/EventsSection.java,17,Отменить будущие встречи серии
+rivet/mod/src/main/java/dev/abros/rivet/client/EventsSection.java,17,Отменить все будущие встречи серии?
+rivet/mod/src/main/java/dev/abros/rivet/client/EventsSection.java,19,Причина отмены: 
+rivet/mod/src/main/java/dev/abros/rivet/client/EventsSection.java,20,Посещение: 
+rivet/mod/src/main/java/dev/abros/rivet/client/EventsSection.java,20, · присутствовал
+rivet/mod/src/main/java/dev/abros/rivet/client/EventsSection.java,20, · отсутствовал
+rivet/mod/src/main/java/dev/abros/rivet/client/EventsSection.java,20, · не отмечено
+rivet/mod/src/main/java/dev/abros/rivet/client/EventsSection.java,20,Посещение · 
+rivet/mod/src/main/java/dev/abros/rivet/client/EventsSection.java,20,Присутствовал
+rivet/mod/src/main/java/dev/abros/rivet/client/EventsSection.java,20,Не присутствовал
+rivet/mod/src/main/java/dev/abros/rivet/client/EventsSection.java,22,Перенести
+rivet/mod/src/main/java/dev/abros/rivet/client/EventsSection.java,22,Перенос события
+rivet/mod/src/main/java/dev/abros/rivet/client/EventsSection.java,22,Начало · местное время
+rivet/mod/src/main/java/dev/abros/rivet/client/EventsSection.java,22,Отменить событие
+rivet/mod/src/main/java/dev/abros/rivet/client/EventsSection.java,22,Отмена события
+rivet/mod/src/main/java/dev/abros/rivet/client/EventsSection.java,22,Причина отмены
+rivet/mod/src/main/java/dev/abros/rivet/client/FeatureListScreen.java,45,Ник игрока
+rivet/mod/src/main/java/dev/abros/rivet/client/FeatureListScreen.java,45,Все
+rivet/mod/src/main/java/dev/abros/rivet/client/FeatureListScreen.java,45,В сети
+rivet/mod/src/main/java/dev/abros/rivet/client/FeatureListScreen.java,45,Игроки
+rivet/mod/src/main/java/dev/abros/rivet/client/FeatureListScreen.java,45,В сети
+rivet/mod/src/main/java/dev/abros/rivet/client/FeatureListScreen.java,45,Все игроки
+rivet/mod/src/main/java/dev/abros/rivet/client/FeatureListScreen.java,45,Сбросить поиск и показать игроков в сети
+rivet/mod/src/main/java/dev/abros/rivet/client/FeatureListScreen.java,49,Обращение: 
+rivet/mod/src/main/java/dev/abros/rivet/client/FeatureListScreen.java,49,Игрок
+rivet/mod/src/main/java/dev/abros/rivet/client/FeatureListScreen.java,49, · Высокий приоритет
+rivet/mod/src/main/java/dev/abros/rivet/client/FeatureListScreen.java,49,Ответственный не назначен
+rivet/mod/src/main/java/dev/abros/rivet/client/FeatureListScreen.java,49,Ответственный: 
+rivet/mod/src/main/java/dev/abros/rivet/client/FeatureListScreen.java,57,Написать
+rivet/mod/src/main/java/dev/abros/rivet/client/FeatureListScreen.java,58,Пожаловаться
+rivet/mod/src/main/java/dev/abros/rivet/client/FeatureListScreen.java,58,Игрок: 
+rivet/mod/src/main/java/dev/abros/rivet/client/FeatureListScreen.java,59,Пригласить в объединение
+rivet/mod/src/main/java/dev/abros/rivet/client/FeatureListScreen.java,61,Профиль игрока…
+rivet/mod/src/main/java/dev/abros/rivet/client/FeatureListScreen.java,82,Выберите игрока слева
+rivet/mod/src/main/java/dev/abros/rivet/client/FeatureListScreen.java,86,Список недоступен
+rivet/mod/src/main/java/dev/abros/rivet/client/FeatureListScreen.java,86,Загружаем список…
+rivet/mod/src/main/java/dev/abros/rivet/client/FeatureListScreen.java,86,Нет игроков
+rivet/mod/src/main/java/dev/abros/rivet/client/FeatureListScreen.java,86,Игроки не найдены
+rivet/mod/src/main/java/dev/abros/rivet/client/FeatureListScreen.java,86,Пока нет записей
+rivet/mod/src/main/java/dev/abros/rivet/client/FeatureListScreen.java,86,Получаем актуальные данные с сервера.
+rivet/mod/src/main/java/dev/abros/rivet/client/FeatureListScreen.java,86,Измените поиск или выберите «Все игроки».
+rivet/mod/src/main/java/dev/abros/rivet/client/FeatureListScreen.java,86,Записи появятся здесь после обновления.
+rivet/mod/src/main/java/dev/abros/rivet/client/FollowingScreen.java,10,Организаторы событий
+rivet/mod/src/main/java/dev/abros/rivet/client/FollowingScreen.java,13,+ Подписаться на организатора
+rivet/mod/src/main/java/dev/abros/rivet/client/FollowingScreen.java,13, · Отписаться
+rivet/mod/src/main/java/dev/abros/rivet/client/FollowingScreen.java,14,Не удалось выполнить действие
+rivet/mod/src/main/java/dev/abros/rivet/client/FollowingScreen.java,14,"Подпишитесь, чтобы узнавать о новых событиях"
+rivet/mod/src/main/java/dev/abros/rivet/client/FollowingScreen.java,15,Нет ответа. Откройте список ещё раз.
+rivet/mod/src/main/java/dev/abros/rivet/client/GlobalSearchScreen.java,9,Введите хотя бы два символа
+rivet/mod/src/main/java/dev/abros/rivet/client/GlobalSearchScreen.java,10,Поиск по серверу
+rivet/mod/src/main/java/dev/abros/rivet/client/GlobalSearchScreen.java,12,Введите хотя бы два символа
+rivet/mod/src/main/java/dev/abros/rivet/client/GlobalSearchScreen.java,12,Поиск…
+rivet/mod/src/main/java/dev/abros/rivet/client/GlobalSearchScreen.java,13,Поиск по серверу
+rivet/mod/src/main/java/dev/abros/rivet/client/GlobalSearchScreen.java,13,Игрок
+rivet/mod/src/main/java/dev/abros/rivet/client/GlobalSearchScreen.java,13,Задача
+rivet/mod/src/main/java/dev/abros/rivet/client/GlobalSearchScreen.java,14,Ничего не найдено
+rivet/mod/src/main/java/dev/abros/rivet/client/GlobalSearchScreen.java,14,Найдено: 
+rivet/mod/src/main/java/dev/abros/rivet/client/GlobalSearchScreen.java,15,Нет ответа сервера
+rivet/mod/src/main/java/dev/abros/rivet/client/GlobalSearchScreen.java,15,Нет ответа. Нажмите «Найти».
+rivet/mod/src/main/java/dev/abros/rivet/client/GlobalSearchScreen.java,18,Поиск недоступен
+rivet/mod/src/main/java/dev/abros/rivet/client/GlobalSearchScreen.java,18,Ищем на сервере…
+rivet/mod/src/main/java/dev/abros/rivet/client/GlobalSearchScreen.java,18,Что найти?
+rivet/mod/src/main/java/dev/abros/rivet/client/GlobalSearchScreen.java,18,Ничего не найдено
+rivet/mod/src/main/java/dev/abros/rivet/client/GlobalSearchScreen.java,18,"Получаем игроков, задачи и записи."
+rivet/mod/src/main/java/dev/abros/rivet/client/GlobalSearchScreen.java,18,Введите хотя бы два символа в строке поиска.
+rivet/mod/src/main/java/dev/abros/rivet/client/GlobalSearchScreen.java,18,Попробуйте другой запрос.
+rivet/mod/src/main/java/dev/abros/rivet/client/GroupsSection.java,12,События объединения
+rivet/mod/src/main/java/dev/abros/rivet/client/GroupsSection.java,12,Событий пока нет.
+rivet/mod/src/main/java/dev/abros/rivet/client/GroupsSection.java,14,Участников: 
+rivet/mod/src/main/java/dev/abros/rivet/client/GroupsSection.java,15,Помощники: исключение участников
+rivet/mod/src/main/java/dev/abros/rivet/client/GroupsSection.java,15,Помощники могут исключать обычных участников
+rivet/mod/src/main/java/dev/abros/rivet/client/GroupsSection.java,15,Запретить
+rivet/mod/src/main/java/dev/abros/rivet/client/GroupsSection.java,15,Разрешить
+rivet/mod/src/main/java/dev/abros/rivet/client/GroupsSection.java,17,Руководитель
+rivet/mod/src/main/java/dev/abros/rivet/client/GroupsSection.java,17,Помощник
+rivet/mod/src/main/java/dev/abros/rivet/client/GroupsSection.java,17,Участник
+rivet/mod/src/main/java/dev/abros/rivet/client/GroupsSection.java,18,Активных задач: 
+rivet/mod/src/main/java/dev/abros/rivet/client/GroupsSection.java,18, · Просрочено: 
+rivet/mod/src/main/java/dev/abros/rivet/client/GroupsSection.java,19,Исключить: 
+rivet/mod/src/main/java/dev/abros/rivet/client/GroupsSection.java,19,Исключить участника
+rivet/mod/src/main/java/dev/abros/rivet/client/GroupsSection.java,19,Причина
+rivet/mod/src/main/java/dev/abros/rivet/client/GroupsSection.java,20,Роль и руководство…
+rivet/mod/src/main/java/dev/abros/rivet/client/GroupsSection.java,20,Сделать участником
+rivet/mod/src/main/java/dev/abros/rivet/client/GroupsSection.java,20,Назначить помощником
+rivet/mod/src/main/java/dev/abros/rivet/client/GroupsSection.java,20,Передать руководство
+rivet/mod/src/main/java/dev/abros/rivet/client/GroupsSection.java,20,Передать руководство этому участнику?
+rivet/mod/src/main/java/dev/abros/rivet/client/GroupsSection.java,20,Изменить роль участника?
+rivet/mod/src/main/java/dev/abros/rivet/client/GroupsSection.java,23,Заявки · 
+rivet/mod/src/main/java/dev/abros/rivet/client/GroupsSection.java,23,Нет ожидающих заявок.
+rivet/mod/src/main/java/dev/abros/rivet/client/GroupsSection.java,24,Принять
+rivet/mod/src/main/java/dev/abros/rivet/client/GroupsSection.java,24,Отклонить
+rivet/mod/src/main/java/dev/abros/rivet/client/GroupsSection.java,25,Приглашения · 
+rivet/mod/src/main/java/dev/abros/rivet/client/GroupsSection.java,26,Нет ожидающих приглашений.
+rivet/mod/src/main/java/dev/abros/rivet/client/GroupsSection.java,27,Отменить приглашение
+rivet/mod/src/main/java/dev/abros/rivet/client/GroupsSection.java,27,Отменить приглашение?
+rivet/mod/src/main/java/dev/abros/rivet/client/GroupsSection.java,29,Набор открыт
+rivet/mod/src/main/java/dev/abros/rivet/client/GroupsSection.java,29,Набор закрыт
+rivet/mod/src/main/java/dev/abros/rivet/client/GroupsSection.java,30,Участников: 
+rivet/mod/src/main/java/dev/abros/rivet/client/GroupsSection.java,31,Пригласить 
+rivet/mod/src/main/java/dev/abros/rivet/client/GroupsSection.java,32,Подать заявку
+rivet/mod/src/main/java/dev/abros/rivet/client/GroupsSection.java,32,Заявка
+rivet/mod/src/main/java/dev/abros/rivet/client/GroupsSection.java,32,О себе
+rivet/mod/src/main/java/dev/abros/rivet/client/GroupsSection.java,33,Ваша заявка ожидает рассмотрения.
+rivet/mod/src/main/java/dev/abros/rivet/client/GroupsSection.java,33,Отозвать мою заявку
+rivet/mod/src/main/java/dev/abros/rivet/client/GroupsSection.java,33,Отозвать заявку?
+rivet/mod/src/main/java/dev/abros/rivet/client/GroupsSection.java,34,Ответить на приглашение
+rivet/mod/src/main/java/dev/abros/rivet/client/GroupsSection.java,34,Приглашение в объединение
+rivet/mod/src/main/java/dev/abros/rivet/client/GroupsSection.java,34,Принять
+rivet/mod/src/main/java/dev/abros/rivet/client/GroupsSection.java,34,Отклонить
+rivet/mod/src/main/java/dev/abros/rivet/client/GroupsSection.java,36,Завершится: 
+rivet/mod/src/main/java/dev/abros/rivet/client/GroupsSection.java,36,Срок объединения…
+rivet/mod/src/main/java/dev/abros/rivet/client/GroupsSection.java,36,Временное объединение
+rivet/mod/src/main/java/dev/abros/rivet/client/GroupsSection.java,36,Бессрочно
+rivet/mod/src/main/java/dev/abros/rivet/client/GroupsSection.java,36,1 день
+rivet/mod/src/main/java/dev/abros/rivet/client/GroupsSection.java,36,7 дней
+rivet/mod/src/main/java/dev/abros/rivet/client/GroupsSection.java,36,30 дней
+rivet/mod/src/main/java/dev/abros/rivet/client/GroupsSection.java,37,Выйти из объединения
+rivet/mod/src/main/java/dev/abros/rivet/client/GroupsSection.java,37,Выйти из объединения?
+rivet/mod/src/main/java/dev/abros/rivet/client/GroupsSection.java,38,Пригласить игрока
+rivet/mod/src/main/java/dev/abros/rivet/client/GroupsSection.java,39,Закрыть набор
+rivet/mod/src/main/java/dev/abros/rivet/client/GroupsSection.java,39,Открыть набор
+rivet/mod/src/main/java/dev/abros/rivet/client/HomeLayout.java,14,Объявления
+rivet/mod/src/main/java/dev/abros/rivet/client/HomeLayout.java,14,Задачи
+rivet/mod/src/main/java/dev/abros/rivet/client/HomeLayout.java,14,События
+rivet/mod/src/main/java/dev/abros/rivet/client/HomeLayout.java,14,Объединения
+rivet/mod/src/main/java/dev/abros/rivet/client/HomeLayout.java,21,Вас пригласили
+rivet/mod/src/main/java/dev/abros/rivet/client/HomeWidgetsScreen.java,8,Главная: виджеты
+rivet/mod/src/main/java/dev/abros/rivet/client/HomeWidgetsScreen.java,10,Не удалось сохранить настройки
+rivet/mod/src/main/java/dev/abros/rivet/client/HomeWidgetsScreen.java,11,По умолчанию
+rivet/mod/src/main/java/dev/abros/rivet/client/HomeWidgetsScreen.java,11,Не удалось сохранить
+rivet/mod/src/main/java/dev/abros/rivet/client/HomeWidgetsScreen.java,11,Готово
+rivet/mod/src/main/java/dev/abros/rivet/client/HomeWidgetsScreen.java,15,Не удалось сохранить настройки
+rivet/mod/src/main/java/dev/abros/rivet/client/HomeWidgetsScreen.java,20,Перетащите за маркер справа. Срочные записи остаются выше.
+rivet/mod/src/main/java/dev/abros/rivet/client/HudInteractionScreen.java,12,Редактор HUD
+rivet/mod/src/main/java/dev/abros/rivet/client/HudInteractionScreen.java,12,Режим курсора
+rivet/mod/src/main/java/dev/abros/rivet/client/HudInteractionScreen.java,15,Подсказки чата
+rivet/mod/src/main/java/dev/abros/rivet/client/HudInteractionScreen.java,15,Указатель маршрута
+rivet/mod/src/main/java/dev/abros/rivet/client/HudInteractionScreen.java,15,Виджет
+rivet/mod/src/main/java/dev/abros/rivet/client/HudInteractionScreen.java,17,Предпросмотр · перетащите блок · R — сброс размещения · Esc — готово
+rivet/mod/src/main/java/dev/abros/rivet/client/HudInteractionScreen.java,17,Режим курсора · нажмите на блок или плашку · Esc — закрыть
+rivet/mod/src/main/java/dev/abros/rivet/client/HudOrderScreen.java,17,Порядок блоков виджета
+rivet/mod/src/main/java/dev/abros/rivet/client/HudOrderScreen.java,23,Не удалось сохранить порядок HUD
+rivet/mod/src/main/java/dev/abros/rivet/client/HudOrderScreen.java,26,Перетащите строку на нужное место
+rivet/mod/src/main/java/dev/abros/rivet/client/HudProfile.java,14,Игрок
+rivet/mod/src/main/java/dev/abros/rivet/client/HudProfile.java,15,Инженер
+rivet/mod/src/main/java/dev/abros/rivet/client/HudProfile.java,15,Мастер механизмов
+rivet/mod/src/main/java/dev/abros/rivet/client/HudProfile.java,16,Сессия · 
+rivet/mod/src/main/java/dev/abros/rivet/client/HudProfile.java,16, ч 
+rivet/mod/src/main/java/dev/abros/rivet/client/HudProfile.java,16, мин
+rivet/mod/src/main/java/dev/abros/rivet/client/HudProfile.java,17,Связь · 
+rivet/mod/src/main/java/dev/abros/rivet/client/HudProfile.java,17, мс
+rivet/mod/src/main/java/dev/abros/rivet/client/HudRenderer.java,17,Подключение…
+rivet/mod/src/main/java/dev/abros/rivet/client/HudRenderer.java,18, этапов
+rivet/mod/src/main/java/dev/abros/rivet/client/HudRenderer.java,18,Без этапов
+rivet/mod/src/main/java/dev/abros/rivet/client/HudRenderer.java,18,Задача появится здесь
+rivet/mod/src/main/java/dev/abros/rivet/client/HudRenderer.java,18,Срок и прогресс этапов
+rivet/mod/src/main/java/dev/abros/rivet/client/HudRenderer.java,19,Ближайшее событие
+rivet/mod/src/main/java/dev/abros/rivet/client/HudRenderer.java,19,Через 30 мин
+rivet/mod/src/main/java/dev/abros/rivet/client/HudRenderer.java,20,Объединения
+rivet/mod/src/main/java/dev/abros/rivet/client/HudRenderer.java,20,Объединения
+rivet/mod/src/main/java/dev/abros/rivet/client/HudRenderer.java,20,Названия ваших объединений
+rivet/mod/src/main/java/dev/abros/rivet/client/HudRenderer.java,21,Уведомления
+rivet/mod/src/main/java/dev/abros/rivet/client/HudRenderer.java,21, непрочитанных
+rivet/mod/src/main/java/dev/abros/rivet/client/HudRenderer.java,23,Перезапуск сервера
+rivet/mod/src/main/java/dev/abros/rivet/client/HudRenderer.java,24,Просрочено: 
+rivet/mod/src/main/java/dev/abros/rivet/client/HudRenderer.java,25,Блоки выключены
+rivet/mod/src/main/java/dev/abros/rivet/client/HudRenderer.java,25,Включите их в настройках HUD
+rivet/mod/src/main/java/dev/abros/rivet/client/HudRenderer.java,34,Перезапуск сервера
+rivet/mod/src/main/java/dev/abros/rivet/client/HudRenderer.java,40,Обновлений: 
+rivet/mod/src/main/java/dev/abros/rivet/client/HudRenderer.java,40,Через 10 мин
+rivet/mod/src/main/java/dev/abros/rivet/client/HudRenderer.java,45,Перезапуск сервера
+rivet/mod/src/main/java/dev/abros/rivet/client/HudSettings.java,18,Не удалось прочитать настройки HUD
+rivet/mod/src/main/java/dev/abros/rivet/client/HudSettings.java,23,Не удалось сохранить настройки HUD
+rivet/mod/src/main/java/dev/abros/rivet/client/HudSettings.java,26,Мини-профиль
+rivet/mod/src/main/java/dev/abros/rivet/client/HudSettings.java,26,Сервер и онлайн
+rivet/mod/src/main/java/dev/abros/rivet/client/HudSettings.java,26,Моя задача
+rivet/mod/src/main/java/dev/abros/rivet/client/HudSettings.java,26,Ближайшее событие
+rivet/mod/src/main/java/dev/abros/rivet/client/HudSettings.java,26,Мои объединения
+rivet/mod/src/main/java/dev/abros/rivet/client/HudSettings.java,26,Непрочитанные
+rivet/mod/src/main/java/dev/abros/rivet/client/HudSettingsScreen.java,14,Настройки Rivet
+rivet/mod/src/main/java/dev/abros/rivet/client/HudSettingsScreen.java,22,Показывать виджет
+rivet/mod/src/main/java/dev/abros/rivet/client/HudSettingsScreen.java,22,Масштаб
+rivet/mod/src/main/java/dev/abros/rivet/client/HudSettingsScreen.java,22,Плотность фона
+rivet/mod/src/main/java/dev/abros/rivet/client/HudSettingsScreen.java,22,В чате
+rivet/mod/src/main/java/dev/abros/rivet/client/HudSettingsScreen.java,22,В инвентаре
+rivet/mod/src/main/java/dev/abros/rivet/client/HudSettingsScreen.java,22,В меню паузы
+rivet/mod/src/main/java/dev/abros/rivet/client/HudSettingsScreen.java,22,При открытом F3
+rivet/mod/src/main/java/dev/abros/rivet/client/HudSettingsScreen.java,22,Голограммы привязанных складов
+rivet/mod/src/main/java/dev/abros/rivet/client/HudSettingsScreen.java,22,Приглушать фон при движении
+rivet/mod/src/main/java/dev/abros/rivet/client/HudSettingsScreen.java,22,Клавиша взаимодействия
+rivet/mod/src/main/java/dev/abros/rivet/client/HudSettingsScreen.java,22,Настроить…
+rivet/mod/src/main/java/dev/abros/rivet/client/HudSettingsScreen.java,23,Голова игрока
+rivet/mod/src/main/java/dev/abros/rivet/client/HudSettingsScreen.java,23,Никнейм
+rivet/mod/src/main/java/dev/abros/rivet/client/HudSettingsScreen.java,23,Префикс LuckPerms
+rivet/mod/src/main/java/dev/abros/rivet/client/HudSettingsScreen.java,23,Суффикс LuckPerms
+rivet/mod/src/main/java/dev/abros/rivet/client/HudSettingsScreen.java,23,Время текущей сессии
+rivet/mod/src/main/java/dev/abros/rivet/client/HudSettingsScreen.java,23,Задержка соединения
+rivet/mod/src/main/java/dev/abros/rivet/client/HudSettingsScreen.java,24,Порядок блоков
+rivet/mod/src/main/java/dev/abros/rivet/client/HudSettingsScreen.java,24,Перетащить…
+rivet/mod/src/main/java/dev/abros/rivet/client/HudSettingsScreen.java,25,Общие параметры
+rivet/mod/src/main/java/dev/abros/rivet/client/HudSettingsScreen.java,25,Сводка пропущенных при входе
+rivet/mod/src/main/java/dev/abros/rivet/client/HudSettingsScreen.java,25,Показывать плашки
+rivet/mod/src/main/java/dev/abros/rivet/client/HudSettingsScreen.java,25,Звук
+rivet/mod/src/main/java/dev/abros/rivet/client/HudSettingsScreen.java,25,Тихие часы обычных уведомлений
+rivet/mod/src/main/java/dev/abros/rivet/client/HudSettingsScreen.java,25,Начало тихих часов
+rivet/mod/src/main/java/dev/abros/rivet/client/HudSettingsScreen.java,25,Конец тихих часов
+rivet/mod/src/main/java/dev/abros/rivet/client/HudSettingsScreen.java,25,Предупреждения о перезапуске
+rivet/mod/src/main/java/dev/abros/rivet/client/HudSettingsScreen.java,25,Одновременно на экране
+rivet/mod/src/main/java/dev/abros/rivet/client/HudSettingsScreen.java,25,Разделы
+rivet/mod/src/main/java/dev/abros/rivet/client/HudSettingsScreen.java,25,Плашки: 
+rivet/mod/src/main/java/dev/abros/rivet/client/HudSettingsScreen.java,25,Сервер
+rivet/mod/src/main/java/dev/abros/rivet/client/HudSettingsScreen.java,25,Личные задачи
+rivet/mod/src/main/java/dev/abros/rivet/client/HudSettingsScreen.java,25,Обращения
+rivet/mod/src/main/java/dev/abros/rivet/client/HudSettingsScreen.java,26,Подробные настройки событий
+rivet/mod/src/main/java/dev/abros/rivet/client/HudSettingsScreen.java,26,Свернуть
+rivet/mod/src/main/java/dev/abros/rivet/client/HudSettingsScreen.java,26,Развернуть
+rivet/mod/src/main/java/dev/abros/rivet/client/HudSettingsScreen.java,26,Все разделы
+rivet/mod/src/main/java/dev/abros/rivet/client/HudSettingsScreen.java,26,Сервер
+rivet/mod/src/main/java/dev/abros/rivet/client/HudSettingsScreen.java,26,Личные задачи
+rivet/mod/src/main/java/dev/abros/rivet/client/HudSettingsScreen.java,26,Объединения
+rivet/mod/src/main/java/dev/abros/rivet/client/HudSettingsScreen.java,26,События
+rivet/mod/src/main/java/dev/abros/rivet/client/HudSettingsScreen.java,26,Доска объявлений
+rivet/mod/src/main/java/dev/abros/rivet/client/HudSettingsScreen.java,26,Голосования
+rivet/mod/src/main/java/dev/abros/rivet/client/HudSettingsScreen.java,26,Предложения
+rivet/mod/src/main/java/dev/abros/rivet/client/HudSettingsScreen.java,26,Обращения
+rivet/mod/src/main/java/dev/abros/rivet/client/HudSettingsScreen.java,26,Область настройки событий
+rivet/mod/src/main/java/dev/abros/rivet/client/IdeasSection.java,8,Поддержали: 
+rivet/mod/src/main/java/dev/abros/rivet/client/IdeasSection.java,8,Убрать поддержку
+rivet/mod/src/main/java/dev/abros/rivet/client/IdeasSection.java,8,Поддержать
+rivet/mod/src/main/java/dev/abros/rivet/client/IdeasSection.java,8,Статус: 
+rivet/mod/src/main/java/dev/abros/rivet/client/IdeasSection.java,8,Ответ администрации\n
+rivet/mod/src/main/java/dev/abros/rivet/client/IdeasSection.java,8,Изменить статус и ответить…
+rivet/mod/src/main/java/dev/abros/rivet/client/IdeasSection.java,8,Решение по предложению
+rivet/mod/src/main/java/dev/abros/rivet/client/IdeasSection.java,8,Официальный ответ
+rivet/mod/src/main/java/dev/abros/rivet/client/IdeasSection.java,8,Объяснение
+rivet/mod/src/main/java/dev/abros/rivet/client/ItemPickerScreen.java,5,Выберите предмет
+rivet/mod/src/main/java/dev/abros/rivet/client/ItemPickerScreen.java,7,Поиск предмета
+rivet/mod/src/main/java/dev/abros/rivet/client/ItemPickerScreen.java,7,Название предмета
+rivet/mod/src/main/java/dev/abros/rivet/client/ItemPickerScreen.java,10,Предмет не найден
+rivet/mod/src/main/java/dev/abros/rivet/client/LocationActions.java,9,Место: 
+rivet/mod/src/main/java/dev/abros/rivet/client/LocationActions.java,11,Идти сюда
+rivet/mod/src/main/java/dev/abros/rivet/client/LocationActions.java,12,Координаты
+rivet/mod/src/main/java/dev/abros/rivet/client/LocationActions.java,13,На карте
+rivet/mod/src/main/java/dev/abros/rivet/client/LocationActions.java,13,Карта Xaero
+rivet/mod/src/main/java/dev/abros/rivet/client/LocationActions.java,13,Эта версия Xaero World Map не поддерживает открытие точки. Координаты можно скопировать из карточки.
+rivet/mod/src/main/java/dev/abros/rivet/client/LocationActions.java,14,Метка в Xaero…
+rivet/mod/src/main/java/dev/abros/rivet/client/LocationActions.java,14,Как добавить место?
+rivet/mod/src/main/java/dev/abros/rivet/client/LocationActions.java,14,Идти сюда
+rivet/mod/src/main/java/dev/abros/rivet/client/LocationActions.java,14,На этот сеанс
+rivet/mod/src/main/java/dev/abros/rivet/client/LocationActions.java,14,Сохранить место
+rivet/mod/src/main/java/dev/abros/rivet/client/LocationActions.java,14,Место в Xaero
+rivet/mod/src/main/java/dev/abros/rivet/client/LocationActions.java,14,Не удалось открыть редактор Xaero. 
+rivet/mod/src/main/java/dev/abros/rivet/client/LocationActions.java,14,Проверьте совместимость версии мода.
+rivet/mod/src/main/java/dev/abros/rivet/client/LocationActions.java,14,\nКоординаты можно скопировать из карточки.
+rivet/mod/src/main/java/dev/abros/rivet/client/LocationEditor.java,12,Место
+rivet/mod/src/main/java/dev/abros/rivet/client/LocationEditor.java,13,Обычный мир
+rivet/mod/src/main/java/dev/abros/rivet/client/LocationEditor.java,13,Незер
+rivet/mod/src/main/java/dev/abros/rivet/client/LocationEditor.java,13,Энд
+rivet/mod/src/main/java/dev/abros/rivet/client/LocationEditor.java,16,Название места
+rivet/mod/src/main/java/dev/abros/rivet/client/LocationEditor.java,16,"Измерение, например minecraft:overworld"
+rivet/mod/src/main/java/dev/abros/rivet/client/LocationEditor.java,17,Измерение
+rivet/mod/src/main/java/dev/abros/rivet/client/LocationEditor.java,18,Моя позиция
+rivet/mod/src/main/java/dev/abros/rivet/client/LocationEditor.java,18,Место встречи
+rivet/mod/src/main/java/dev/abros/rivet/client/LocationEditor.java,19,Участникам объединения ▾
+rivet/mod/src/main/java/dev/abros/rivet/client/LocationEditor.java,19,Видно всем ▾
+rivet/mod/src/main/java/dev/abros/rivet/client/LocationEditor.java,19,Кто видит место
+rivet/mod/src/main/java/dev/abros/rivet/client/LocationEditor.java,19,Все игроки
+rivet/mod/src/main/java/dev/abros/rivet/client/LocationEditor.java,19,Участники объединения
+rivet/mod/src/main/java/dev/abros/rivet/client/LocationEditor.java,20,Готово
+rivet/mod/src/main/java/dev/abros/rivet/client/LocationEditor.java,21,Убрать место
+rivet/mod/src/main/java/dev/abros/rivet/client/MapLayerClient.java,12,Не удалось сохранить настройки карты
+rivet/mod/src/main/java/dev/abros/rivet/client/MapSharingScreen.java,11,Выбрать объединение
+rivet/mod/src/main/java/dev/abros/rivet/client/MapSharingScreen.java,12,Карта объединения
+rivet/mod/src/main/java/dev/abros/rivet/client/MapSharingScreen.java,15,Объединение
+rivet/mod/src/main/java/dev/abros/rivet/client/MapSharingScreen.java,15,"Чтобы сменить объединение, сначала остановите передачу позиции."
+rivet/mod/src/main/java/dev/abros/rivet/client/MapSharingScreen.java,15,Остановить передачу позиции
+rivet/mod/src/main/java/dev/abros/rivet/client/MapSharingScreen.java,15,Передавать мою позицию · 1 час
+rivet/mod/src/main/java/dev/abros/rivet/client/MapSharingScreen.java,15,Позицию увидят участники выбранного объединения. Передача прекращается при выходе с сервера.
+rivet/mod/src/main/java/dev/abros/rivet/client/MapSharingScreen.java,15,Показывать участников на карте: 
+rivet/mod/src/main/java/dev/abros/rivet/client/MapSharingScreen.java,15,да
+rivet/mod/src/main/java/dev/abros/rivet/client/MapSharingScreen.java,15,нет
+rivet/mod/src/main/java/dev/abros/rivet/client/MapSharingScreen.java,15,Для отображения нужен Xaero’s Minimap.
+rivet/mod/src/main/java/dev/abros/rivet/client/MapSharingScreen.java,16,Недоступно
+rivet/mod/src/main/java/dev/abros/rivet/client/MapSharingScreen.java,16,Сначала вступите в объединение
+rivet/mod/src/main/java/dev/abros/rivet/client/MapSharingScreen.java,16,Позиции не сохраняются в историю или личные метки.
+rivet/mod/src/main/java/dev/abros/rivet/client/MapSharingScreen.java,17,Нет ответа. Откройте экран ещё раз.
+rivet/mod/src/main/java/dev/abros/rivet/client/MemberPickerScreen.java,13,Ответственный · участник объединения
+rivet/mod/src/main/java/dev/abros/rivet/client/MemberPickerScreen.java,16,Поиск участника
+rivet/mod/src/main/java/dev/abros/rivet/client/MemberPickerScreen.java,16,Поиск по нику
+rivet/mod/src/main/java/dev/abros/rivet/client/MemberPickerScreen.java,18,Участник не найден
+rivet/mod/src/main/java/dev/abros/rivet/client/MenuSidebar.java,20,Сервер не поддерживает личные задачи. Обновите Rivet на клиенте и сервере.
+rivet/mod/src/main/java/dev/abros/rivet/client/MenuSidebar.java,22,Входящие
+rivet/mod/src/main/java/dev/abros/rivet/client/MenuSidebar.java,22,Уведомления
+rivet/mod/src/main/java/dev/abros/rivet/client/MenuSidebar.java,23,Раздел
+rivet/mod/src/main/java/dev/abros/rivet/client/ModerationVoteScreen.java,12,Нарушение правил
+rivet/mod/src/main/java/dev/abros/rivet/client/ModerationVoteScreen.java,16,Кик
+rivet/mod/src/main/java/dev/abros/rivet/client/ModerationVoteScreen.java,16,Временный бан
+rivet/mod/src/main/java/dev/abros/rivet/client/ModerationVoteScreen.java,16,Голосовой mute
+rivet/mod/src/main/java/dev/abros/rivet/client/ModerationVoteScreen.java,25,Игрок: 
+rivet/mod/src/main/java/dev/abros/rivet/client/ModerationVoteScreen.java,25,выбрать
+rivet/mod/src/main/java/dev/abros/rivet/client/ModerationVoteScreen.java,26,Мера: 
+rivet/mod/src/main/java/dev/abros/rivet/client/ModerationVoteScreen.java,26,Мера
+rivet/mod/src/main/java/dev/abros/rivet/client/ModerationVoteScreen.java,27,Причина
+rivet/mod/src/main/java/dev/abros/rivet/client/ModerationVoteScreen.java,27,Причина нарушения
+rivet/mod/src/main/java/dev/abros/rivet/client/ModerationVoteScreen.java,28,"Срок наказания, минут"
+rivet/mod/src/main/java/dev/abros/rivet/client/ModerationVoteScreen.java,29,Начать голосование…
+rivet/mod/src/main/java/dev/abros/rivet/client/ModerationVoteScreen.java,31, мин.
+rivet/mod/src/main/java/dev/abros/rivet/client/ModerationVoteScreen.java,31,\nЗа: 
+rivet/mod/src/main/java/dev/abros/rivet/client/ModerationVoteScreen.java,31, · Против: 
+rivet/mod/src/main/java/dev/abros/rivet/client/ModerationVoteScreen.java,31, · Могут голосовать: 
+rivet/mod/src/main/java/dev/abros/rivet/client/ModerationVoteScreen.java,31,Голосование идёт
+rivet/mod/src/main/java/dev/abros/rivet/client/ModerationVoteScreen.java,31,Применение результата…
+rivet/mod/src/main/java/dev/abros/rivet/client/ModerationVoteScreen.java,34,✓ За
+rivet/mod/src/main/java/dev/abros/rivet/client/ModerationVoteScreen.java,34,За
+rivet/mod/src/main/java/dev/abros/rivet/client/ModerationVoteScreen.java,35,✓ Против
+rivet/mod/src/main/java/dev/abros/rivet/client/ModerationVoteScreen.java,35,Против
+rivet/mod/src/main/java/dev/abros/rivet/client/ModerationVoteScreen.java,36,Отменить с причиной…
+rivet/mod/src/main/java/dev/abros/rivet/client/ModerationVoteScreen.java,38,Сейчас нет голосования о нарушении правил.
+rivet/mod/src/main/java/dev/abros/rivet/client/ModerationVoteScreen.java,43,Новое голосование
+rivet/mod/src/main/java/dev/abros/rivet/client/ModerationVoteScreen.java,44,Выберите игрока и укажите причину
+rivet/mod/src/main/java/dev/abros/rivet/client/ModerationVoteScreen.java,44,Укажите срок от 1 до 1440 минут
+rivet/mod/src/main/java/dev/abros/rivet/client/ModerationVoteScreen.java,44,Начать голосование?
+rivet/mod/src/main/java/dev/abros/rivet/client/ModerationVoteScreen.java,44, мин.
+rivet/mod/src/main/java/dev/abros/rivet/client/ModerationVoteScreen.java,47,Действие не выполнено
+rivet/mod/src/main/java/dev/abros/rivet/client/ModerationVoteScreen.java,48,Нет ответа. Закройте и откройте голосование повторно.
+rivet/mod/src/main/java/dev/abros/rivet/client/ModerationVoteScreen.java,50,"Срок наказания, минут (1–1440)"
+rivet/mod/src/main/java/dev/abros/rivet/client/ModerationVoteScreen.java,50,Осталось: 
+rivet/mod/src/main/java/dev/abros/rivet/client/ModerationVoteScreen.java,50, с
+rivet/mod/src/main/java/dev/abros/rivet/client/ModerationVoteScreen.java,57,Причина отмены
+rivet/mod/src/main/java/dev/abros/rivet/client/ModerationVoteScreen.java,59,Отменить голосование
+rivet/mod/src/main/java/dev/abros/rivet/client/NavigationSettingsScreen.java,12,Настройки Rivet
+rivet/mod/src/main/java/dev/abros/rivet/client/NavigationSettingsScreen.java,19,Указатель точки
+rivet/mod/src/main/java/dev/abros/rivet/client/NavigationSettingsScreen.java,20,Прозрачность фона: 
+rivet/mod/src/main/java/dev/abros/rivet/client/NavigationSettingsScreen.java,20,Прозрачность указателя
+rivet/mod/src/main/java/dev/abros/rivet/client/NavigationSettingsScreen.java,20,15% (по умолчанию)
+rivet/mod/src/main/java/dev/abros/rivet/client/NavigationSettingsScreen.java,21,Координаты в указателе
+rivet/mod/src/main/java/dev/abros/rivet/client/NavigationSettingsScreen.java,22,Метка маршрута в Xaero’s
+rivet/mod/src/main/java/dev/abros/rivet/client/NavigationSettingsScreen.java,22,Слой Xaero недоступен. Указатель Rivet работает самостоятельно.
+rivet/mod/src/main/java/dev/abros/rivet/client/NotificationPopup.java,20,Уведомления
+rivet/mod/src/main/java/dev/abros/rivet/client/NotificationPopup.java,32,Все уведомления
+rivet/mod/src/main/java/dev/abros/rivet/client/NotificationPopup.java,32,Объединения
+rivet/mod/src/main/java/dev/abros/rivet/client/NotificationPopup.java,32,События
+rivet/mod/src/main/java/dev/abros/rivet/client/NotificationPopup.java,32,Голосования
+rivet/mod/src/main/java/dev/abros/rivet/client/NotificationPopup.java,32,Объявления
+rivet/mod/src/main/java/dev/abros/rivet/client/NotificationPopup.java,32,Предложения
+rivet/mod/src/main/java/dev/abros/rivet/client/NotificationPopup.java,32,Обращения
+rivet/mod/src/main/java/dev/abros/rivet/client/NotificationPopup.java,32,Категория
+rivet/mod/src/main/java/dev/abros/rivet/client/NotificationPopup.java,33,Голосование о наказании: 
+rivet/mod/src/main/java/dev/abros/rivet/client/NotificationPopup.java,40,Прочитать всё
+rivet/mod/src/main/java/dev/abros/rivet/client/NotificationPopup.java,41,Настройки
+rivet/mod/src/main/java/dev/abros/rivet/client/NotificationPopup.java,42,Какие события присылать и как о них сообщать
+rivet/mod/src/main/java/dev/abros/rivet/client/NotificationPopup.java,42,Настройки загружаются с сервера
+rivet/mod/src/main/java/dev/abros/rivet/client/NotificationPopup.java,72,Уведомлений пока нет
+rivet/mod/src/main/java/dev/abros/rivet/client/NotificationPopup.java,99,Обновление…
+rivet/mod/src/main/java/dev/abros/rivet/client/NotificationRow.java,16,Уведомления
+rivet/mod/src/main/java/dev/abros/rivet/client/NotificationRow.java,16,Сообщество
+rivet/mod/src/main/java/dev/abros/rivet/client/NotificationRow.java,16, · новое
+rivet/mod/src/main/java/dev/abros/rivet/client/PasswordVisibilityButton.java,7,Показать пароль
+rivet/mod/src/main/java/dev/abros/rivet/client/PasswordVisibilityButton.java,7,Скрыть пароль
+rivet/mod/src/main/java/dev/abros/rivet/client/PasswordVisibilityButton.java,7,Показать пароль
+rivet/mod/src/main/java/dev/abros/rivet/client/PersonalProfileScreen.java,11,О себе
+rivet/mod/src/main/java/dev/abros/rivet/client/PersonalProfileScreen.java,19,Видимость…
+rivet/mod/src/main/java/dev/abros/rivet/client/PersonalProfileScreen.java,19,О себе
+rivet/mod/src/main/java/dev/abros/rivet/client/PersonalProfileScreen.java,19,О себе
+rivet/mod/src/main/java/dev/abros/rivet/client/PersonalProfileScreen.java,20,Сохранить
+rivet/mod/src/main/java/dev/abros/rivet/client/PersonalProfileScreen.java,21,Выбрать игрока…
+rivet/mod/src/main/java/dev/abros/rivet/client/PersonalProfileScreen.java,21,Ограничить
+rivet/mod/src/main/java/dev/abros/rivet/client/PersonalProfileScreen.java,21, · Разрешить
+rivet/mod/src/main/java/dev/abros/rivet/client/PersonalProfileScreen.java,25,Ошибка
+rivet/mod/src/main/java/dev/abros/rivet/client/PersonalProfileScreen.java,26,Нет ответа. Повтор безопасен.
+rivet/mod/src/main/java/dev/abros/rivet/client/PersonalProfileScreen.java,27,Приглашения и отклики
+rivet/mod/src/main/java/dev/abros/rivet/client/PersonalProfileScreen.java,27,Коротко расскажите о себе · до 300 символов
+rivet/mod/src/main/java/dev/abros/rivet/client/PersonalProfileScreen.java,27,Ограниченных игроков нет
+rivet/mod/src/main/java/dev/abros/rivet/client/PlacesScreen.java,12,Общедоступные места
+rivet/mod/src/main/java/dev/abros/rivet/client/PlacesScreen.java,16,Для удаления используйте действие в карточке места
+rivet/mod/src/main/java/dev/abros/rivet/client/PlacesScreen.java,18,+ Добавить место
+rivet/mod/src/main/java/dev/abros/rivet/client/PlacesScreen.java,18,Слой на карте: 
+rivet/mod/src/main/java/dev/abros/rivet/client/PlacesScreen.java,18,да
+rivet/mod/src/main/java/dev/abros/rivet/client/PlacesScreen.java,18,нет
+rivet/mod/src/main/java/dev/abros/rivet/client/PlacesScreen.java,18,Место…
+rivet/mod/src/main/java/dev/abros/rivet/client/PlacesScreen.java,18,Место
+rivet/mod/src/main/java/dev/abros/rivet/client/PlacesScreen.java,18,Идти сюда
+rivet/mod/src/main/java/dev/abros/rivet/client/PlacesScreen.java,18,Скопировать координаты
+rivet/mod/src/main/java/dev/abros/rivet/client/PlacesScreen.java,18,Показать на карте
+rivet/mod/src/main/java/dev/abros/rivet/client/PlacesScreen.java,18,Скрыть на карте
+rivet/mod/src/main/java/dev/abros/rivet/client/PlacesScreen.java,18,Изменить…
+rivet/mod/src/main/java/dev/abros/rivet/client/PlacesScreen.java,18,Место
+rivet/mod/src/main/java/dev/abros/rivet/client/PlacesScreen.java,18,Название и координаты
+rivet/mod/src/main/java/dev/abros/rivet/client/PlacesScreen.java,18,Статус места
+rivet/mod/src/main/java/dev/abros/rivet/client/PlacesScreen.java,18,Удалить с сервера…
+rivet/mod/src/main/java/dev/abros/rivet/client/PlacesScreen.java,18,Статус
+rivet/mod/src/main/java/dev/abros/rivet/client/PlacesScreen.java,18,Доступно
+rivet/mod/src/main/java/dev/abros/rivet/client/PlacesScreen.java,18,Временно недоступно
+rivet/mod/src/main/java/dev/abros/rivet/client/PlacesScreen.java,18,Закрыто
+rivet/mod/src/main/java/dev/abros/rivet/client/PlacesScreen.java,18,Удалить общедоступное место?
+rivet/mod/src/main/java/dev/abros/rivet/client/PlacesScreen.java,19,Повторить
+rivet/mod/src/main/java/dev/abros/rivet/client/PlacesScreen.java,19,Следующая страница
+rivet/mod/src/main/java/dev/abros/rivet/client/PlacesScreen.java,19,К началу списка
+rivet/mod/src/main/java/dev/abros/rivet/client/PlacesScreen.java,20,Не удалось загрузить места
+rivet/mod/src/main/java/dev/abros/rivet/client/PlacesScreen.java,20,Мест пока нет
+rivet/mod/src/main/java/dev/abros/rivet/client/PlacesScreen.java,21,Нет ответа. Повтор безопасен.
+rivet/mod/src/main/java/dev/abros/rivet/client/PlacesScreen.java,23,Закрыто
+rivet/mod/src/main/java/dev/abros/rivet/client/PlacesScreen.java,23,Недоступно
+rivet/mod/src/main/java/dev/abros/rivet/client/PlacesScreen.java,23,Доступно
+rivet/mod/src/main/java/dev/abros/rivet/client/PlacesScreen.java,23,Автор: 
+rivet/mod/src/main/java/dev/abros/rivet/client/PlasmoVoiceClientAdapter.java,7,неизвестно
+rivet/mod/src/main/java/dev/abros/rivet/client/PlasmoVoiceClientAdapter.java,7,неизвестно
+rivet/mod/src/main/java/dev/abros/rivet/client/PlasmoVoiceClientAdapter.java,7,неизвестно
+rivet/mod/src/main/java/dev/abros/rivet/client/PlasmoVoiceClientAdapter.java,7,неизвестно
+rivet/mod/src/main/java/dev/abros/rivet/client/PlasmoVoiceClientAdapter.java,10,подключён
+rivet/mod/src/main/java/dev/abros/rivet/client/PlasmoVoiceClientAdapter.java,10,нет соединения
+rivet/mod/src/main/java/dev/abros/rivet/client/PlasmoVoiceClientAdapter.java,11,доступно
+rivet/mod/src/main/java/dev/abros/rivet/client/PlasmoVoiceClientAdapter.java,11,не открыто
+rivet/mod/src/main/java/dev/abros/rivet/client/PlasmoVoiceClientAdapter.java,12,да
+rivet/mod/src/main/java/dev/abros/rivet/client/PlasmoVoiceClientAdapter.java,12,нет
+rivet/mod/src/main/java/dev/abros/rivet/client/PlasmoVoiceClientAdapter.java,12,выключен
+rivet/mod/src/main/java/dev/abros/rivet/client/PlasmoVoiceClientAdapter.java,12,включён
+rivet/mod/src/main/java/dev/abros/rivet/client/PlasmoVoiceClientAdapter.java,15,Plasmo Voice: установлен
+rivet/mod/src/main/java/dev/abros/rivet/client/PlasmoVoiceClientAdapter.java,15,Устройство записи: 
+rivet/mod/src/main/java/dev/abros/rivet/client/PlasmoVoiceClientAdapter.java,15,Микрофон: 
+rivet/mod/src/main/java/dev/abros/rivet/client/PlasmoVoiceClientAdapter.java,15,Серверный mute: 
+rivet/mod/src/main/java/dev/abros/rivet/client/PlasmoVoiceClientAdapter.java,15,Настройки Plasmo Voice: клавиша V
+rivet/mod/src/main/java/dev/abros/rivet/client/PlayerActionsScreen.java,23,Права и история модерации
+rivet/mod/src/main/java/dev/abros/rivet/client/PlayerActionsScreen.java,23,Сброс пароля…
+rivet/mod/src/main/java/dev/abros/rivet/client/PlayerActionsScreen.java,29,stat:Общение и объединения
+rivet/mod/src/main/java/dev/abros/rivet/client/PlayerActionsScreen.java,30,Написать
+rivet/mod/src/main/java/dev/abros/rivet/client/PlayerActionsScreen.java,30,Пригласить
+rivet/mod/src/main/java/dev/abros/rivet/client/PlayerActionsScreen.java,31,Объединения игрока
+rivet/mod/src/main/java/dev/abros/rivet/client/PlayerActionsScreen.java,32,stat:Безопасность
+rivet/mod/src/main/java/dev/abros/rivet/client/PlayerActionsScreen.java,33,Общение…
+rivet/mod/src/main/java/dev/abros/rivet/client/PlayerActionsScreen.java,34,Пожаловаться
+rivet/mod/src/main/java/dev/abros/rivet/client/PlayerActionsScreen.java,34,Игрок: 
+rivet/mod/src/main/java/dev/abros/rivet/client/PlayerActionsScreen.java,34,Общение…
+rivet/mod/src/main/java/dev/abros/rivet/client/PlayerActionsScreen.java,35,Голосование о нарушении…
+rivet/mod/src/main/java/dev/abros/rivet/client/PlayerActionsScreen.java,36,Модерация…
+rivet/mod/src/main/java/dev/abros/rivet/client/PlayerActionsScreen.java,40,Предупредить
+rivet/mod/src/main/java/dev/abros/rivet/client/PlayerActionsScreen.java,45,Срок бана: 
+rivet/mod/src/main/java/dev/abros/rivet/client/PlayerActionsScreen.java,45,бессрочно
+rivet/mod/src/main/java/dev/abros/rivet/client/PlayerActionsScreen.java,45, мин
+rivet/mod/src/main/java/dev/abros/rivet/client/PlayerActionsScreen.java,45,Срок бана
+rivet/mod/src/main/java/dev/abros/rivet/client/PlayerActionsScreen.java,45,Бессрочно
+rivet/mod/src/main/java/dev/abros/rivet/client/PlayerActionsScreen.java,45,30 минут
+rivet/mod/src/main/java/dev/abros/rivet/client/PlayerActionsScreen.java,45,1 час
+rivet/mod/src/main/java/dev/abros/rivet/client/PlayerActionsScreen.java,45,1 день
+rivet/mod/src/main/java/dev/abros/rivet/client/PlayerActionsScreen.java,45,7 дней
+rivet/mod/src/main/java/dev/abros/rivet/client/PlayerActionsScreen.java,46,Профиль
+rivet/mod/src/main/java/dev/abros/rivet/client/PlayerActionsScreen.java,46,Действия
+rivet/mod/src/main/java/dev/abros/rivet/client/PlayerActionsScreen.java,51,Личное сообщение
+rivet/mod/src/main/java/dev/abros/rivet/client/PlayerActionsScreen.java,51,Личные сообщения доступны после подключения к серверу.
+rivet/mod/src/main/java/dev/abros/rivet/client/PlayerActionsScreen.java,58,бессрочно
+rivet/mod/src/main/java/dev/abros/rivet/client/PlayerActionsScreen.java,58, мин
+rivet/mod/src/main/java/dev/abros/rivet/client/PlayerActionsScreen.java,59,Предупредить
+rivet/mod/src/main/java/dev/abros/rivet/client/PlayerAdministrationScreen.java,15,Права и история · 
+rivet/mod/src/main/java/dev/abros/rivet/client/PlayerAdministrationScreen.java,17,Загрузка…
+rivet/mod/src/main/java/dev/abros/rivet/client/PlayerAdministrationScreen.java,19,Текущие разрешения LuckPerms
+rivet/mod/src/main/java/dev/abros/rivet/client/PlayerAdministrationScreen.java,19,Нет доступных данных API для этого игрока
+rivet/mod/src/main/java/dev/abros/rivet/client/PlayerAdministrationScreen.java,19,разрешено
+rivet/mod/src/main/java/dev/abros/rivet/client/PlayerAdministrationScreen.java,19,не разрешено
+rivet/mod/src/main/java/dev/abros/rivet/client/PlayerAdministrationScreen.java,19,Доступные команды сейчас: 
+rivet/mod/src/main/java/dev/abros/rivet/client/PlayerAdministrationScreen.java,19,Команды офлайн-игрока: неизвестно
+rivet/mod/src/main/java/dev/abros/rivet/client/PlayerAdministrationScreen.java,19,Наследование групп здесь не отображается.
+rivet/mod/src/main/java/dev/abros/rivet/client/PlayerAdministrationScreen.java,19,История модерации
+rivet/mod/src/main/java/dev/abros/rivet/client/PlayerAdministrationScreen.java,20, · до 
+rivet/mod/src/main/java/dev/abros/rivet/client/PlayerAdministrationScreen.java,21,Записей пока нет
+rivet/mod/src/main/java/dev/abros/rivet/client/PlayerAdministrationScreen.java,23,Не удалось загрузить данные
+rivet/mod/src/main/java/dev/abros/rivet/client/PlayerAdministrationScreen.java,25,Нет ответа. Закройте и откройте карточку повторно.
+rivet/mod/src/main/java/dev/abros/rivet/client/PlayerRow.java,17,В сети
+rivet/mod/src/main/java/dev/abros/rivet/client/PlayerRow.java,17,Не в сети
+rivet/mod/src/main/java/dev/abros/rivet/client/PlayerStatisticsText.java,9,О себе: 
+rivet/mod/src/main/java/dev/abros/rivet/client/PlayerStatisticsText.java,11,На сервере с: 
+rivet/mod/src/main/java/dev/abros/rivet/client/PlayerStatisticsText.java,12,Время игры: 
+rivet/mod/src/main/java/dev/abros/rivet/client/PlayerStatisticsText.java,13,Сессия: 
+rivet/mod/src/main/java/dev/abros/rivet/client/PlayerStatisticsText.java,14,Смерти: 
+rivet/mod/src/main/java/dev/abros/rivet/client/PlayerStatisticsText.java,15,Время игры: 
+rivet/mod/src/main/java/dev/abros/rivet/client/PlayerStatisticsText.java,15,На сервере с 
+rivet/mod/src/main/java/dev/abros/rivet/client/PlayerStatisticsText.java,15,Смерти: 
+rivet/mod/src/main/java/dev/abros/rivet/client/PlayerStatisticsText.java,17,В сети
+rivet/mod/src/main/java/dev/abros/rivet/client/PlayerStatisticsText.java,24, ч 
+rivet/mod/src/main/java/dev/abros/rivet/client/PlayerStatisticsText.java,24, мин
+rivet/mod/src/main/java/dev/abros/rivet/client/PlayerText.java,13,Игрок
+rivet/mod/src/main/java/dev/abros/rivet/client/PollsSection.java,9,До: 
+rivet/mod/src/main/java/dev/abros/rivet/client/PollsSection.java,15,Голосовать
+rivet/mod/src/main/java/dev/abros/rivet/client/PollsSection.java,15,Выберите вариант ответа
+rivet/mod/src/main/java/dev/abros/rivet/client/PrivacyScreen.java,11,Видимость профиля
+rivet/mod/src/main/java/dev/abros/rivet/client/PrivacyScreen.java,14,Все игроки
+rivet/mod/src/main/java/dev/abros/rivet/client/PrivacyScreen.java,14,Мои объединения
+rivet/mod/src/main/java/dev/abros/rivet/client/PrivacyScreen.java,14,Только я
+rivet/mod/src/main/java/dev/abros/rivet/client/PrivacyScreen.java,14,О себе: 
+rivet/mod/src/main/java/dev/abros/rivet/client/PrivacyScreen.java,14,Кто видит описание
+rivet/mod/src/main/java/dev/abros/rivet/client/PrivacyScreen.java,14,Показывать статистику: 
+rivet/mod/src/main/java/dev/abros/rivet/client/PrivacyScreen.java,14,да
+rivet/mod/src/main/java/dev/abros/rivet/client/PrivacyScreen.java,14,нет
+rivet/mod/src/main/java/dev/abros/rivet/client/PrivacyScreen.java,14,Сохранить
+rivet/mod/src/main/java/dev/abros/rivet/client/PrivacyScreen.java,15,Не удалось сохранить
+rivet/mod/src/main/java/dev/abros/rivet/client/PrivacyScreen.java,15,Сохранено
+rivet/mod/src/main/java/dev/abros/rivet/client/PrivacyScreen.java,16,Нет ответа. Повторите сохранение.
+rivet/mod/src/main/java/dev/abros/rivet/client/ProfilePanel.java,15,Игрок
+rivet/mod/src/main/java/dev/abros/rivet/client/ProfilePanel.java,16,В сети
+rivet/mod/src/main/java/dev/abros/rivet/client/ProfilePanel.java,18,Загрузка…
+rivet/mod/src/main/java/dev/abros/rivet/client/ProfilePanel.java,18, ч 
+rivet/mod/src/main/java/dev/abros/rivet/client/ProfilePanel.java,18, м
+rivet/mod/src/main/java/dev/abros/rivet/client/ProfilePanel.java,19,Время игры
+rivet/mod/src/main/java/dev/abros/rivet/client/ProfilePanel.java,20,Онлайн
+rivet/mod/src/main/java/dev/abros/rivet/client/ProfilePanel.java,21,Игрок
+rivet/mod/src/main/java/dev/abros/rivet/client/QuickSkinsScreen.java,11,Выберите скин
+rivet/mod/src/main/java/dev/abros/rivet/client/QuickSkinsScreen.java,25,Библиотека скинов
+rivet/mod/src/main/java/dev/abros/rivet/client/QuickSkinsScreen.java,31,Загрузка…
+rivet/mod/src/main/java/dev/abros/rivet/client/QuickSkinsScreen.java,31,Применяется…
+rivet/mod/src/main/java/dev/abros/rivet/client/ReportBulkScreen.java,10,Проверка массового действия
+rivet/mod/src/main/java/dev/abros/rivet/client/ReportBulkScreen.java,13,Не задано
+rivet/mod/src/main/java/dev/abros/rivet/client/ReportBulkScreen.java,14,Применить
+rivet/mod/src/main/java/dev/abros/rivet/client/ReportBulkScreen.java,14,Отмена
+rivet/mod/src/main/java/dev/abros/rivet/client/ReportBulkScreen.java,15,Не удалось выполнить
+rivet/mod/src/main/java/dev/abros/rivet/client/ReportBulkScreen.java,16,Нет ответа. Закройте окно и обновите очередь перед повтором.
+rivet/mod/src/main/java/dev/abros/rivet/client/ReportBulkScreen.java,18,Взять в работу
+rivet/mod/src/main/java/dev/abros/rivet/client/ReportBulkScreen.java,18,Закрыть выбранные обращения
+rivet/mod/src/main/java/dev/abros/rivet/client/ReportBulkScreen.java,18,Повысить приоритет
+rivet/mod/src/main/java/dev/abros/rivet/client/ReportBulkScreen.java,18,Изменится: 
+rivet/mod/src/main/java/dev/abros/rivet/client/ReportBulkScreen.java,18, · Пропущено: 
+rivet/mod/src/main/java/dev/abros/rivet/client/ReportBulkScreen.java,18,Проверяем текущие данные…
+rivet/mod/src/main/java/dev/abros/rivet/client/ReportDetailScreen.java,9,Обращение игрока
+rivet/mod/src/main/java/dev/abros/rivet/client/ReportDetailScreen.java,16,Обращение: 
+rivet/mod/src/main/java/dev/abros/rivet/client/ReportDetailScreen.java,16,\n\nОтвет администрации · 
+rivet/mod/src/main/java/dev/abros/rivet/client/ReportDetailScreen.java,17,Управление обращением…
+rivet/mod/src/main/java/dev/abros/rivet/client/ReportDetailScreen.java,18,Закрыть после ответа
+rivet/mod/src/main/java/dev/abros/rivet/client/ReportDetailScreen.java,19,Ответить
+rivet/mod/src/main/java/dev/abros/rivet/client/ReportDetailScreen.java,19,Отправка…
+rivet/mod/src/main/java/dev/abros/rivet/client/ReportDetailScreen.java,21,Ответ игроку
+rivet/mod/src/main/java/dev/abros/rivet/client/ReportDetailScreen.java,27,Отправка…
+rivet/mod/src/main/java/dev/abros/rivet/client/ReportDetailScreen.java,27,Ответить
+rivet/mod/src/main/java/dev/abros/rivet/client/ReportDetailScreen.java,27,Нет ответа. Повторите отправку: ответ не продублируется.
+rivet/mod/src/main/java/dev/abros/rivet/client/ReportManagementScreen.java,11,Управление обращением
+rivet/mod/src/main/java/dev/abros/rivet/client/ReportManagementScreen.java,14,Классификация
+rivet/mod/src/main/java/dev/abros/rivet/client/ReportManagementScreen.java,15,Снять моё назначение
+rivet/mod/src/main/java/dev/abros/rivet/client/ReportManagementScreen.java,15,Взять в работу
+rivet/mod/src/main/java/dev/abros/rivet/client/ReportManagementScreen.java,15,Ответственный: 
+rivet/mod/src/main/java/dev/abros/rivet/client/ReportManagementScreen.java,15,Назначить администратора ▾
+rivet/mod/src/main/java/dev/abros/rivet/client/ReportManagementScreen.java,15,Администраторы в сети
+rivet/mod/src/main/java/dev/abros/rivet/client/ReportManagementScreen.java,15,Выберите администратора в сети с доступом к обращениям.
+rivet/mod/src/main/java/dev/abros/rivet/client/ReportManagementScreen.java,15,Категория ▾
+rivet/mod/src/main/java/dev/abros/rivet/client/ReportManagementScreen.java,15,Техническая проблема
+rivet/mod/src/main/java/dev/abros/rivet/client/ReportManagementScreen.java,15,Жалоба на игрока
+rivet/mod/src/main/java/dev/abros/rivet/client/ReportManagementScreen.java,15,Обжалование
+rivet/mod/src/main/java/dev/abros/rivet/client/ReportManagementScreen.java,15,Другое
+rivet/mod/src/main/java/dev/abros/rivet/client/ReportManagementScreen.java,15,Приоритет: 
+rivet/mod/src/main/java/dev/abros/rivet/client/ReportManagementScreen.java,15,низкий
+rivet/mod/src/main/java/dev/abros/rivet/client/ReportManagementScreen.java,15,высокий
+rivet/mod/src/main/java/dev/abros/rivet/client/ReportManagementScreen.java,15,обычный
+rivet/mod/src/main/java/dev/abros/rivet/client/ReportManagementScreen.java,15,Низкий
+rivet/mod/src/main/java/dev/abros/rivet/client/ReportManagementScreen.java,15,Обычный
+rivet/mod/src/main/java/dev/abros/rivet/client/ReportManagementScreen.java,15,Высокий
+rivet/mod/src/main/java/dev/abros/rivet/client/ReportManagementScreen.java,16,Следующий шаг…
+rivet/mod/src/main/java/dev/abros/rivet/client/ReportManagementScreen.java,16,Следующий шаг
+rivet/mod/src/main/java/dev/abros/rivet/client/ReportManagementScreen.java,16,Что требуется сделать
+rivet/mod/src/main/java/dev/abros/rivet/client/ReportManagementScreen.java,16,Состояние ▾
+rivet/mod/src/main/java/dev/abros/rivet/client/ReportManagementScreen.java,16,Состояние обращения
+rivet/mod/src/main/java/dev/abros/rivet/client/ReportManagementScreen.java,16,Открыто
+rivet/mod/src/main/java/dev/abros/rivet/client/ReportManagementScreen.java,16,Ожидаем ответ
+rivet/mod/src/main/java/dev/abros/rivet/client/ReportManagementScreen.java,16,Закрыто
+rivet/mod/src/main/java/dev/abros/rivet/client/ReportManagementScreen.java,17,Внутренняя заметка
+rivet/mod/src/main/java/dev/abros/rivet/client/ReportManagementScreen.java,17,+ Внутренняя заметка
+rivet/mod/src/main/java/dev/abros/rivet/client/ReportManagementScreen.java,17,Заметка · видна только администрации
+rivet/mod/src/main/java/dev/abros/rivet/client/ReportManagementScreen.java,17,Текст заметки
+rivet/mod/src/main/java/dev/abros/rivet/client/ReportManagementScreen.java,19,Нет ответа. Откройте обращение заново.
+rivet/mod/src/main/java/dev/abros/rivet/client/ReportQueueScreen.java,13,Очередь обращений
+rivet/mod/src/main/java/dev/abros/rivet/client/ReportQueueScreen.java,18,Выберите не более 20 обращений
+rivet/mod/src/main/java/dev/abros/rivet/client/ReportQueueScreen.java,19,Для выбранных обращений
+rivet/mod/src/main/java/dev/abros/rivet/client/ReportQueueScreen.java,19,Взять в работу
+rivet/mod/src/main/java/dev/abros/rivet/client/ReportQueueScreen.java,19,Закрыть обращения
+rivet/mod/src/main/java/dev/abros/rivet/client/ReportQueueScreen.java,19,Высокий приоритет
+rivet/mod/src/main/java/dev/abros/rivet/client/ReportQueueScreen.java,20,Новые
+rivet/mod/src/main/java/dev/abros/rivet/client/ReportQueueScreen.java,20,Мои
+rivet/mod/src/main/java/dev/abros/rivet/client/ReportQueueScreen.java,20,Ожидают
+rivet/mod/src/main/java/dev/abros/rivet/client/ReportQueueScreen.java,20,Закрытые
+rivet/mod/src/main/java/dev/abros/rivet/client/ReportQueueScreen.java,22,Поиск
+rivet/mod/src/main/java/dev/abros/rivet/client/ReportQueueScreen.java,22,Игрок или текст обращения
+rivet/mod/src/main/java/dev/abros/rivet/client/ReportQueueScreen.java,23,Фильтр ▾
+rivet/mod/src/main/java/dev/abros/rivet/client/ReportQueueScreen.java,23,Показать
+rivet/mod/src/main/java/dev/abros/rivet/client/ReportQueueScreen.java,23,Все
+rivet/mod/src/main/java/dev/abros/rivet/client/ReportQueueScreen.java,23,Без ответственного
+rivet/mod/src/main/java/dev/abros/rivet/client/ReportQueueScreen.java,23,Высокий приоритет
+rivet/mod/src/main/java/dev/abros/rivet/client/ReportQueueScreen.java,24,Выбрано: 
+rivet/mod/src/main/java/dev/abros/rivet/client/ReportQueueScreen.java,24,Сбросить
+rivet/mod/src/main/java/dev/abros/rivet/client/ReportQueueScreen.java,25,Ожидает ответа
+rivet/mod/src/main/java/dev/abros/rivet/client/ReportQueueScreen.java,25,Высокий приоритет
+rivet/mod/src/main/java/dev/abros/rivet/client/ReportQueueScreen.java,25,Закрыто
+rivet/mod/src/main/java/dev/abros/rivet/client/ReportQueueScreen.java,25,Открыто
+rivet/mod/src/main/java/dev/abros/rivet/client/ReportQueueScreen.java,25,Назначьте ответственного
+rivet/mod/src/main/java/dev/abros/rivet/client/ReportQueueScreen.java,25,Ответственный: 
+rivet/mod/src/main/java/dev/abros/rivet/client/ReportQueueScreen.java,25,Далее: 
+rivet/mod/src/main/java/dev/abros/rivet/client/ReportQueueScreen.java,26,Следующие
+rivet/mod/src/main/java/dev/abros/rivet/client/ReportQueueScreen.java,28,Не удалось загрузить очередь
+rivet/mod/src/main/java/dev/abros/rivet/client/ReportQueueScreen.java,28,В этой очереди обращений нет
+rivet/mod/src/main/java/dev/abros/rivet/client/ReportQueueScreen.java,29,Нет ответа. Обновите очередь.
+rivet/mod/src/main/java/dev/abros/rivet/client/ReportQueueScreen.java,32,Очередь недоступна
+rivet/mod/src/main/java/dev/abros/rivet/client/ReportQueueScreen.java,32,Загружаем обращения…
+rivet/mod/src/main/java/dev/abros/rivet/client/ReportQueueScreen.java,32,В этой очереди нет обращений
+rivet/mod/src/main/java/dev/abros/rivet/client/ReportQueueScreen.java,32,Обращения не найдены
+rivet/mod/src/main/java/dev/abros/rivet/client/ReportQueueScreen.java,32,Получаем актуальные данные с сервера.
+rivet/mod/src/main/java/dev/abros/rivet/client/ReportQueueScreen.java,32,Новые обращения появятся здесь.
+rivet/mod/src/main/java/dev/abros/rivet/client/ReportQueueScreen.java,32,Измените запрос или фильтр.
+rivet/mod/src/main/java/dev/abros/rivet/client/ReportScreen.java,22,Игрок: 
+rivet/mod/src/main/java/dev/abros/rivet/client/ReportScreen.java,22,Жалоба на игрока
+rivet/mod/src/main/java/dev/abros/rivet/client/ReportScreen.java,22,Игрок: 
+rivet/mod/src/main/java/dev/abros/rivet/client/ReportScreen.java,31,Обжаловать наказание
+rivet/mod/src/main/java/dev/abros/rivet/client/ReportScreen.java,31,Другое
+rivet/mod/src/main/java/dev/abros/rivet/client/ReportScreen.java,31,Техническая проблема
+rivet/mod/src/main/java/dev/abros/rivet/client/ReportScreen.java,31,Тема обращения
+rivet/mod/src/main/java/dev/abros/rivet/client/ReportScreen.java,31,Техническая проблема
+rivet/mod/src/main/java/dev/abros/rivet/client/ReportScreen.java,31,Обжаловать наказание
+rivet/mod/src/main/java/dev/abros/rivet/client/ReportScreen.java,31,Другое
+rivet/mod/src/main/java/dev/abros/rivet/client/ReportScreen.java,32,"Опишите, что произошло"
+rivet/mod/src/main/java/dev/abros/rivet/client/ReportScreen.java,42,Повторная отправка…
+rivet/mod/src/main/java/dev/abros/rivet/client/ReportScreen.java,49,Отправка…
+rivet/mod/src/main/java/dev/abros/rivet/client/ReportScreen.java,53,Отправлено администрации
+rivet/mod/src/main/java/dev/abros/rivet/client/ReportScreen.java,54,Нет ответа. Повторите отправку.
+rivet/mod/src/main/java/dev/abros/rivet/client/RestartScreen.java,12,Продолжить до выхода
+rivet/mod/src/main/java/dev/abros/rivet/client/RivetHud.java,34,Ответ не получен
+rivet/mod/src/main/java/dev/abros/rivet/client/RivetHud.java,34,Откройте запись и проверьте результат действия
+rivet/mod/src/main/java/dev/abros/rivet/client/RivetHud.java,37,Не удалось отметить уведомление прочитанным
+rivet/mod/src/main/java/dev/abros/rivet/client/RivetHud.java,41,Скорый перезапуск
+rivet/mod/src/main/java/dev/abros/rivet/client/RivetHud.java,41,Сохраните работу: 
+rivet/mod/src/main/java/dev/abros/rivet/client/RivetHud.java,44,Участвовать несмотря на пересечение?
+rivet/mod/src/main/java/dev/abros/rivet/client/RivetHud.java,44,Действие не выполнено
+rivet/mod/src/main/java/dev/abros/rivet/client/RivetHud.java,44,Откройте запись и обновите её
+rivet/mod/src/main/java/dev/abros/rivet/client/RivetHud.java,44,Не удалось отметить уведомление прочитанным
+rivet/mod/src/main/java/dev/abros/rivet/client/RivetHud.java,47,Уведомление
+rivet/mod/src/main/java/dev/abros/rivet/client/RivetHud.java,47,Личные задачи
+rivet/mod/src/main/java/dev/abros/rivet/client/RivetHud.java,50,Задачи
+rivet/mod/src/main/java/dev/abros/rivet/client/RivetHud.java,50,Сервер
+rivet/mod/src/main/java/dev/abros/rivet/client/RivetHud.java,50,Пока вас не было · 
+rivet/mod/src/main/java/dev/abros/rivet/client/RivetHud.java,50,Открыть уведомления
+rivet/mod/src/main/java/dev/abros/rivet/client/RivetHud.java,51,Выполняем…
+rivet/mod/src/main/java/dev/abros/rivet/client/RivetHud.java,51,Принять
+rivet/mod/src/main/java/dev/abros/rivet/client/RivetHud.java,51,Участвовать
+rivet/mod/src/main/java/dev/abros/rivet/client/RivetHud.java,61,Просрочено на 
+rivet/mod/src/main/java/dev/abros/rivet/client/RivetHud.java,61, мин
+rivet/mod/src/main/java/dev/abros/rivet/client/RivetHud.java,61,Просрочено
+rivet/mod/src/main/java/dev/abros/rivet/client/RivetHud.java,61,Через 
+rivet/mod/src/main/java/dev/abros/rivet/client/RivetHud.java,61, мин
+rivet/mod/src/main/java/dev/abros/rivet/client/RivetHud.java,61,Через 
+rivet/mod/src/main/java/dev/abros/rivet/client/RivetHud.java,61, ч
+rivet/mod/src/main/java/dev/abros/rivet/client/RivetTab.java,41,Перезапуск · 
+rivet/mod/src/main/java/dev/abros/rivet/client/RivetTab.java,41,Список игроков обновляется…
+rivet/mod/src/main/java/dev/abros/rivet/client/RivetTab.java,41,Показаны 
+rivet/mod/src/main/java/dev/abros/rivet/client/RivetTab.java,41, из 
+rivet/mod/src/main/java/dev/abros/rivet/client/RivetTab.java,46,Колесо: прокрутка
+rivet/mod/src/main/java/dev/abros/rivet/client/RivetTab.java,46,Режим курсора: 
+rivet/mod/src/main/java/dev/abros/rivet/client/RivetTab.java,46,назначьте клавишу
+rivet/mod/src/main/java/dev/abros/rivet/client/RivetTab.java,47, мс
+rivet/mod/src/main/java/dev/abros/rivet/client/RolePreviewScreen.java,12,Права роли · предпросмотр
+rivet/mod/src/main/java/dev/abros/rivet/client/RolePreviewScreen.java,15,Выберите роль
+rivet/mod/src/main/java/dev/abros/rivet/client/RolePreviewScreen.java,17,Полное администрирование
+rivet/mod/src/main/java/dev/abros/rivet/client/RolePreviewScreen.java,17,Создание событий
+rivet/mod/src/main/java/dev/abros/rivet/client/RolePreviewScreen.java,17,Сброс авторизации
+rivet/mod/src/main/java/dev/abros/rivet/client/RolePreviewScreen.java,17,Защита от голосования о наказании
+rivet/mod/src/main/java/dev/abros/rivet/client/RolePreviewScreen.java,17,Изменение статистики
+rivet/mod/src/main/java/dev/abros/rivet/client/RolePreviewScreen.java,17,Просмотр статистики
+rivet/mod/src/main/java/dev/abros/rivet/client/RolePreviewScreen.java,17,Объявления
+rivet/mod/src/main/java/dev/abros/rivet/client/RolePreviewScreen.java,17,Обслуживание сервера
+rivet/mod/src/main/java/dev/abros/rivet/client/RolePreviewScreen.java,17,Остановка сервера
+rivet/mod/src/main/java/dev/abros/rivet/client/RolePreviewScreen.java,17,Работа с обращениями
+rivet/mod/src/main/java/dev/abros/rivet/client/RolePreviewScreen.java,17,Диагностика клиентов
+rivet/mod/src/main/java/dev/abros/rivet/client/RolePreviewScreen.java,18,Недоступно
+rivet/mod/src/main/java/dev/abros/rivet/client/RolePreviewScreen.java,18,Не удалось получить загруженные роли LuckPerms. Проверьте подключение плагина.
+rivet/mod/src/main/java/dev/abros/rivet/client/RolePreviewScreen.java,19,Нет ответа. Откройте заново.
+rivet/mod/src/main/java/dev/abros/rivet/client/RolePreviewScreen.java,21,Загрузка ролей…
+rivet/mod/src/main/java/dev/abros/rivet/client/ScheduledAnnouncementsScreen.java,5,Запланированные объявления
+rivet/mod/src/main/java/dev/abros/rivet/client/ScheduledAnnouncementsScreen.java,8,Новое объявление
+rivet/mod/src/main/java/dev/abros/rivet/client/ScheduledAnnouncementsScreen.java,8,Текст объявления
+rivet/mod/src/main/java/dev/abros/rivet/client/ScheduledAnnouncementsScreen.java,8,Время UTC (2026-10-02T18:00:00Z)
+rivet/mod/src/main/java/dev/abros/rivet/client/ScheduledAnnouncementsScreen.java,9,Запланировать объявление
+rivet/mod/src/main/java/dev/abros/rivet/client/ScheduledAnnouncementsScreen.java,9,Отменить · 
+rivet/mod/src/main/java/dev/abros/rivet/client/ScheduledAnnouncementsScreen.java,9,Отменить объявление?
+rivet/mod/src/main/java/dev/abros/rivet/client/ScheduledAnnouncementsScreen.java,11,Не удалось выполнить действие
+rivet/mod/src/main/java/dev/abros/rivet/client/ScheduledAnnouncementsScreen.java,11,Нет запланированных объявлений
+rivet/mod/src/main/java/dev/abros/rivet/client/ScheduledAnnouncementsScreen.java,11,"Получатели — игроки, подключённые в момент публикации."
+rivet/mod/src/main/java/dev/abros/rivet/client/ScheduledAnnouncementsScreen.java,11,Объявление
+rivet/mod/src/main/java/dev/abros/rivet/client/ScheduledAnnouncementsScreen.java,11,Публикация
+rivet/mod/src/main/java/dev/abros/rivet/client/ScheduledAnnouncementsScreen.java,12,Ответ не получен. Повторить проверит то же действие без дубликата.
+rivet/mod/src/main/java/dev/abros/rivet/client/ScheduledAnnouncementsScreen.java,12,Нет ответа. Обновите список.
+rivet/mod/src/main/java/dev/abros/rivet/client/ServerMenuClient.java,43,Слишком много запросов. Подождите завершения текущих.
+rivet/mod/src/main/java/dev/abros/rivet/client/ServerMenuClient.java,74,Меню этого сервера временно недоступно для вашей версии Rivet.
+rivet/mod/src/main/java/dev/abros/rivet/client/ServerMenuClient.java,74,Меню этого сервера временно недоступно для вашей версии Rivet.
+rivet/mod/src/main/java/dev/abros/rivet/client/ServerMenuClient.java,74,Обновление Rivet
+rivet/mod/src/main/java/dev/abros/rivet/client/ServerMenuClient.java,84,Сообщение сервера
+rivet/mod/src/main/java/dev/abros/rivet/client/ServerMenuClient.java,85, мс\nLuckPerms: 
+rivet/mod/src/main/java/dev/abros/rivet/client/ServerMenuClient.java,85,включён
+rivet/mod/src/main/java/dev/abros/rivet/client/ServerMenuClient.java,85,выключен
+rivet/mod/src/main/java/dev/abros/rivet/client/ServerMenuClient.java,85,установлен
+rivet/mod/src/main/java/dev/abros/rivet/client/ServerMenuClient.java,85,не установлен
+rivet/mod/src/main/java/dev/abros/rivet/client/ServerMenuClient.java,85,\nКлиенты\n
+rivet/mod/src/main/java/dev/abros/rivet/client/ServerMenuClient.java,92,Выбрать версию Rivet
+rivet/mod/src/main/java/dev/abros/rivet/client/ServerMenuScreen.java,27,Обновляем сводку…
+rivet/mod/src/main/java/dev/abros/rivet/client/ServerMenuScreen.java,28,Сводка недоступна
+rivet/mod/src/main/java/dev/abros/rivet/client/ServerMenuScreen.java,36,Управление сервером
+rivet/mod/src/main/java/dev/abros/rivet/client/ServerMenuScreen.java,36,Объявления
+rivet/mod/src/main/java/dev/abros/rivet/client/ServerMenuScreen.java,36,Экспорт данных
+rivet/mod/src/main/java/dev/abros/rivet/client/ServerMenuScreen.java,36,Администрирование
+rivet/mod/src/main/java/dev/abros/rivet/client/ServerMenuScreen.java,42,Интерфейс и голос…
+rivet/mod/src/main/java/dev/abros/rivet/client/ServerMenuScreen.java,42,Настройки клиента
+rivet/mod/src/main/java/dev/abros/rivet/client/ServerMenuScreen.java,42,Доступность интерфейса
+rivet/mod/src/main/java/dev/abros/rivet/client/ServerMenuScreen.java,42,Диагностика Plasmo Voice
+rivet/mod/src/main/java/dev/abros/rivet/client/ServerMenuScreen.java,48,Обзор
+rivet/mod/src/main/java/dev/abros/rivet/client/ServerMenuScreen.java,49,Обращения
+rivet/mod/src/main/java/dev/abros/rivet/client/ServerMenuScreen.java,50,Сервер
+rivet/mod/src/main/java/dev/abros/rivet/client/ServerMenuScreen.java,51,Диагностика
+rivet/mod/src/main/java/dev/abros/rivet/client/ServerMenuScreen.java,52,Инструменты
+rivet/mod/src/main/java/dev/abros/rivet/client/ServerMenuScreen.java,60,Обращения · сводка
+rivet/mod/src/main/java/dev/abros/rivet/client/ServerMenuScreen.java,62,Игрок
+rivet/mod/src/main/java/dev/abros/rivet/client/ServerMenuScreen.java,62,Ожидает ответа
+rivet/mod/src/main/java/dev/abros/rivet/client/ServerMenuScreen.java,62,Ответственный не назначен
+rivet/mod/src/main/java/dev/abros/rivet/client/ServerMenuScreen.java,62,Ответственный: 
+rivet/mod/src/main/java/dev/abros/rivet/client/ServerMenuScreen.java,63,Обращения игроков
+rivet/mod/src/main/java/dev/abros/rivet/client/ServerMenuScreen.java,63,Загрузка…
+rivet/mod/src/main/java/dev/abros/rivet/client/ServerMenuScreen.java,63,Все обращения обработаны
+rivet/mod/src/main/java/dev/abros/rivet/client/ServerMenuScreen.java,63,Открыть очередь
+rivet/mod/src/main/java/dev/abros/rivet/client/ServerMenuScreen.java,63,Назначение ответственного и ответы
+rivet/mod/src/main/java/dev/abros/rivet/client/ServerMenuScreen.java,63,Открытые и закрытые обращения
+rivet/mod/src/main/java/dev/abros/rivet/client/ServerMenuScreen.java,64,Обращения игроков
+rivet/mod/src/main/java/dev/abros/rivet/client/ServerMenuScreen.java,68,Ошибки Rivet
+rivet/mod/src/main/java/dev/abros/rivet/client/ServerMenuScreen.java,68, последних ошибок
+rivet/mod/src/main/java/dev/abros/rivet/client/ServerMenuScreen.java,68,Открыть диагностику
+rivet/mod/src/main/java/dev/abros/rivet/client/ServerMenuScreen.java,68,Подробности и журнал
+rivet/mod/src/main/java/dev/abros/rivet/client/ServerMenuScreen.java,69,Состояние сервера
+rivet/mod/src/main/java/dev/abros/rivet/client/ServerMenuScreen.java,69,Обслуживание включено
+rivet/mod/src/main/java/dev/abros/rivet/client/ServerMenuScreen.java,69,Остановка запланирована
+rivet/mod/src/main/java/dev/abros/rivet/client/ServerMenuScreen.java,69,Проверить режим и время остановки
+rivet/mod/src/main/java/dev/abros/rivet/client/ServerMenuScreen.java,69,Открыть управление сервером
+rivet/mod/src/main/java/dev/abros/rivet/client/ServerMenuScreen.java,70,Требуют внимания
+rivet/mod/src/main/java/dev/abros/rivet/client/ServerMenuScreen.java,72,Состояние Rivet
+rivet/mod/src/main/java/dev/abros/rivet/client/ServerMenuScreen.java,72,Ошибок не зафиксировано
+rivet/mod/src/main/java/dev/abros/rivet/client/ServerMenuScreen.java,72, последних ошибок
+rivet/mod/src/main/java/dev/abros/rivet/client/ServerMenuScreen.java,72,Нет данных об ошибках
+rivet/mod/src/main/java/dev/abros/rivet/client/ServerMenuScreen.java,72,Очередь записи: 
+rivet/mod/src/main/java/dev/abros/rivet/client/ServerMenuScreen.java,72,Очередь чтения: 
+rivet/mod/src/main/java/dev/abros/rivet/client/ServerMenuScreen.java,73,Состояние Rivet
+rivet/mod/src/main/java/dev/abros/rivet/client/ServerMenuScreen.java,73,Проверка подключений
+rivet/mod/src/main/java/dev/abros/rivet/client/ServerMenuScreen.java,73,Состояние мода и интеграций
+rivet/mod/src/main/java/dev/abros/rivet/client/ServerMenuScreen.java,73,Получить текущий отчёт
+rivet/mod/src/main/java/dev/abros/rivet/client/ServerMenuScreen.java,74,Производительность
+rivet/mod/src/main/java/dev/abros/rivet/client/ServerMenuScreen.java,74,"TPS, MSPT, CPU и память"
+rivet/mod/src/main/java/dev/abros/rivet/client/ServerMenuScreen.java,74,Профилирование и история отчётов
+rivet/mod/src/main/java/dev/abros/rivet/client/ServerMenuScreen.java,75,Сервер и диагностика
+rivet/mod/src/main/java/dev/abros/rivet/client/ServerMenuScreen.java,78,Права ролей
+rivet/mod/src/main/java/dev/abros/rivet/client/ServerMenuScreen.java,78,Предпросмотр
+rivet/mod/src/main/java/dev/abros/rivet/client/ServerMenuScreen.java,78,Какие разделы и действия доступны
+rivet/mod/src/main/java/dev/abros/rivet/client/ServerMenuScreen.java,78,Без смены вашей роли
+rivet/mod/src/main/java/dev/abros/rivet/client/ServerMenuScreen.java,79,Журнал действий
+rivet/mod/src/main/java/dev/abros/rivet/client/ServerMenuScreen.java,79,История администрации
+rivet/mod/src/main/java/dev/abros/rivet/client/ServerMenuScreen.java,79,Кто и что изменил
+rivet/mod/src/main/java/dev/abros/rivet/client/ServerMenuScreen.java,79,Открыть записи и подробности
+rivet/mod/src/main/java/dev/abros/rivet/client/ServerMenuScreen.java,80,Данные сообщества
+rivet/mod/src/main/java/dev/abros/rivet/client/ServerMenuScreen.java,80,Экспорт
+rivet/mod/src/main/java/dev/abros/rivet/client/ServerMenuScreen.java,80,Выберите нужный раздел
+rivet/mod/src/main/java/dev/abros/rivet/client/ServerMenuScreen.java,80,Выгрузка данных с сервера
+rivet/mod/src/main/java/dev/abros/rivet/client/ServerMenuScreen.java,81,Инструменты администрации
+rivet/mod/src/main/java/dev/abros/rivet/client/ServerMenuScreen.java,84,Вход игроков
+rivet/mod/src/main/java/dev/abros/rivet/client/ServerMenuScreen.java,84,Обслуживание включено
+rivet/mod/src/main/java/dev/abros/rivet/client/ServerMenuScreen.java,84,Открыт
+rivet/mod/src/main/java/dev/abros/rivet/client/ServerMenuScreen.java,84,Игроки могут подключаться
+rivet/mod/src/main/java/dev/abros/rivet/client/ServerMenuScreen.java,84,"Нажмите, чтобы завершить"
+rivet/mod/src/main/java/dev/abros/rivet/client/ServerMenuScreen.java,84,Включить обслуживание с причиной
+rivet/mod/src/main/java/dev/abros/rivet/client/ServerMenuScreen.java,85,Остановка сервера
+rivet/mod/src/main/java/dev/abros/rivet/client/ServerMenuScreen.java,85,Запланирована
+rivet/mod/src/main/java/dev/abros/rivet/client/ServerMenuScreen.java,85,Не запланирована
+rivet/mod/src/main/java/dev/abros/rivet/client/ServerMenuScreen.java,85,Перезапуск выполняется панелью
+rivet/mod/src/main/java/dev/abros/rivet/client/ServerMenuScreen.java,85,Отменить запланированную остановку
+rivet/mod/src/main/java/dev/abros/rivet/client/ServerMenuScreen.java,85,Указать время и причину остановки
+rivet/mod/src/main/java/dev/abros/rivet/client/ServerMenuScreen.java,86,Объявления
+rivet/mod/src/main/java/dev/abros/rivet/client/ServerMenuScreen.java,86,Есть закреплённое
+rivet/mod/src/main/java/dev/abros/rivet/client/ServerMenuScreen.java,86,Нет закреплённого
+rivet/mod/src/main/java/dev/abros/rivet/client/ServerMenuScreen.java,86,Разовое сообщение всем игрокам
+rivet/mod/src/main/java/dev/abros/rivet/client/ServerMenuScreen.java,86,Сообщение на главной Rivet
+rivet/mod/src/main/java/dev/abros/rivet/client/ServerMenuScreen.java,87,Настройки сервера
+rivet/mod/src/main/java/dev/abros/rivet/client/ServerMenuScreen.java,87,Просмотр и изменения
+rivet/mod/src/main/java/dev/abros/rivet/client/ServerMenuScreen.java,87,Проверка значений перед применением
+rivet/mod/src/main/java/dev/abros/rivet/client/ServerMenuScreen.java,87,Изменения с подтверждением
+rivet/mod/src/main/java/dev/abros/rivet/client/ServerMenuScreen.java,89,Запланированные объявления
+rivet/mod/src/main/java/dev/abros/rivet/client/ServerMenuScreen.java,89,Публикация по времени
+rivet/mod/src/main/java/dev/abros/rivet/client/ServerMenuScreen.java,89,Предпросмотр текста и времени перед сохранением
+rivet/mod/src/main/java/dev/abros/rivet/client/ServerMenuScreen.java,89,Доставка игрокам онлайн без повторов
+rivet/mod/src/main/java/dev/abros/rivet/client/ServerMenuScreen.java,90,Разовое объявление
+rivet/mod/src/main/java/dev/abros/rivet/client/ServerMenuScreen.java,90,Отправить игрокам
+rivet/mod/src/main/java/dev/abros/rivet/client/ServerMenuScreen.java,90,Текст появится у всех игроков
+rivet/mod/src/main/java/dev/abros/rivet/client/ServerMenuScreen.java,90,Сообщение и подтверждение отправки
+rivet/mod/src/main/java/dev/abros/rivet/client/ServerMenuScreen.java,92,Сообщение на главной
+rivet/mod/src/main/java/dev/abros/rivet/client/ServerMenuScreen.java,92,Изменить закреплённое
+rivet/mod/src/main/java/dev/abros/rivet/client/ServerMenuScreen.java,92,Закрепить объявление
+rivet/mod/src/main/java/dev/abros/rivet/client/ServerMenuScreen.java,92,Показывается на главной Rivet
+rivet/mod/src/main/java/dev/abros/rivet/client/ServerMenuScreen.java,92,Укажите текст и срок показа
+rivet/mod/src/main/java/dev/abros/rivet/client/ServerMenuScreen.java,93,Снять объявление
+rivet/mod/src/main/java/dev/abros/rivet/client/ServerMenuScreen.java,93,Убрать с главной
+rivet/mod/src/main/java/dev/abros/rivet/client/ServerMenuScreen.java,93,Текущее сообщение перестанет показываться
+rivet/mod/src/main/java/dev/abros/rivet/client/ServerMenuScreen.java,93,Действие потребует подтверждения
+rivet/mod/src/main/java/dev/abros/rivet/client/ServerMenuScreen.java,93,Снять объявление?
+rivet/mod/src/main/java/dev/abros/rivet/client/ServerMenuScreen.java,93,Сообщение исчезнет с главной Rivet.
+rivet/mod/src/main/java/dev/abros/rivet/client/ServerMenuScreen.java,96,Все разделы
+rivet/mod/src/main/java/dev/abros/rivet/client/ServerMenuScreen.java,96,Доска объявлений
+rivet/mod/src/main/java/dev/abros/rivet/client/ServerMenuScreen.java,96,Объединения
+rivet/mod/src/main/java/dev/abros/rivet/client/ServerMenuScreen.java,96,События
+rivet/mod/src/main/java/dev/abros/rivet/client/ServerMenuScreen.java,96,Голосования
+rivet/mod/src/main/java/dev/abros/rivet/client/ServerMenuScreen.java,96,Предложения
+rivet/mod/src/main/java/dev/abros/rivet/client/ServerMenuScreen.java,97,Выгрузить данные
+rivet/mod/src/main/java/dev/abros/rivet/client/ServerMenuScreen.java,97,Экспорт выбранного раздела
+rivet/mod/src/main/java/dev/abros/rivet/client/ServerMenuScreen.java,97,Файл создаётся на сервере
+rivet/mod/src/main/java/dev/abros/rivet/client/ServerMenuScreen.java,102,Открытые обращения
+rivet/mod/src/main/java/dev/abros/rivet/client/ServerMenuScreen.java,102,Без ответственного
+rivet/mod/src/main/java/dev/abros/rivet/client/ServerMenuScreen.java,102,Высокий приоритет
+rivet/mod/src/main/java/dev/abros/rivet/client/ServerMenuScreen.java,103,Открыть очередь обращений
+rivet/mod/src/main/java/dev/abros/rivet/client/ServerMenuScreen.java,112,Открытые обращения
+rivet/mod/src/main/java/dev/abros/rivet/client/ServerMenuScreen.java,112,Без ответственного
+rivet/mod/src/main/java/dev/abros/rivet/client/ServerMenuScreen.java,112,Высокий приоритет
+rivet/mod/src/main/java/dev/abros/rivet/client/ServerMenuScreen.java,112,Все обращения
+rivet/mod/src/main/java/dev/abros/rivet/client/ServerMenuScreen.java,136,Нет ответа. Обновите сводку.
+rivet/mod/src/main/java/dev/abros/rivet/client/ServerMenuScreen.java,141,Помощь
+rivet/mod/src/main/java/dev/abros/rivet/client/ServerMenuScreen.java,157,Закреплённое объявление
+rivet/mod/src/main/java/dev/abros/rivet/client/ServerMenuScreen.java,160,Минуты (1–10080)
+rivet/mod/src/main/java/dev/abros/rivet/client/ServerMenuScreen.java,167,Критическое предупреждение
+rivet/mod/src/main/java/dev/abros/rivet/client/ServerMenuScreen.java,178, с
+rivet/mod/src/main/java/dev/abros/rivet/client/ServerMenuScreen.java,178, мин
+rivet/mod/src/main/java/dev/abros/rivet/client/ServerMenuScreen.java,184,Сообщение появится на главной до окончания указанного срока.
+rivet/mod/src/main/java/dev/abros/rivet/client/ServerPackClient.java,31,Сборка сервера
+rivet/mod/src/main/java/dev/abros/rivet/client/ServerPackClient.java,36,Не удалось определить адрес сервера
+rivet/mod/src/main/java/dev/abros/rivet/client/ServerPackClient.java,39,Сервер не использует раздачу сборки Rivet.
+rivet/mod/src/main/java/dev/abros/rivet/client/ServerPackClient.java,40,Сборка сервера
+rivet/mod/src/main/java/dev/abros/rivet/client/ServerPackClient.java,40,Ключ сервера изменился
+rivet/mod/src/main/java/dev/abros/rivet/client/ServerPackClient.java,40,Сервер: 
+rivet/mod/src/main/java/dev/abros/rivet/client/ServerPackClient.java,40,\nКлюч: 
+rivet/mod/src/main/java/dev/abros/rivet/client/ServerPackClient.java,40,Разрешить получение файлов этого сервера?
+rivet/mod/src/main/java/dev/abros/rivet/client/ServerPackClient.java,40,Перед подтверждением проверьте новый ключ у владельца сервера.
+rivet/mod/src/main/java/dev/abros/rivet/client/ServerPackClient.java,42,Владелец ещё не опубликовал сборку сервера.
+rivet/mod/src/main/java/dev/abros/rivet/client/ServerPackClient.java,43,Установите Minecraft 
+rivet/mod/src/main/java/dev/abros/rivet/client/ServerPackClient.java,43, и NeoForge 
+rivet/mod/src/main/java/dev/abros/rivet/client/ServerPackClient.java,43, перед подключением
+rivet/mod/src/main/java/dev/abros/rivet/client/ServerPackClient.java,48,Файлы: 
+rivet/mod/src/main/java/dev/abros/rivet/client/ServerPackClient.java,48,\nЗагрузка: 
+rivet/mod/src/main/java/dev/abros/rivet/client/ServerPackClient.java,48, байт\n\n
+rivet/mod/src/main/java/dev/abros/rivet/client/ServerPackClient.java,48,Удалить: 
+rivet/mod/src/main/java/dev/abros/rivet/client/ServerPackClient.java,48,Добавить: 
+rivet/mod/src/main/java/dev/abros/rivet/client/ServerPackClient.java,48,Заменить: 
+rivet/mod/src/main/java/dev/abros/rivet/client/ServerPackClient.java,48,\nСуществующие или изменённые файлы затронуты:\n
+rivet/mod/src/main/java/dev/abros/rivet/client/ServerPackClient.java,48,\nФайлы уже соответствуют сборке. Перезапуск не требуется.
+rivet/mod/src/main/java/dev/abros/rivet/client/ServerPackClient.java,48,\nСуществующие изменяемые файлы сохраняются в резервной копии. Для применения потребуется закрыть Minecraft.
+rivet/mod/src/main/java/dev/abros/rivet/client/ServerPackClient.java,48,Изменения сборки
+rivet/mod/src/main/java/dev/abros/rivet/client/ServerPackClient.java,48,Сохранить
+rivet/mod/src/main/java/dev/abros/rivet/client/ServerPackClient.java,48,Установить
+rivet/mod/src/main/java/dev/abros/rivet/client/ServerPackClient.java,49,Сборка сервера
+rivet/mod/src/main/java/dev/abros/rivet/client/ServerPackClient.java,49,Выбор компонентов сохранён. Файлы сборки готовы к подключению.
+rivet/mod/src/main/java/dev/abros/rivet/client/ServerPackClient.java,53,Проверка сборки сервера…
+rivet/mod/src/main/java/dev/abros/rivet/client/ServerPackClient.java,54,Сборка сервера
+rivet/mod/src/main/java/dev/abros/rivet/client/ServerPackClient.java,55,Отмена
+rivet/mod/src/main/java/dev/abros/rivet/client/ServerPackScreen.java,11,Сборка сервера
+rivet/mod/src/main/java/dev/abros/rivet/client/ServerPackScreen.java,12,Проверить изменения
+rivet/mod/src/main/java/dev/abros/rivet/client/ServerPackScreen.java,12,Отмена
+rivet/mod/src/main/java/dev/abros/rivet/client/ServerPackScreen.java,14,Все файлы этой сборки обязательны.
+rivet/mod/src/main/java/dev/abros/rivet/client/ServerSettingsReviewScreen.java,11,Изменения настроек сервера
+rivet/mod/src/main/java/dev/abros/rivet/client/ServerSettingsReviewScreen.java,14,можно применить
+rivet/mod/src/main/java/dev/abros/rivet/client/ServerSettingsReviewScreen.java,14,нужен перезапуск
+rivet/mod/src/main/java/dev/abros/rivet/client/ServerSettingsReviewScreen.java,14,Изменений нет
+rivet/mod/src/main/java/dev/abros/rivet/client/ServerSettingsReviewScreen.java,14,Применить меню и разделы
+rivet/mod/src/main/java/dev/abros/rivet/client/ServerSettingsReviewScreen.java,14,Применить настройки?
+rivet/mod/src/main/java/dev/abros/rivet/client/ServerSettingsReviewScreen.java,14,Применятся только меню и разделы. Остальные изменения требуют перезапуска.
+rivet/mod/src/main/java/dev/abros/rivet/client/ServerSettingsReviewScreen.java,14,Проверить файл заново
+rivet/mod/src/main/java/dev/abros/rivet/client/ServerSettingsReviewScreen.java,15,Не удалось проверить
+rivet/mod/src/main/java/dev/abros/rivet/client/ServerSettingsReviewScreen.java,15,Меню и разделы обновлены
+rivet/mod/src/main/java/dev/abros/rivet/client/ServerSettingsReviewScreen.java,16,Нет ответа. Проверьте файл заново.
+rivet/mod/src/main/java/dev/abros/rivet/client/SettingsCatalog.java,7,Приглашения
+rivet/mod/src/main/java/dev/abros/rivet/client/SettingsCatalog.java,7,Заявки
+rivet/mod/src/main/java/dev/abros/rivet/client/SettingsCatalog.java,7,Решения по заявкам
+rivet/mod/src/main/java/dev/abros/rivet/client/SettingsCatalog.java,7,Отклики
+rivet/mod/src/main/java/dev/abros/rivet/client/SettingsCatalog.java,7,Назначение задачи
+rivet/mod/src/main/java/dev/abros/rivet/client/SettingsCatalog.java,7,Изменение срока
+rivet/mod/src/main/java/dev/abros/rivet/client/SettingsCatalog.java,7,Напоминания
+rivet/mod/src/main/java/dev/abros/rivet/client/SettingsCatalog.java,7,Отмена события
+rivet/mod/src/main/java/dev/abros/rivet/client/SettingsCatalog.java,7,Перенос события
+rivet/mod/src/main/java/dev/abros/rivet/client/SettingsCatalog.java,7,Комментарии
+rivet/mod/src/main/java/dev/abros/rivet/client/SettingsCatalog.java,7,Комментарии к записи
+rivet/mod/src/main/java/dev/abros/rivet/client/SettingsCatalog.java,7,Комментарии задачи
+rivet/mod/src/main/java/dev/abros/rivet/client/SettingsCatalog.java,7,Изменение роли
+rivet/mod/src/main/java/dev/abros/rivet/client/SettingsCatalog.java,7,Исключение из объединения
+rivet/mod/src/main/java/dev/abros/rivet/client/SettingsCatalog.java,7,Приглашение на событие
+rivet/mod/src/main/java/dev/abros/rivet/client/SettingsCatalog.java,7,Статус задачи
+rivet/mod/src/main/java/dev/abros/rivet/client/SettingsCatalog.java,7,Диагностика spark
+rivet/mod/src/main/java/dev/abros/rivet/client/SettingsCatalog.java,9,Сервер
+rivet/mod/src/main/java/dev/abros/rivet/client/SettingsCatalog.java,9,Личные задачи
+rivet/mod/src/main/java/dev/abros/rivet/client/SettingsCatalog.java,9,Объединения
+rivet/mod/src/main/java/dev/abros/rivet/client/SettingsCatalog.java,9,События
+rivet/mod/src/main/java/dev/abros/rivet/client/SettingsCatalog.java,9,Доска объявлений
+rivet/mod/src/main/java/dev/abros/rivet/client/SettingsCatalog.java,9,Голосования
+rivet/mod/src/main/java/dev/abros/rivet/client/SettingsCatalog.java,9,Предложения
+rivet/mod/src/main/java/dev/abros/rivet/client/SettingsCatalog.java,9,Обращения
+rivet/mod/src/main/java/dev/abros/rivet/client/SettingsCatalog.java,13,Тема интерфейса|Прозрачные панели|Плотность интерфейса|Масштаб GUI Minecraft|Часовой пояс|Контрастность|Анимации|Профиль оформления
+rivet/mod/src/main/java/dev/abros/rivet/client/SettingsCatalog.java,14,Показывать виджет|Масштаб виджета|Плотность фона|В чате|В инвентаре|В меню паузы|При открытом F3|Голограммы привязанных складов|Приглушать фон при движении|Клавиша взаимодействия|Голова игрока|Никнейм|Префикс LuckPerms|Суффикс LuckPerms|Время текущей сессии|Задержка соединения|Порядок блоков
+rivet/mod/src/main/java/dev/abros/rivet/client/SettingsCatalog.java,14,hud виджет
+rivet/mod/src/main/java/dev/abros/rivet/client/SettingsCatalog.java,15,hud виджет
+rivet/mod/src/main/java/dev/abros/rivet/client/SettingsCatalog.java,16,Сводка пропущенных при входе|Показывать плашки|Звук|Тихие часы обычных уведомлений|Начало тихих часов|Конец тихих часов|Предупреждения о перезапуске|Одновременно на экране
+rivet/mod/src/main/java/dev/abros/rivet/client/SettingsCatalog.java,16,уведомления
+rivet/mod/src/main/java/dev/abros/rivet/client/SettingsCatalog.java,17,Плашки: 
+rivet/mod/src/main/java/dev/abros/rivet/client/SettingsCatalog.java,17,уведомления
+rivet/mod/src/main/java/dev/abros/rivet/client/SettingsCatalog.java,18,Область настройки событий
+rivet/mod/src/main/java/dev/abros/rivet/client/SettingsCatalog.java,18,уведомления фильтр событий
+rivet/mod/src/main/java/dev/abros/rivet/client/SettingsCatalog.java,19,уведомления события
+rivet/mod/src/main/java/dev/abros/rivet/client/SettingsCatalog.java,20,Режим сервера|Группировка игроков|Головы игроков|Точный пинг|Нижний контекст TAB|Прозрачность фона TAB|Плотность строк TAB|Ширина колонок TAB
+rivet/mod/src/main/java/dev/abros/rivet/client/SettingsCatalog.java,20,таб tab ping пинг
+rivet/mod/src/main/java/dev/abros/rivet/client/SettingsCatalog.java,21,Режим сервера|Объединять системные повторы|Размер текста чата|Расстояние между строками чата|Прозрачность текста чата|Прозрачность фона чата|Подсказки ввода чата|Прозрачность подсказок
+rivet/mod/src/main/java/dev/abros/rivet/client/SettingsCatalog.java,21,chat чат
+rivet/mod/src/main/java/dev/abros/rivet/client/SettingsCatalog.java,22,Указатель точки|Прозрачность указателя|Координаты в указателе|Метка маршрута в Xaero’s
+rivet/mod/src/main/java/dev/abros/rivet/client/SettingsCatalog.java,22,маршрут навигация xaero
+rivet/mod/src/main/java/dev/abros/rivet/client/SettingsCatalog.java,23,Расположение элементов
+rivet/mod/src/main/java/dev/abros/rivet/client/SettingsCatalog.java,23,hud виджет чат подсказки указатель навигация редактор
+rivet/mod/src/main/java/dev/abros/rivet/client/SettingsCatalog.java,27,Масштаб
+rivet/mod/src/main/java/dev/abros/rivet/client/SettingsCatalog.java,27,Масштаб виджета
+rivet/mod/src/main/java/dev/abros/rivet/client/SettingsSearchScreen.java,10,Поиск настроек
+rivet/mod/src/main/java/dev/abros/rivet/client/SettingsSearchScreen.java,14,"Тема, пинг, прозрачность…"
+rivet/mod/src/main/java/dev/abros/rivet/client/SettingsSearchScreen.java,17,Настройки не найдены
+rivet/mod/src/main/java/dev/abros/rivet/client/SettingsSearchScreen.java,17,"Попробуйте «пинг», «прозрачность» или название раздела."
+rivet/mod/src/main/java/dev/abros/rivet/client/SkinClient.java,35,Нет ответа. Повторите запрос.
+rivet/mod/src/main/java/dev/abros/rivet/client/SkinClient.java,41,Загрузка…
+rivet/mod/src/main/java/dev/abros/rivet/client/SkinClient.java,45,Скины выключены на сервере
+rivet/mod/src/main/java/dev/abros/rivet/client/SkinClient.java,46,Ошибка загрузки
+rivet/mod/src/main/java/dev/abros/rivet/client/SkinClient.java,51,Неверный размер скина
+rivet/mod/src/main/java/dev/abros/rivet/client/SkinsScreen.java,22,Скины
+rivet/mod/src/main/java/dev/abros/rivet/client/SkinsScreen.java,33,Библиотека
+rivet/mod/src/main/java/dev/abros/rivet/client/SkinsScreen.java,33,Предпросмотр
+rivet/mod/src/main/java/dev/abros/rivet/client/SkinsScreen.java,41,Выбор файла…
+rivet/mod/src/main/java/dev/abros/rivet/client/SkinsScreen.java,41,Добавить PNG
+rivet/mod/src/main/java/dev/abros/rivet/client/SkinsScreen.java,42,PNG 64×64 или 64×32. После выбора можно проверить скин.
+rivet/mod/src/main/java/dev/abros/rivet/client/SkinsScreen.java,45,Название скина
+rivet/mod/src/main/java/dev/abros/rivet/client/SkinsScreen.java,46,Тонкие руки
+rivet/mod/src/main/java/dev/abros/rivet/client/SkinsScreen.java,46,Обычные руки
+rivet/mod/src/main/java/dev/abros/rivet/client/SkinsScreen.java,47,Отмена
+rivet/mod/src/main/java/dev/abros/rivet/client/SkinsScreen.java,51,Второй слой: 
+rivet/mod/src/main/java/dev/abros/rivet/client/SkinsScreen.java,51,Вкл
+rivet/mod/src/main/java/dev/abros/rivet/client/SkinsScreen.java,51,Выкл
+rivet/mod/src/main/java/dev/abros/rivet/client/SkinsScreen.java,52,Вернуть вид
+rivet/mod/src/main/java/dev/abros/rivet/client/SkinsScreen.java,53,Применяется…
+rivet/mod/src/main/java/dev/abros/rivet/client/SkinsScreen.java,53,Загрузить и применить
+rivet/mod/src/main/java/dev/abros/rivet/client/SkinsScreen.java,53,Активный скин
+rivet/mod/src/main/java/dev/abros/rivet/client/SkinsScreen.java,53,Применить
+rivet/mod/src/main/java/dev/abros/rivet/client/SkinsScreen.java,54,Введите название скина
+rivet/mod/src/main/java/dev/abros/rivet/client/SkinsScreen.java,56,Действия ▾
+rivet/mod/src/main/java/dev/abros/rivet/client/SkinsScreen.java,57,Повторить запрос
+rivet/mod/src/main/java/dev/abros/rivet/client/SkinsScreen.java,58,Загрузить и применить
+rivet/mod/src/main/java/dev/abros/rivet/client/SkinsScreen.java,58,Введите название скина
+rivet/mod/src/main/java/dev/abros/rivet/client/SkinsScreen.java,63,Переименовать
+rivet/mod/src/main/java/dev/abros/rivet/client/SkinsScreen.java,64,Сделать обычные руки
+rivet/mod/src/main/java/dev/abros/rivet/client/SkinsScreen.java,64,Сделать тонкие руки
+rivet/mod/src/main/java/dev/abros/rivet/client/SkinsScreen.java,66,Удалить…
+rivet/mod/src/main/java/dev/abros/rivet/client/SkinsScreen.java,66,Удалить скин?
+rivet/mod/src/main/java/dev/abros/rivet/client/SkinsScreen.java,67,Действия
+rivet/mod/src/main/java/dev/abros/rivet/client/SkinsScreen.java,67,Действия ▾
+rivet/mod/src/main/java/dev/abros/rivet/client/SkinsScreen.java,76,Выберите скин PNG
+rivet/mod/src/main/java/dev/abros/rivet/client/SkinsScreen.java,77,Скин
+rivet/mod/src/main/java/dev/abros/rivet/client/SkinsScreen.java,78,Нужен PNG 64×64 или 64×32 в пределах лимита.
+rivet/mod/src/main/java/dev/abros/rivet/client/SkinsScreen.java,80,Не удалось подготовить скин
+rivet/mod/src/main/java/dev/abros/rivet/client/SkinsScreen.java,85,Название скина
+rivet/mod/src/main/java/dev/abros/rivet/client/SkinsScreen.java,87,Сохранить
+rivet/mod/src/main/java/dev/abros/rivet/client/SkinsScreen.java,87,Отмена
+rivet/mod/src/main/java/dev/abros/rivet/client/SkinsScreen.java,95,Название
+rivet/mod/src/main/java/dev/abros/rivet/client/SkinsScreen.java,96,Библиотека
+rivet/mod/src/main/java/dev/abros/rivet/client/SocialSettingsScreen.java,9,Настройки Rivet
+rivet/mod/src/main/java/dev/abros/rivet/client/SocialSettingsScreen.java,12,Прозрачность подсказок: 
+rivet/mod/src/main/java/dev/abros/rivet/client/SocialSettingsScreen.java,12,Прозрачность подсказок
+rivet/mod/src/main/java/dev/abros/rivet/client/SocialSettingsScreen.java,14,Группировка: 
+rivet/mod/src/main/java/dev/abros/rivet/client/SocialSettingsScreen.java,14,Алфавит
+rivet/mod/src/main/java/dev/abros/rivet/client/SocialSettingsScreen.java,14,Роли
+rivet/mod/src/main/java/dev/abros/rivet/client/SocialSettingsScreen.java,14,Объединения
+rivet/mod/src/main/java/dev/abros/rivet/client/SocialSettingsScreen.java,14,Группировка игроков
+rivet/mod/src/main/java/dev/abros/rivet/client/SocialSettingsScreen.java,14,Алфавит
+rivet/mod/src/main/java/dev/abros/rivet/client/SocialSettingsScreen.java,14,Роли
+rivet/mod/src/main/java/dev/abros/rivet/client/SocialSettingsScreen.java,14,Объединения
+rivet/mod/src/main/java/dev/abros/rivet/client/SocialSettingsScreen.java,15,Прозрачность фона
+rivet/mod/src/main/java/dev/abros/rivet/client/SocialSettingsScreen.java,15,Плотность строк
+rivet/mod/src/main/java/dev/abros/rivet/client/SocialSettingsScreen.java,15,Ширина колонок
+rivet/mod/src/main/java/dev/abros/rivet/client/SocialSettingsScreen.java,15,Компактная
+rivet/mod/src/main/java/dev/abros/rivet/client/SocialSettingsScreen.java,15,Обычная
+rivet/mod/src/main/java/dev/abros/rivet/client/SocialSettingsScreen.java,15,Свободная
+rivet/mod/src/main/java/dev/abros/rivet/client/SocialSettingsScreen.java,15,35% (по умолчанию)
+rivet/mod/src/main/java/dev/abros/rivet/client/SocialSettingsScreen.java,15,Компактная
+rivet/mod/src/main/java/dev/abros/rivet/client/SocialSettingsScreen.java,15,Обычная
+rivet/mod/src/main/java/dev/abros/rivet/client/SocialSettingsScreen.java,15,Свободная
+rivet/mod/src/main/java/dev/abros/rivet/client/SocialSettingsScreen.java,17,Головы игроков
+rivet/mod/src/main/java/dev/abros/rivet/client/SocialSettingsScreen.java,17,Точный пинг
+rivet/mod/src/main/java/dev/abros/rivet/client/SocialSettingsScreen.java,17,Нижний контекст TAB
+rivet/mod/src/main/java/dev/abros/rivet/client/SocialSettingsScreen.java,18,Подсказки ввода
+rivet/mod/src/main/java/dev/abros/rivet/client/SocialSettingsScreen.java,18,Объединять системные повторы
+rivet/mod/src/main/java/dev/abros/rivet/client/SocialSettingsScreen.java,19,Размер текста
+rivet/mod/src/main/java/dev/abros/rivet/client/SocialSettingsScreen.java,19,Расстояние между строками
+rivet/mod/src/main/java/dev/abros/rivet/client/SocialSettingsScreen.java,19,Прозрачность текста
+rivet/mod/src/main/java/dev/abros/rivet/client/SocialSettingsScreen.java,19,Прозрачность фона
+rivet/mod/src/main/java/dev/abros/rivet/client/SocialSettingsScreen.java,26,Чат Rivet включён
+rivet/mod/src/main/java/dev/abros/rivet/client/SocialSettingsScreen.java,26,Чат Rivet выключен
+rivet/mod/src/main/java/dev/abros/rivet/client/SocialSettingsScreen.java,26,Автоматический
+rivet/mod/src/main/java/dev/abros/rivet/client/SocialSettingsScreen.java,26,Совместимый
+rivet/mod/src/main/java/dev/abros/rivet/client/SocialSettingsScreen.java,26,Режим сервера: 
+rivet/mod/src/main/java/dev/abros/rivet/client/SparkDiagnosticsScreen.java,20,Производительность · spark
+rivet/mod/src/main/java/dev/abros/rivet/client/SparkDiagnosticsScreen.java,31,Состояние
+rivet/mod/src/main/java/dev/abros/rivet/client/SparkDiagnosticsScreen.java,31,Профилирование
+rivet/mod/src/main/java/dev/abros/rivet/client/SparkDiagnosticsScreen.java,31,Отчёты
+rivet/mod/src/main/java/dev/abros/rivet/client/SparkDiagnosticsScreen.java,36,CPU системы
+rivet/mod/src/main/java/dev/abros/rivet/client/SparkDiagnosticsScreen.java,36,Память
+rivet/mod/src/main/java/dev/abros/rivet/client/SparkDiagnosticsScreen.java,36,MSPT · 95% тиков
+rivet/mod/src/main/java/dev/abros/rivet/client/SparkDiagnosticsScreen.java,41,Проверить состояние
+rivet/mod/src/main/java/dev/abros/rivet/client/SparkDiagnosticsScreen.java,41,Записать 60 секунд
+rivet/mod/src/main/java/dev/abros/rivet/client/SparkDiagnosticsScreen.java,41,Записать 120 секунд
+rivet/mod/src/main/java/dev/abros/rivet/client/SparkDiagnosticsScreen.java,41,Медленные тики · 50 мс
+rivet/mod/src/main/java/dev/abros/rivet/client/SparkDiagnosticsScreen.java,41,Медленные тики · 100 мс
+rivet/mod/src/main/java/dev/abros/rivet/client/SparkDiagnosticsScreen.java,41,Открыть текущий отчёт
+rivet/mod/src/main/java/dev/abros/rivet/client/SparkDiagnosticsScreen.java,41,Завершить запись
+rivet/mod/src/main/java/dev/abros/rivet/client/SparkDiagnosticsScreen.java,41,Отменить запись
+rivet/mod/src/main/java/dev/abros/rivet/client/SparkDiagnosticsScreen.java,41,Предупреждения: включены
+rivet/mod/src/main/java/dev/abros/rivet/client/SparkDiagnosticsScreen.java,41,Предупреждения: выключены
+rivet/mod/src/main/java/dev/abros/rivet/client/SparkDiagnosticsScreen.java,44,Создаёт отчёт в просмотрщике spark
+rivet/mod/src/main/java/dev/abros/rivet/client/SparkDiagnosticsScreen.java,44,Чужая и фоновая запись не прерываются
+rivet/mod/src/main/java/dev/abros/rivet/client/SparkDiagnosticsScreen.java,44,Результат появится после завершения записи
+rivet/mod/src/main/java/dev/abros/rivet/client/SparkDiagnosticsScreen.java,44,Только тики дольше 50 мс
+rivet/mod/src/main/java/dev/abros/rivet/client/SparkDiagnosticsScreen.java,44,Только тики дольше 100 мс
+rivet/mod/src/main/java/dev/abros/rivet/client/SparkDiagnosticsScreen.java,44,Не останавливает текущую запись
+rivet/mod/src/main/java/dev/abros/rivet/client/SparkDiagnosticsScreen.java,44,"Только ваша запись, запущенная из Rivet"
+rivet/mod/src/main/java/dev/abros/rivet/client/SparkDiagnosticsScreen.java,44,Без загрузки результата
+rivet/mod/src/main/java/dev/abros/rivet/client/SparkDiagnosticsScreen.java,44,Предупреждения только для вас; пауза 5 минут
+rivet/mod/src/main/java/dev/abros/rivet/client/SparkDiagnosticsScreen.java,52,Отчёт
+rivet/mod/src/main/java/dev/abros/rivet/client/SparkDiagnosticsScreen.java,57,Открыть отчёт spark?
+rivet/mod/src/main/java/dev/abros/rivet/client/SparkDiagnosticsScreen.java,58,%.0f / %.0f МиБ
+rivet/mod/src/main/java/dev/abros/rivet/client/SparkDiagnosticsScreen.java,59, мс
+rivet/mod/src/main/java/dev/abros/rivet/client/SparkDiagnosticsScreen.java,65,Загрузка…
+rivet/mod/src/main/java/dev/abros/rivet/client/SparkDiagnosticsScreen.java,65,Нет данных
+rivet/mod/src/main/java/dev/abros/rivet/client/SparkDiagnosticsScreen.java,70,TPS · последние 15 минут
+rivet/mod/src/main/java/dev/abros/rivet/client/SparkDiagnosticsScreen.java,71,MSPT · последние 15 минут
+rivet/mod/src/main/java/dev/abros/rivet/client/SparkDiagnosticsScreen.java,72,CPU Minecraft · последние 15 минут
+rivet/mod/src/main/java/dev/abros/rivet/client/SparkDiagnosticsScreen.java,73,Сборка мусора · с запуска JVM
+rivet/mod/src/main/java/dev/abros/rivet/client/SparkDiagnosticsScreen.java,73, очисток · 
+rivet/mod/src/main/java/dev/abros/rivet/client/SparkDiagnosticsScreen.java,73, мс
+rivet/mod/src/main/java/dev/abros/rivet/client/SparkDiagnosticsScreen.java,74,Rivet · база и синхронизация
+rivet/mod/src/main/java/dev/abros/rivet/client/SparkDiagnosticsScreen.java,74,Очереди: запись 
+rivet/mod/src/main/java/dev/abros/rivet/client/SparkDiagnosticsScreen.java,74, · чтение 
+rivet/mod/src/main/java/dev/abros/rivet/client/SparkDiagnosticsScreen.java,74,Последний цикл синхронизации: 
+rivet/mod/src/main/java/dev/abros/rivet/client/SparkDiagnosticsScreen.java,74, мс · БД: 
+rivet/mod/src/main/java/dev/abros/rivet/client/SparkDiagnosticsScreen.java,74, мс
+rivet/mod/src/main/java/dev/abros/rivet/client/SparkDiagnosticsScreen.java,76,Отчётов пока нет. Запустите диагностику во вкладке «Профилирование».
+rivet/mod/src/main/java/dev/abros/rivet/client/SparkDiagnosticsScreen.java,78,Запись: 
+rivet/mod/src/main/java/dev/abros/rivet/client/SparkDiagnosticsScreen.java,78, · осталось 
+rivet/mod/src/main/java/dev/abros/rivet/client/SparkDiagnosticsScreen.java,78, с
+rivet/mod/src/main/java/dev/abros/rivet/client/SparkDiagnosticsScreen.java,85,Собираем измерения…
+rivet/mod/src/main/java/dev/abros/rivet/client/StockHologramRenderer.java,17,Собрано
+rivet/mod/src/main/java/dev/abros/rivet/client/StockHologramRenderer.java,17,Ещё 
+rivet/mod/src/main/java/dev/abros/rivet/client/StockHologramRenderer.java,17,Ещё ресурсов: 
+rivet/mod/src/main/java/dev/abros/rivet/client/TaskArchiveScreen.java,5,Архив завершённых задач
+rivet/mod/src/main/java/dev/abros/rivet/client/TaskArchiveScreen.java,7,В архив
+rivet/mod/src/main/java/dev/abros/rivet/client/TaskArchiveScreen.java,7,Отмена
+rivet/mod/src/main/java/dev/abros/rivet/client/TaskArchiveScreen.java,8,Не удалось архивировать
+rivet/mod/src/main/java/dev/abros/rivet/client/TaskArchiveScreen.java,8,Первые 200 задач. Остальные можно архивировать следующим действием.
+rivet/mod/src/main/java/dev/abros/rivet/client/TaskArchiveScreen.java,8,Задачи останутся доступны через фильтр «Архив».
+rivet/mod/src/main/java/dev/abros/rivet/client/TaskArchiveScreen.java,9,Нет ответа. Откройте предпросмотр заново перед повтором.
+rivet/mod/src/main/java/dev/abros/rivet/client/TaskArchiveScreen.java,11,Проверяем…
+rivet/mod/src/main/java/dev/abros/rivet/client/TaskArchiveScreen.java,11,Будет архивировано: 
+rivet/mod/src/main/java/dev/abros/rivet/client/TaskEditScreen.java,18,Заполните поле «
+rivet/mod/src/main/java/dev/abros/rivet/client/TaskEditScreen.java,19,Дождитесь ответа сервера
+rivet/mod/src/main/java/dev/abros/rivet/client/TaskEditScreen.java,19,Отменить изменения?
+rivet/mod/src/main/java/dev/abros/rivet/client/TaskEditScreen.java,19,Введённый текст не будет сохранён.
+rivet/mod/src/main/java/dev/abros/rivet/client/TaskEditScreen.java,27,Сохраняем…
+rivet/mod/src/main/java/dev/abros/rivet/client/TaskEditScreen.java,27,Сохранить
+rivet/mod/src/main/java/dev/abros/rivet/client/TaskEditScreen.java,27,Отмена
+rivet/mod/src/main/java/dev/abros/rivet/client/TaskEditScreen.java,30,Дождитесь ответа сервера
+rivet/mod/src/main/java/dev/abros/rivet/client/TaskEditScreen.java,30,Отменить изменения?
+rivet/mod/src/main/java/dev/abros/rivet/client/TaskEditScreen.java,30,Введённый текст не будет сохранён.
+rivet/mod/src/main/java/dev/abros/rivet/client/TaskEditScreen.java,31,Не удалось сохранить изменения
+rivet/mod/src/main/java/dev/abros/rivet/client/TaskEditScreen.java,32,Ответ не получен. Вернитесь к задаче и нажмите «Повторить». Введённый текст сохранён.
+rivet/mod/src/main/java/dev/abros/rivet/client/TaskMemberPicker.java,11,Ответственный · участник объединения
+rivet/mod/src/main/java/dev/abros/rivet/client/TaskMemberPicker.java,14,Поиск участника
+rivet/mod/src/main/java/dev/abros/rivet/client/TaskMemberPicker.java,14,Поиск по нику
+rivet/mod/src/main/java/dev/abros/rivet/client/TaskMemberPicker.java,14,Следующая страница
+rivet/mod/src/main/java/dev/abros/rivet/client/TaskMemberPicker.java,15,Недоступно
+rivet/mod/src/main/java/dev/abros/rivet/client/TaskMemberPicker.java,15,Участник не найден
+rivet/mod/src/main/java/dev/abros/rivet/client/TaskMemberPicker.java,16,Нет ответа. Измените поиск и повторите.
+rivet/mod/src/main/java/dev/abros/rivet/client/TaskPlanning.java,6,Задача заблокирована: завершите 
+rivet/mod/src/main/java/dev/abros/rivet/client/TaskPlanning.java,6," задач ниже, чтобы начать работу или завершить её."
+rivet/mod/src/main/java/dev/abros/rivet/client/TaskPlanning.java,6,Сначала выполнить
+rivet/mod/src/main/java/dev/abros/rivet/client/TaskPlanning.java,7,Готово: 
+rivet/mod/src/main/java/dev/abros/rivet/client/TaskPlanning.java,7,Ожидается: 
+rivet/mod/src/main/java/dev/abros/rivet/client/TaskPlanning.java,8,Не повторять
+rivet/mod/src/main/java/dev/abros/rivet/client/TaskPlanning.java,8,Каждый день
+rivet/mod/src/main/java/dev/abros/rivet/client/TaskPlanning.java,8,Каждые 7 дней
+rivet/mod/src/main/java/dev/abros/rivet/client/TaskPlanning.java,8,Каждые 30 дней
+rivet/mod/src/main/java/dev/abros/rivet/client/TaskPlanning.java,9,Повтор: 
+rivet/mod/src/main/java/dev/abros/rivet/client/TaskPlanning.java,10,Следующая отдельная задача: 
+rivet/mod/src/main/java/dev/abros/rivet/client/TaskResourcesScreen.java,5,Ресурсы задачи
+rivet/mod/src/main/java/dev/abros/rivet/client/TaskResourcesScreen.java,9,Количество…
+rivet/mod/src/main/java/dev/abros/rivet/client/TaskResourcesScreen.java,9,Добавить допустимую замену…
+rivet/mod/src/main/java/dev/abros/rivet/client/TaskResourcesScreen.java,9,Убрать все замены
+rivet/mod/src/main/java/dev/abros/rivet/client/TaskResourcesScreen.java,9,Для замен нужен обновлённый Rivet на сервере
+rivet/mod/src/main/java/dev/abros/rivet/client/TaskResourcesScreen.java,10,Необходимое количество
+rivet/mod/src/main/java/dev/abros/rivet/client/TaskResourcesScreen.java,10,Этот предмет уже есть в списке
+rivet/mod/src/main/java/dev/abros/rivet/client/TaskResourcesScreen.java,10,Количество: 1–1000000. Каждый предмет добавляется один раз.
+rivet/mod/src/main/java/dev/abros/rivet/client/TaskResourcesScreen.java,11, · замен: 
+rivet/mod/src/main/java/dev/abros/rivet/client/TaskResourcesScreen.java,11,Убрать
+rivet/mod/src/main/java/dev/abros/rivet/client/TaskResourcesScreen.java,11,+ Выбрать предмет
+rivet/mod/src/main/java/dev/abros/rivet/client/TaskResourcesScreen.java,11,Найдите предмет по названию или его идентификатору
+rivet/mod/src/main/java/dev/abros/rivet/client/TaskResourcesScreen.java,11,В задаче можно указать до 30 видов ресурсов
+rivet/mod/src/main/java/dev/abros/rivet/client/TaskResourcesScreen.java,11,Сохраняем…
+rivet/mod/src/main/java/dev/abros/rivet/client/TaskResourcesScreen.java,11,Сохранить
+rivet/mod/src/main/java/dev/abros/rivet/client/TaskResourcesScreen.java,11,Список ресурсов и допустимых замен
+rivet/mod/src/main/java/dev/abros/rivet/client/TaskResourcesScreen.java,13,Выберите предметы для задачи
+rivet/mod/src/main/java/dev/abros/rivet/client/TaskResourcesScreen.java,14,Дождитесь ответа сервера
+rivet/mod/src/main/java/dev/abros/rivet/client/TaskResourcesScreen.java,14,Выйти без сохранения?
+rivet/mod/src/main/java/dev/abros/rivet/client/TaskResourcesScreen.java,14,Изменения списка ресурсов ещё не сохранены.
+rivet/mod/src/main/java/dev/abros/rivet/client/TaskResourcesScreen.java,14,Не удалось сохранить ресурсы
+rivet/mod/src/main/java/dev/abros/rivet/client/TaskResourcesScreen.java,15,Нет ответа. Вернитесь к задаче и повторите отправку.
+rivet/mod/src/main/java/dev/abros/rivet/client/TaskScreen.java,11,Обзор
+rivet/mod/src/main/java/dev/abros/rivet/client/TaskScreen.java,17,Мои задачи
+rivet/mod/src/main/java/dev/abros/rivet/client/TaskScreen.java,17,Задачи объединения
+rivet/mod/src/main/java/dev/abros/rivet/client/TaskScreen.java,21,Сохраните изменения или нажмите «Отмена»
+rivet/mod/src/main/java/dev/abros/rivet/client/TaskScreen.java,31,Сохраните изменения или нажмите «Отмена»
+rivet/mod/src/main/java/dev/abros/rivet/client/TaskScreen.java,31,Обзор
+rivet/mod/src/main/java/dev/abros/rivet/client/TaskScreen.java,40,Этап
+rivet/mod/src/main/java/dev/abros/rivet/client/TaskScreen.java,40,Переименовать…
+rivet/mod/src/main/java/dev/abros/rivet/client/TaskScreen.java,40,Удалить этап…
+rivet/mod/src/main/java/dev/abros/rivet/client/TaskScreen.java,40,Название этапа
+rivet/mod/src/main/java/dev/abros/rivet/client/TaskScreen.java,40,Название
+rivet/mod/src/main/java/dev/abros/rivet/client/TaskScreen.java,40,Удалить этап?
+rivet/mod/src/main/java/dev/abros/rivet/client/TaskScreen.java,42,Восстановлен черновик. Проверьте текст перед сохранением.
+rivet/mod/src/main/java/dev/abros/rivet/client/TaskScreen.java,46,Отменить изменения?
+rivet/mod/src/main/java/dev/abros/rivet/client/TaskScreen.java,46,Введённый текст не будет сохранён.
+rivet/mod/src/main/java/dev/abros/rivet/client/TaskScreen.java,47,Введите название задачи
+rivet/mod/src/main/java/dev/abros/rivet/client/TaskScreen.java,47,Название
+rivet/mod/src/main/java/dev/abros/rivet/client/TaskScreen.java,47,Описание
+rivet/mod/src/main/java/dev/abros/rivet/client/TaskScreen.java,49,Название задачи
+rivet/mod/src/main/java/dev/abros/rivet/client/TaskScreen.java,49,Название задачи
+rivet/mod/src/main/java/dev/abros/rivet/client/TaskScreen.java,50,Описание задачи
+rivet/mod/src/main/java/dev/abros/rivet/client/TaskScreen.java,50,Что нужно сделать?
+rivet/mod/src/main/java/dev/abros/rivet/client/TaskScreen.java,51,Сохраняем…
+rivet/mod/src/main/java/dev/abros/rivet/client/TaskScreen.java,51,Сохранить
+rivet/mod/src/main/java/dev/abros/rivet/client/TaskScreen.java,53,Показаны 
+rivet/mod/src/main/java/dev/abros/rivet/client/TaskScreen.java,53, из 
+rivet/mod/src/main/java/dev/abros/rivet/client/TaskScreen.java,53,← Предыдущая страница
+rivet/mod/src/main/java/dev/abros/rivet/client/TaskScreen.java,53,Следующая страница →
+rivet/mod/src/main/java/dev/abros/rivet/client/TaskScreen.java,57,Коды блокирующих задач
+rivet/mod/src/main/java/dev/abros/rivet/client/TaskScreen.java,57,Коды через запятую; пусто — убрать
+rivet/mod/src/main/java/dev/abros/rivet/client/TaskScreen.java,58,Повтор задачи
+rivet/mod/src/main/java/dev/abros/rivet/client/TaskScreen.java,58,Не повторять
+rivet/mod/src/main/java/dev/abros/rivet/client/TaskScreen.java,58,Каждый день
+rivet/mod/src/main/java/dev/abros/rivet/client/TaskScreen.java,58,Каждые 7 дней
+rivet/mod/src/main/java/dev/abros/rivet/client/TaskScreen.java,58,Каждые 30 дней
+rivet/mod/src/main/java/dev/abros/rivet/client/TaskScreen.java,59,Убрать из игрового виджета
+rivet/mod/src/main/java/dev/abros/rivet/client/TaskScreen.java,59,Закрепить в игровом виджете
+rivet/mod/src/main/java/dev/abros/rivet/client/TaskScreen.java,59,Скопировать код
+rivet/mod/src/main/java/dev/abros/rivet/client/TaskScreen.java,59,Код скопирован
+rivet/mod/src/main/java/dev/abros/rivet/client/TaskScreen.java,59,Вернуть из архива
+rivet/mod/src/main/java/dev/abros/rivet/client/TaskScreen.java,59,Редактировать задачу
+rivet/mod/src/main/java/dev/abros/rivet/client/TaskScreen.java,59,Зависимости…
+rivet/mod/src/main/java/dev/abros/rivet/client/TaskScreen.java,59,Повтор задачи…
+rivet/mod/src/main/java/dev/abros/rivet/client/TaskScreen.java,59,Удалить задачу…
+rivet/mod/src/main/java/dev/abros/rivet/client/TaskScreen.java,59,Удалить задачу?
+rivet/mod/src/main/java/dev/abros/rivet/client/TaskScreen.java,59,"Этапы, комментарии и привязки складов будут удалены."
+rivet/mod/src/main/java/dev/abros/rivet/client/TaskScreen.java,59,Отменить последнее изменение статуса
+rivet/mod/src/main/java/dev/abros/rivet/client/TaskScreen.java,59,Действия с задачей
+rivet/mod/src/main/java/dev/abros/rivet/client/TaskScreen.java,59,Удалить задачу…
+rivet/mod/src/main/java/dev/abros/rivet/client/TaskScreen.java,62,Изменены название и описание
+rivet/mod/src/main/java/dev/abros/rivet/client/TaskScreen.java,62,Изменён статус
+rivet/mod/src/main/java/dev/abros/rivet/client/TaskScreen.java,62,Изменён ответственный
+rivet/mod/src/main/java/dev/abros/rivet/client/TaskScreen.java,62,Изменён срок
+rivet/mod/src/main/java/dev/abros/rivet/client/TaskScreen.java,62,Изменён этап
+rivet/mod/src/main/java/dev/abros/rivet/client/TaskScreen.java,62,Изменены ресурсы
+rivet/mod/src/main/java/dev/abros/rivet/client/TaskScreen.java,62,Изменены зависимости
+rivet/mod/src/main/java/dev/abros/rivet/client/TaskScreen.java,62,Изменён резерв
+rivet/mod/src/main/java/dev/abros/rivet/client/TaskScreen.java,62,Изменён повтор
+rivet/mod/src/main/java/dev/abros/rivet/client/TaskScreen.java,62,Добавлен комментарий
+rivet/mod/src/main/java/dev/abros/rivet/client/TaskScreen.java,62,Изменена задача
+rivet/mod/src/main/java/dev/abros/rivet/client/TaskScreen.java,65,Обзор
+rivet/mod/src/main/java/dev/abros/rivet/client/TaskScreen.java,66,Статус: 
+rivet/mod/src/main/java/dev/abros/rivet/client/TaskScreen.java,66,Статус задачи
+rivet/mod/src/main/java/dev/abros/rivet/client/TaskScreen.java,66,Открыта
+rivet/mod/src/main/java/dev/abros/rivet/client/TaskScreen.java,66,В работе
+rivet/mod/src/main/java/dev/abros/rivet/client/TaskScreen.java,66,Готово
+rivet/mod/src/main/java/dev/abros/rivet/client/TaskScreen.java,67,Ответственный: 
+rivet/mod/src/main/java/dev/abros/rivet/client/TaskScreen.java,67,Не назначен
+rivet/mod/src/main/java/dev/abros/rivet/client/TaskScreen.java,67,Ответственный
+rivet/mod/src/main/java/dev/abros/rivet/client/TaskScreen.java,67,Выбрать участника
+rivet/mod/src/main/java/dev/abros/rivet/client/TaskScreen.java,67,Снять назначение
+rivet/mod/src/main/java/dev/abros/rivet/client/TaskScreen.java,67,Срок не задан
+rivet/mod/src/main/java/dev/abros/rivet/client/TaskScreen.java,67,Срок: 
+rivet/mod/src/main/java/dev/abros/rivet/client/TaskScreen.java,67,Срок задачи
+rivet/mod/src/main/java/dev/abros/rivet/client/TaskScreen.java,67,Выбрать дату и время
+rivet/mod/src/main/java/dev/abros/rivet/client/TaskScreen.java,67,Убрать срок
+rivet/mod/src/main/java/dev/abros/rivet/client/TaskScreen.java,67,Обзор
+rivet/mod/src/main/java/dev/abros/rivet/client/TaskScreen.java,67,Этапы
+rivet/mod/src/main/java/dev/abros/rivet/client/TaskScreen.java,67,Разбейте задачу на небольшие шаги
+rivet/mod/src/main/java/dev/abros/rivet/client/TaskScreen.java,67,На этой странице выполнено: 
+rivet/mod/src/main/java/dev/abros/rivet/client/TaskScreen.java,67, из 
+rivet/mod/src/main/java/dev/abros/rivet/client/TaskScreen.java,67,Добавить этап…
+rivet/mod/src/main/java/dev/abros/rivet/client/TaskScreen.java,67,Достигнут лимит этапов: 
+rivet/mod/src/main/java/dev/abros/rivet/client/TaskScreen.java,67,Название этапа
+rivet/mod/src/main/java/dev/abros/rivet/client/TaskScreen.java,68,Ресурсы
+rivet/mod/src/main/java/dev/abros/rivet/client/TaskScreen.java,68,Ресурсы
+rivet/mod/src/main/java/dev/abros/rivet/client/TaskScreen.java,69,Нужно: 
+rivet/mod/src/main/java/dev/abros/rivet/client/TaskScreen.java,69,Собрано
+rivet/mod/src/main/java/dev/abros/rivet/client/TaskScreen.java,69,Ещё 
+rivet/mod/src/main/java/dev/abros/rivet/client/TaskScreen.java,69,Склад ещё не проверен сервером
+rivet/mod/src/main/java/dev/abros/rivet/client/TaskScreen.java,69,Проверено: 
+rivet/mod/src/main/java/dev/abros/rivet/client/TaskScreen.java,69,Изменить список ресурсов
+rivet/mod/src/main/java/dev/abros/rivet/client/TaskScreen.java,69,Как подключить сундук
+rivet/mod/src/main/java/dev/abros/rivet/client/TaskScreen.java,70,Ресурсы
+rivet/mod/src/main/java/dev/abros/rivet/client/TaskScreen.java,72,Резерв общего запаса
+rivet/mod/src/main/java/dev/abros/rivet/client/TaskScreen.java,72,: свободно 
+rivet/mod/src/main/java/dev/abros/rivet/client/TaskScreen.java,72,", этой задаче "
+rivet/mod/src/main/java/dev/abros/rivet/client/TaskScreen.java,72,", другим "
+rivet/mod/src/main/java/dev/abros/rivet/client/TaskScreen.java,73,Резерв учитывается Rivet по последней проверке сервера. Предметы в сундуках остаются доступны игрокам.
+rivet/mod/src/main/java/dev/abros/rivet/client/TaskScreen.java,74,Снять резерв
+rivet/mod/src/main/java/dev/abros/rivet/client/TaskScreen.java,74,Зарезервировать требуемые ресурсы
+rivet/mod/src/main/java/dev/abros/rivet/client/TaskScreen.java,75,История
+rivet/mod/src/main/java/dev/abros/rivet/client/TaskScreen.java,75,Последние изменения
+rivet/mod/src/main/java/dev/abros/rivet/client/TaskScreen.java,75,Изменений ещё нет
+rivet/mod/src/main/java/dev/abros/rivet/client/TaskScreen.java,76,Комментарии
+rivet/mod/src/main/java/dev/abros/rivet/client/TaskScreen.java,76,Комментарии
+rivet/mod/src/main/java/dev/abros/rivet/client/TaskScreen.java,76,+ Комментарий
+rivet/mod/src/main/java/dev/abros/rivet/client/TaskScreen.java,76,Достигнут лимит комментариев: 
+rivet/mod/src/main/java/dev/abros/rivet/client/TaskScreen.java,76,Комментарий
+rivet/mod/src/main/java/dev/abros/rivet/client/TaskScreen.java,79,Поиск задач
+rivet/mod/src/main/java/dev/abros/rivet/client/TaskScreen.java,80,Все
+rivet/mod/src/main/java/dev/abros/rivet/client/TaskScreen.java,80,В работе
+rivet/mod/src/main/java/dev/abros/rivet/client/TaskScreen.java,80,Готово
+rivet/mod/src/main/java/dev/abros/rivet/client/TaskScreen.java,80,Архив
+rivet/mod/src/main/java/dev/abros/rivet/client/TaskScreen.java,80,Открыты
+rivet/mod/src/main/java/dev/abros/rivet/client/TaskScreen.java,80,Показать задачи
+rivet/mod/src/main/java/dev/abros/rivet/client/TaskScreen.java,80,Все
+rivet/mod/src/main/java/dev/abros/rivet/client/TaskScreen.java,80,Открытые
+rivet/mod/src/main/java/dev/abros/rivet/client/TaskScreen.java,80,В работе
+rivet/mod/src/main/java/dev/abros/rivet/client/TaskScreen.java,80,Готовые
+rivet/mod/src/main/java/dev/abros/rivet/client/TaskScreen.java,80,Архив
+rivet/mod/src/main/java/dev/abros/rivet/client/TaskScreen.java,80,Сбросить поиск и фильтр задач
+rivet/mod/src/main/java/dev/abros/rivet/client/TaskScreen.java,80,Новая задача
+rivet/mod/src/main/java/dev/abros/rivet/client/TaskScreen.java,80,Архивировать завершённые
+rivet/mod/src/main/java/dev/abros/rivet/client/TaskScreen.java,80,Все завершённые
+rivet/mod/src/main/java/dev/abros/rivet/client/TaskScreen.java,80,Завершены больше 7 дней назад
+rivet/mod/src/main/java/dev/abros/rivet/client/TaskScreen.java,80,Завершены больше 30 дней назад
+rivet/mod/src/main/java/dev/abros/rivet/client/TaskScreen.java,80,Архивировать завершённые задачи
+rivet/mod/src/main/java/dev/abros/rivet/client/TaskScreen.java,80,Завершите редактирование задачи
+rivet/mod/src/main/java/dev/abros/rivet/client/TaskScreen.java,80,Дождитесь завершения текущего запроса
+rivet/mod/src/main/java/dev/abros/rivet/client/TaskScreen.java,80,Сначала повторите запрос к серверу
+rivet/mod/src/main/java/dev/abros/rivet/client/TaskScreen.java,80,Загрузка лимитов сервера
+rivet/mod/src/main/java/dev/abros/rivet/client/TaskScreen.java,82,Не назначен
+rivet/mod/src/main/java/dev/abros/rivet/client/TaskScreen.java,82,Этапы: 
+rivet/mod/src/main/java/dev/abros/rivet/client/TaskScreen.java,82,До 
+rivet/mod/src/main/java/dev/abros/rivet/client/TaskScreen.java,82,Без срока
+rivet/mod/src/main/java/dev/abros/rivet/client/TaskScreen.java,84,Действия ▾
+rivet/mod/src/main/java/dev/abros/rivet/client/TaskScreen.java,84,Код задачи и дополнительные действия
+rivet/mod/src/main/java/dev/abros/rivet/client/TaskScreen.java,84,Обзор
+rivet/mod/src/main/java/dev/abros/rivet/client/TaskScreen.java,84,Этапы
+rivet/mod/src/main/java/dev/abros/rivet/client/TaskScreen.java,84,Ресурсы
+rivet/mod/src/main/java/dev/abros/rivet/client/TaskScreen.java,84,Комментарии
+rivet/mod/src/main/java/dev/abros/rivet/client/TaskScreen.java,84,История
+rivet/mod/src/main/java/dev/abros/rivet/client/TaskScreen.java,84,Обзор
+rivet/mod/src/main/java/dev/abros/rivet/client/TaskScreen.java,84,Этапы
+rivet/mod/src/main/java/dev/abros/rivet/client/TaskScreen.java,84,Ресурсы
+rivet/mod/src/main/java/dev/abros/rivet/client/TaskScreen.java,84,Комментарии
+rivet/mod/src/main/java/dev/abros/rivet/client/TaskScreen.java,86,Переименовать или удалить этап
+rivet/mod/src/main/java/dev/abros/rivet/client/TaskScreen.java,87,К началу списка
+rivet/mod/src/main/java/dev/abros/rivet/client/TaskScreen.java,87,Следующая страница
+rivet/mod/src/main/java/dev/abros/rivet/client/TaskScreen.java,88,Отменить
+rivet/mod/src/main/java/dev/abros/rivet/client/TaskScreen.java,93,В работе
+rivet/mod/src/main/java/dev/abros/rivet/client/TaskScreen.java,93,Готово
+rivet/mod/src/main/java/dev/abros/rivet/client/TaskScreen.java,93,Открыта
+rivet/mod/src/main/java/dev/abros/rivet/client/TaskScreen.java,95,Обзор
+rivet/mod/src/main/java/dev/abros/rivet/client/TaskScreen.java,103,Задачи недоступны
+rivet/mod/src/main/java/dev/abros/rivet/client/TaskScreen.java,103,Загружаем задачи…
+rivet/mod/src/main/java/dev/abros/rivet/client/TaskScreen.java,103,Начните с первой задачи
+rivet/mod/src/main/java/dev/abros/rivet/client/TaskScreen.java,103,Задачи не найдены
+rivet/mod/src/main/java/dev/abros/rivet/client/TaskScreen.java,103,Получаем актуальный список с сервера.
+rivet/mod/src/main/java/dev/abros/rivet/client/TaskScreen.java,103,Нажмите «Новая задача» и добавьте первый шаг.
+rivet/mod/src/main/java/dev/abros/rivet/client/TaskScreen.java,103,Измените запрос или сбросьте фильтр кнопкой ×.
+rivet/mod/src/main/java/dev/abros/rivet/client/TaskScreen.java,103,Ваш следующий шаг
+rivet/mod/src/main/java/dev/abros/rivet/client/TaskScreen.java,103,Открываем задачу…
+rivet/mod/src/main/java/dev/abros/rivet/client/TaskScreen.java,103,Выберите карточку слева или создайте новую задачу.
+rivet/mod/src/main/java/dev/abros/rivet/client/TaskScreen.java,103,Получаем актуальные данные с сервера.
+rivet/mod/src/main/java/dev/abros/rivet/client/TaskScreen.java,104,Изменения сохранены
+rivet/mod/src/main/java/dev/abros/rivet/client/TaskScreen.java,104,отменено
+rivet/mod/src/main/java/dev/abros/rivet/client/TaskScreen.java,104,Новая задача
+rivet/mod/src/main/java/dev/abros/rivet/client/TaskScreen.java,104,Редактирование задачи
+rivet/mod/src/main/java/dev/abros/rivet/client/TaskStockSignScreen.java,11,Подключить склад
+rivet/mod/src/main/java/dev/abros/rivet/client/TaskStockSignScreen.java,14,Копировать шаблон
+rivet/mod/src/main/java/dev/abros/rivet/client/TaskStockSignScreen.java,14,Три строки скопированы
+rivet/mod/src/main/java/dev/abros/rivet/client/TaskStockSignScreen.java,14,Готово
+rivet/mod/src/main/java/dev/abros/rivet/client/TaskStockSignScreen.java,16,Задача: 
+rivet/mod/src/main/java/dev/abros/rivet/client/TaskStockSignScreen.java,16,Прикрепите табличку к контейнеру:
+rivet/mod/src/main/java/dev/abros/rivet/client/TaskStockSignScreen.java,16,Маркер
+rivet/mod/src/main/java/dev/abros/rivet/client/TaskStockSignScreen.java,16,Ник владельца
+rivet/mod/src/main/java/dev/abros/rivet/client/TaskStockSignScreen.java,16,Объединение
+rivet/mod/src/main/java/dev/abros/rivet/client/TaskStockSignScreen.java,16,Код задачи
+rivet/mod/src/main/java/dev/abros/rivet/client/TaskStockSignScreen.java,16,Регистр букв не важен. Сервер считает ресурсы в загруженных складах; после выгрузки показывает последнее подтверждённое количество.
+rivet/mod/src/main/java/dev/abros/rivet/client/UiConfirmDialog.java,12,Подтвердить удаление
+rivet/mod/src/main/java/dev/abros/rivet/client/UiConfirmDialog.java,12,Подтвердить
+rivet/mod/src/main/java/dev/abros/rivet/client/UiConfirmDialog.java,12,Отмена
+rivet/mod/src/main/java/dev/abros/rivet/client/UiFormDraft.java,10,Не удалось восстановить черновик
+rivet/mod/src/main/java/dev/abros/rivet/client/UiFormDraft.java,11,Не удалось сохранить черновик
+rivet/mod/src/main/java/dev/abros/rivet/client/UiFormDraft.java,12,Не удалось удалить черновик
+rivet/mod/src/main/java/dev/abros/rivet/client/UiSearchToolbar.java,15,Поиск
+rivet/mod/src/main/java/dev/abros/rivet/client/UiSearchToolbar.java,16,Все записи
+rivet/mod/src/main/java/dev/abros/rivet/client/UiSearchToolbar.java,16,Мои записи
+rivet/mod/src/main/java/dev/abros/rivet/client/UiSearchToolbar.java,16,Участвую
+rivet/mod/src/main/java/dev/abros/rivet/client/UiSearchToolbar.java,16,По умолчанию
+rivet/mod/src/main/java/dev/abros/rivet/client/UiSearchToolbar.java,16,Сначала новые
+rivet/mod/src/main/java/dev/abros/rivet/client/UiSearchToolbar.java,16,Сначала старые
+rivet/mod/src/main/java/dev/abros/rivet/client/UiSearchToolbar.java,16,Сбросить условия
+rivet/mod/src/main/java/dev/abros/rivet/client/UiSearchToolbar.java,17,Фильтры и порядок
+rivet/mod/src/main/java/dev/abros/rivet/client/UiSearchToolbar.java,17,Фильтры и порядок записей
+rivet/mod/src/main/java/dev/abros/rivet/client/UiSearchToolbar.java,19,Поиск
+rivet/mod/src/main/java/dev/abros/rivet/client/UiSearchToolbar.java,20,Все
+rivet/mod/src/main/java/dev/abros/rivet/client/UiSearchToolbar.java,20,Мои
+rivet/mod/src/main/java/dev/abros/rivet/client/UiSearchToolbar.java,20,Участвую
+rivet/mod/src/main/java/dev/abros/rivet/client/UiSearchToolbar.java,20,Показать
+rivet/mod/src/main/java/dev/abros/rivet/client/UiSearchToolbar.java,21,По умолчанию
+rivet/mod/src/main/java/dev/abros/rivet/client/UiSearchToolbar.java,21,Сначала новые
+rivet/mod/src/main/java/dev/abros/rivet/client/UiSearchToolbar.java,21,Сначала старые
+rivet/mod/src/main/java/dev/abros/rivet/client/UiSearchToolbar.java,22,Порядок записей
+rivet/mod/src/main/java/dev/abros/rivet/client/UiSearchToolbar.java,23,Архив · 
+rivet/mod/src/main/java/dev/abros/rivet/client/UiSearchToolbar.java,23,Сбросить ×
+rivet/mod/src/main/java/dev/abros/rivet/client/UiSearchToolbar.java,23,Убрать поиск: 
+rivet/mod/src/main/java/dev/abros/rivet/client/UiSearchToolbar.java,23,Показать все записи
+rivet/mod/src/main/java/dev/abros/rivet/client/UiSearchToolbar.java,23,Сбросить порядок
+rivet/mod/src/main/java/dev/abros/rivet/client/UiSearchToolbar.java,23,Сбросить все условия
+rivet/mod/src/main/java/dev/abros/rivet/client/UiSearchToolbar.java,23,Активные условия
+rivet/mod/src/main/java/dev/abros/rivet/client/UiSearchToolbar.java,28,Найти
+rivet/mod/src/main/java/dev/abros/rivet/client/UiSettingsPreview.java,10,Предпросмотр · 
+rivet/mod/src/main/java/dev/abros/rivet/client/UiSettingsPreview.java,10,Чат
+rivet/mod/src/main/java/dev/abros/rivet/client/UiSettingsPreview.java,12,Игрок
+rivet/mod/src/main/java/dev/abros/rivet/client/UiSettingsPreview.java,12,: Привет!
+rivet/mod/src/main/java/dev/abros/rivet/client/UiSettingsPreview.java,13,Роль · В сети
+rivet/mod/src/main/java/dev/abros/rivet/client/UiSettingsPreview.java,13,!общий · #объединение
+rivet/mod/src/main/java/dev/abros/rivet/client/UiSettingsPreview.java,15,Предпросмотр виджета
+rivet/mod/src/main/java/dev/abros/rivet/client/UiSettingsShell.java,10,Оформление
+rivet/mod/src/main/java/dev/abros/rivet/client/UiSettingsShell.java,10,Виджет
+rivet/mod/src/main/java/dev/abros/rivet/client/UiSettingsShell.java,10,Уведомления
+rivet/mod/src/main/java/dev/abros/rivet/client/UiSettingsShell.java,10,Чат
+rivet/mod/src/main/java/dev/abros/rivet/client/UiSettingsShell.java,10,Навигация
+rivet/mod/src/main/java/dev/abros/rivet/client/UiSettingsShell.java,10,Редактор HUD
+rivet/mod/src/main/java/dev/abros/rivet/client/UiSettingsShell.java,16,Раздел
+rivet/mod/src/main/java/dev/abros/rivet/client/UiSettingsShell.java,16,Раздел настроек
+rivet/mod/src/main/java/dev/abros/rivet/client/UiSettingsShell.java,17,Поиск…
+rivet/mod/src/main/java/dev/abros/rivet/client/UiSettingsShell.java,20,Поиск…
+rivet/mod/src/main/java/dev/abros/rivet/client/UiSettingsShell.java,22,Редактор HUD…
+rivet/mod/src/main/java/dev/abros/rivet/client/UiSettingsShell.java,26,Очистить поиск
+rivet/mod/src/main/java/dev/abros/rivet/client/UiSettingsShell.java,26,Сбросить раздел
+rivet/mod/src/main/java/dev/abros/rivet/client/UiSettingsShell.java,32,Сбросить раздел?
+rivet/mod/src/main/java/dev/abros/rivet/client/UiSettingsShell.java,32,Будут восстановлены стандартные значения только текущего раздела.
+rivet/mod/src/main/java/dev/abros/rivet/client/UiSkinCard.java,12,Обычный скин
+rivet/mod/src/main/java/dev/abros/rivet/client/UiSkinCard.java,14, · активен
+rivet/mod/src/main/java/dev/abros/rivet/client/UiTabs.java,17,Раздел
+rivet/mod/src/main/java/dev/abros/rivet/client/UiTextForm.java,25,Сначала проверьте результат предыдущей отправки
+rivet/mod/src/main/java/dev/abros/rivet/client/UiTextForm.java,25,Дождитесь завершения сохранения
+rivet/mod/src/main/java/dev/abros/rivet/client/UiTextForm.java,25,Отмена
+rivet/mod/src/main/java/dev/abros/rivet/client/UiTextForm.java,25,Дождитесь завершения сохранения
+rivet/mod/src/main/java/dev/abros/rivet/client/UiThemePicker.java,9,Темы оформления
+rivet/mod/src/main/java/dev/abros/rivet/client/UiThemePicker.java,14,Текст · описание
+rivet/mod/src/main/java/dev/abros/rivet/client/UiThemePicker.java,14,✓ Выбрана
+rivet/mod/src/main/java/dev/abros/rivet/client/UiThemePicker.java,14,Выбрать
+rivet/mod/src/main/java/dev/abros/rivet/client/VoiceDiagnosticsScreen.java,10,Голосовой чат
+rivet/mod/src/main/java/dev/abros/rivet/client/XaeroBridge.java,18,Xaero ещё не подготовил карту этого сервера.
+rivet/mod/src/main/java/dev/abros/rivet/client/XaeroBridge.java,30,"Сначала посетите это измерение, чтобы Xaero определил его карту."
+rivet/mod/src/main/java/dev/abros/rivet/client/XaeroBridge.java,32,В Xaero не определена карта этого измерения. Выберите её после посещения измерения.
+rivet/mod/src/main/java/dev/abros/rivet/client/XaeroBridge.java,34,Измерение карты не совпадает с местом.
+rivet/mod/src/main/java/dev/abros/rivet/client/XaeroMapBridge.java,22,Мир ещё не загружен.
+rivet/mod/src/main/java/dev/abros/rivet/client/XaeroMapBridge.java,23,Это место в другом измерении. Перейдите в него или сохраните метку через Xaero Minimap.
+rivet/mod/src/main/java/dev/abros/rivet/client/XaeroMapBridge.java,25,Карта ещё загружается.
+rivet/mod/src/main/java/dev/abros/rivet/client/XaeroMapBridge.java,27,Карта ещё загружается.
+rivet/mod/src/main/java/dev/abros/rivet/client/XaeroMapBridge.java,30,Выберите текущее измерение в Xaero World Map и повторите.

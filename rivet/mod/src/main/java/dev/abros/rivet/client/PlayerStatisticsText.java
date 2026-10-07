@@ -6,7 +6,7 @@ import java.util.*;
 final class PlayerStatisticsText {
     static List<String> lines(JsonObject player){return lines(player,178);}
     static List<String> lines(JsonObject player,int width){var rows=new ArrayList<>(biography(player,width));rows.addAll(statistics(player));return rows;}
-    static List<String> biography(JsonObject player,int width){var rows=new ArrayList<String>();for(String field:List.of("about")){String text=dev.abros.rivet.core.Json.opt(player,field,"");if(text.isBlank())continue;int count=0;for(var line:net.minecraft.client.Minecraft.getInstance().font.split(net.minecraft.network.chat.Component.literal((field.equals("interests")?"Интересы: ":"О себе: ")+text),width)){if(count++>=2)break;rows.add(plain(line));}}return rows;}
+    static List<String> biography(JsonObject player,int width){var rows=new ArrayList<String>();for(String field:List.of("about")){String text=dev.abros.rivet.core.Json.opt(player,field,"");if(text.isBlank())continue;int count=0;for(var line:net.minecraft.client.Minecraft.getInstance().font.split(net.minecraft.network.chat.Component.literal("О себе: "+text),width)){if(count++>=2)break;rows.add(plain(line));}}return rows;}
     static List<String> statistics(JsonObject player){var rows=new ArrayList<String>();if(!player.has("statistics"))return rows;var s=player.getAsJsonObject("statistics");
         if(s.has("firstJoin"))rows.add("На сервере с: "+day(s.get("firstJoin").getAsLong()));
         if(s.has("totalMillis"))rows.add("Время игры: "+duration(s.get("totalMillis").getAsLong()));

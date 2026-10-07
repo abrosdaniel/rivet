@@ -4,7 +4,7 @@ import net.minecraft.client.gui.screens.Screen;
 /** Cross-screen contract: repeated semantic actions must not drift back to local sizes. */
 final class UiGeometryHarness {
  static void verify(Screen screen){
-  boolean framed=screen instanceof HubScreen||screen instanceof RegistryScreen||screen instanceof SkinsScreen||screen instanceof FeatureListScreen||screen instanceof TaskScreen||screen instanceof CommunityScreen||screen instanceof ReportQueueScreen||screen instanceof ServerMenuScreen||screen instanceof ServerInfoScreen||screen instanceof FeatureListScreen list&&list.kind.equals("players");
+  boolean framed=screen instanceof SkinsScreen||screen instanceof FeatureListScreen||screen instanceof TaskScreen||screen instanceof CommunityScreen||screen instanceof ReportQueueScreen||screen instanceof ServerMenuScreen||screen instanceof FeatureListScreen list&&list.kind.equals("players");
   if(framed){var frame=UiWorkspace.fit(screen.width,screen.height).frame();for(var child:screen.children())if(child instanceof net.minecraft.client.gui.components.AbstractWidget widget&&widget.visible&&(widget.getX()<frame.x()||widget.getY()<frame.y()||widget.getX()+widget.getWidth()>frame.right()||widget.getY()+widget.getHeight()>frame.bottom()))throw new IllegalStateException(screen.getClass().getSimpleName()+": widget escaped inset frame: "+widget.getMessage().getString());}
 
   if(screen instanceof ScrollScreen scrolling && scrolling.scrollLayout()!=null)verifyScroll(screen,scrolling.scrollLayout());
@@ -16,7 +16,7 @@ final class UiGeometryHarness {
    var command=UiActions.commandOf(button);String label=button.getMessage().getString();
    if((label.equals("Обновить")||label.equals("Повторить"))&&command==null)throw new IllegalStateException(screen.getClass().getSimpleName()+": local refresh/retry button");
    if(command!=null){
-    boolean workspace=screen instanceof TaskScreen||screen instanceof CommunityScreen||screen instanceof ReportQueueScreen||screen instanceof ServerMenuScreen||screen instanceof ServerInfoScreen||screen instanceof FeatureListScreen list&&list.kind.equals("players");
+    boolean workspace=screen instanceof TaskScreen||screen instanceof CommunityScreen||screen instanceof ReportQueueScreen||screen instanceof ServerMenuScreen||screen instanceof FeatureListScreen list&&list.kind.equals("players");
     if(workspace&&button.getY()==UiWorkspace.fit(screen.width,screen.height).footer().y()){var footer=UiPageFooter.workspace(screen.width,screen.height);var slot=command==UiActions.Command.BACK||command==UiActions.Command.CLOSE?footer.end():footer.start();if(button.getX()!=slot.x()||button.getWidth()!=slot.width())throw new IllegalStateException(screen.getClass().getSimpleName()+": footer alignment drift");}
 if(button.getHeight()!=UiActions.CONTROL_HEIGHT||button.getWidth()>UiActions.COMMAND_WIDTH)throw new IllegalStateException(screen.getClass().getSimpleName()+": invalid command size");
     if(screen.width>=420&&button.getWidth()!=UiActions.COMMAND_WIDTH)throw new IllegalStateException(screen.getClass().getSimpleName()+": command width drift: "+command+" "+button.getWidth());}

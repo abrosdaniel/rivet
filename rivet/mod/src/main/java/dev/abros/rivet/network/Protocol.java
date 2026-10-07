@@ -14,12 +14,10 @@ public final class Protocol {
     private static final java.util.concurrent.atomic.AtomicLong lastWarning=new java.util.concurrent.atomic.AtomicLong();
     private static void failedPacket(Exception error){long now=System.nanoTime(),previous=lastWarning.get();if((previous==0||now-previous>java.util.concurrent.TimeUnit.MINUTES.toNanos(1))&&lastWarning.compareAndSet(previous,now))System.getLogger(Protocol.class.getName()).log(System.Logger.Level.WARNING,"Rivet menu packet rejected: "+error.getClass().getSimpleName());}
 
-    public static Consumer<JsonObject> serverHello=j->{};
     public static Consumer<String> incompatible=version->{};
     public static volatile java.util.Set<String> supportedFeatures=java.util.Set.of();
     public static Consumer<JsonObject> featureState=j->{};
     public static BiConsumer<JsonObject,IPayloadContext> featureRequest=(j,c)->{};
-    public static volatile String expectedServerId="";
     public static Supplier<JsonObject> clientState=JsonObject::new;
     public static BiConsumer<JsonObject,IPayloadContext> serverReply=(j,c)->c.disconnect(net.minecraft.network.chat.Component.literal("Rivet server not configured"));
     public static volatile JsonObject profile=new JsonObject();
@@ -49,10 +47,9 @@ public final class Protocol {
         handshake.configurationToClient(Hello.TYPE,Hello.CODEC,(payload,context)->{
             try{var hello=Json.parse(payload.json());String serverVersion=Json.str(hello,"coreVersion");
                 String failure=ConnectionCompatibility.failure(serverVersion,dev.abros.rivet.Rivet.VERSION,hello.getAsJsonObject("protocols"));
-                if(!failure.isEmpty()){incompatible.accept(ConnectionCompatibility.branch(serverVersion));context.disconnect(net.minecraft.network.chat.Component.literal(failure));return;}
+                if(!failure.isEmpty()){incompatible.accept(serverVersion);context.disconnect(net.minecraft.network.chat.Component.literal(failure));return;}
                 supportedFeatures=ConnectionCompatibility.common(hello.get("features"));
-                if(!expectedServerId.isEmpty()&&!Json.opt(hello,"serverId","").isEmpty()&&!expectedServerId.equals(Json.str(hello,"serverId"))){context.disconnect(net.minecraft.network.chat.Component.literal("Rivet: SERVER_MISMATCH"));return;}
-                expectedServerId="";serverHello.accept(hello);var state=clientState.get();state.addProperty("nonce",Json.str(hello,"nonce"));state.addProperty("protocolVersion",WireProtocols.version("pack"));state.add("protocols",WireProtocols.current());state.add("features",ConnectionCompatibility.features());context.reply(new ClientState(Json.GSON.toJson(state)));}
+                var state=clientState.get();state.addProperty("nonce",Json.str(hello,"nonce"));state.addProperty("protocolVersion",WireProtocols.version("pack"));state.add("protocols",WireProtocols.current());state.add("features",ConnectionCompatibility.features());context.reply(new ClientState(Json.GSON.toJson(state)));}
             catch(Exception e){context.disconnect(net.minecraft.network.chat.Component.literal("Invalid Rivet handshake"));}
         });
         handshake.configurationToServer(ClientState.TYPE,ClientState.CODEC,(payload,context)->{try{serverReply.accept(Json.parse(payload.json()),context);}catch(Exception e){context.disconnect(net.minecraft.network.chat.Component.literal("Invalid Rivet client state"));}});

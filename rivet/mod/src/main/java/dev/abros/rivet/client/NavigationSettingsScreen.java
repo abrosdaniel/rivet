@@ -6,7 +6,7 @@ import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.network.chat.Component;
 
 /** Navigation uses the same bounded settings workspace and controls as the HUD. */
-final class NavigationSettingsScreen extends ScrollScreen {
+final class NavigationSettingsScreen extends ScrollScreen implements SettingsTarget {
  private long adapterRevision=-1;
  private final Screen parent;private UiDialog dialog;
  NavigationSettingsScreen(Screen parent){super(Component.literal("Настройки Rivet"));this.parent=parent;}
@@ -22,6 +22,7 @@ final class NavigationSettingsScreen extends ScrollScreen {
    else if(row==3){var toggle=addRenderableWidget(new UiToggle("Метка маршрута в Xaero’s",body.x(),y,w,s.directionXaero,()->change(()->s.directionXaero=!s.directionXaero)));toggle.active=ClientCompatibilityRegistry.xaeroAvailable();if(!toggle.active)toggle.setTooltip(net.minecraft.client.gui.components.Tooltip.create(Component.literal("Слой Xaero недоступен. Указатель Rivet работает самостоятельно.")));}
   }
  }
+ public void revealSetting(String id){revealRow(SettingsCatalog.row(5,id));rebuildWidgets();}
  @Override public void tick(){long revision=ClientCompatibilityRegistry.revision();if(adapterRevision!=revision){adapterRevision=revision;rebuildWidgets();}}
  private void reset(){var s=HudSettings.INSTANCE;s.directionEnabled=true;s.directionCoordinates=true;s.directionXaero=true;s.directionOpacity=.85f;s.save();}
  @Override public void renderBackground(GuiGraphics g,int x,int y,float d){UiDialog.surface(g,dialog.frame().x(),dialog.frame().y(),dialog.frame().width(),dialog.frame().height());}

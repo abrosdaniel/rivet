@@ -17,6 +17,17 @@ class CommunityStoreTest {
  JsonObject create(String section)throws Exception{var j=input(section,"create","");j.addProperty("title","Example");j.addProperty("description","Description");j.addProperty("days",14);j.addProperty("type","Команда");j.addProperty("startsAt",Instant.now().plusSeconds(120).toString());j.addProperty("endsAt",Instant.now().plusSeconds(60).toString());j.addProperty("capacity",1);var options=new JsonArray();options.add("One");options.add("Two");j.add("options",options);return db.request(Set.of("events","polls").contains(section)?admin:owner,j).getAsJsonObject("detail");}
  String id(JsonObject j){return Json.str(j,"id");}
  JsonObject detail(String section,String id,CommunityStore.Actor a)throws Exception{return db.request(a,input(section,"detail",id)).getAsJsonObject("detail");}
+ @Test void trashMetadataUsesConfiguredRetentionWithoutPersistingDerivedDeadline()throws Exception{
+  for(int days:List.of(1,30,365)){
+   owner=actor("Owner"+days,false);db.seen(owner);
+   db.retention(30,days,1000);var created=create("board");String key=id(created);
+   var deleted=db.request(owner,input("board","delete",key));var row=deleted.getAsJsonObject("detail");
+   assertEquals(days,deleted.get("trashDays").getAsInt());assertEquals(row.get("deletedAt").getAsLong()+days*86400000L,row.get("restoreUntil").getAsLong());
+   assertFalse(TestDatabase.database(world).communityTransaction(()->db.get(key).has("restoreUntil")));
+   var listed=db.request(owner,input("board","list",""));assertEquals(days,listed.get("trashDays").getAsInt());
+   db.retention(30,2,1000);var refreshed=detail("board",key,owner);assertEquals(refreshed.get("deletedAt").getAsLong()+2*86400000L,refreshed.get("restoreUntil").getAsLong());
+  }
+ }
  @Test void removedWorkspaceOperationsAreRejectedBeforeReplay()throws Exception{
   for(String op:List.of("spaceList","spaceGet","spaceSave","spaceDelete","spaceLink","spaceFavorite","spaceFavorites")){
    var q=input("home",op,"");q.addProperty("operationId",UUID.randomUUID().toString());q.addProperty("issuedAt",System.currentTimeMillis());

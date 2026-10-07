@@ -10,7 +10,6 @@ class CoreTest {
     @Test void duplicateKeysRejected(){assertThrows(Exception.class,()->Json.parse("{\"a\":1,\"a\":2}"));}
     @Test void unsafePathsRejected(){for(String p:List.of("../mods/a.jar","mods/../a.jar","saves/world","config/rivet-client.toml","mods/CON.jar","mods/a.jar.","mods/a\\b.jar","mods//a.jar","/mods/a.jar"))assertThrows(IllegalArgumentException.class,()->SafePaths.validate(p),p);}
     @Test void symlinkEscapeRejected()throws Exception{Path outside=Files.createTempDirectory("rivet-outside");try{Files.createSymbolicLink(game.resolve("mods"),outside);assertThrows(Exception.class,()->SafePaths.resolve(game,"mods/a.jar"));}finally{Files.deleteIfExists(game.resolve("mods"));Files.delete(outside);}}
-    @Test void repoIdentityNormalized(){assertEquals("https://github.com/owner/repo",Repositories.normalize("https://github.com/Owner/Repo.git/"));assertThrows(Exception.class,()->Repositories.normalize("https://user@github.com/a/b"));}
     private String object(String text)throws Exception{String h=Hashes.sha256(text.getBytes());Path p=game.resolve("rivet/cache/objects/"+h.substring(0,2)+"/"+h);Files.createDirectories(p.getParent());Files.writeString(p,text);return h;}
     private Planner.Plan plan(String before,String after){return new Planner.Plan(UUID.randomUUID().toString(),"project",List.of(new Planner.Change("mods/a.jar",before,after)),Map.of(),Set.of(),List.of(),0);}
     @Test void recoveryDoesNotUndoCommittedTransaction()throws Exception{

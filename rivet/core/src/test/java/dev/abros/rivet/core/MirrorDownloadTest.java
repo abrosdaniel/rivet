@@ -8,7 +8,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import static org.junit.jupiter.api.Assertions.*;
 class MirrorDownloadTest {
  @TempDir Path game;
- Manifest.FileEntry file(){return new Manifest.FileEntry("mod","mods/test.jar","1",List.of("https://first.example/mod.jar","https://second.example/mod.jar"),Hashes.sha256("good".getBytes()),4,"enforce");}
+ Cache.Artifact file(){return new Cache.Artifact("mods/test.jar",List.of("https://first.example/mod.jar","https://second.example/mod.jar"),Hashes.sha256("good".getBytes()),4);}
  @Test void mismatchFallsBackAndVerifiedCacheAvoidsNetwork()throws Exception{
   var calls=new ArrayList<String>();var remote=new Remote(){@Override public void download(String url,Path to,long limit,AtomicBoolean cancel)throws IOException{calls.add(url);assertFalse(Files.exists(to));Files.writeString(to,url.contains("first")?"evil":"good");}};
   var cache=new Cache(game,remote);assertEquals("good",Files.readString(cache.obtain(file(),new AtomicBoolean())));cache.obtain(file(),new AtomicBoolean());assertEquals(file().urls(),calls);

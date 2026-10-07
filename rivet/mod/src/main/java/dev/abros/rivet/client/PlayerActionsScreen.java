@@ -27,12 +27,13 @@ final class PlayerActionsScreen extends ScrollScreen {
    var stats=PlayerStatisticsText.statistics(player);for(int i=0;i<stats.size();i+=2){var tiles=new ArrayList<Action>();for(int n=i;n<Math.min(i+2,stats.size());n++)tiles.add(new Action(stats.get(n),null));rows.add(new Action("stats",null,tiles));}
    }else{
    rows.add(new Action("stat:Общение и объединения",null));
-   if(!self){var social=new ArrayList<Action>();if(online&&actions.contains(new JsonPrimitive("tell")))social.add(new Action("Написать",()->openChat(surface(),Json.str(player,"name"))));social.add(new Action("Пригласить",()->CommunityScreen.invite(surface(),player)));if(social.size()==2)pair(social.get(0),social.get(1));else rows.addAll(social);}
-   rows.add(new Action("Объединения игрока",()->CommunityScreen.groupsFor(surface(),Json.str(player,"uuid"))));
+   if(!self){var social=new ArrayList<Action>();if(online&&actions.contains(new JsonPrimitive("tell")))social.add(new Action("Написать",()->openChat(surface(),Json.str(player,"name"))));if(ServerMenuClient.module("groups"))social.add(new Action("Пригласить",()->CommunityScreen.invite(surface(),player)));if(social.size()==2)pair(social.get(0),social.get(1));else rows.addAll(social);}
+   if(ServerMenuClient.module("groups"))rows.add(new Action("Объединения игрока",()->CommunityScreen.groupsFor(surface(),Json.str(player,"uuid"))));
    if(!self)rows.add(new Action("stat:Безопасность",null));
-   if(!self)pair(new Action("Пожаловаться",()->minecraft.setScreen(new ReportScreen(surface(),"Игрок: "+Json.str(player,"name")+"\n"))),new Action("Общение…",()->PersonalProfileScreen.ignores(surface(),Json.str(player,"name"))));
+   if(!self&&!ServerMenuClient.module("reports"))rows.add(new Action("Общение…",()->PersonalProfileScreen.ignores(surface(),Json.str(player,"name"))));
+   if(!self&&ServerMenuClient.module("reports"))pair(new Action("Пожаловаться",()->minecraft.setScreen(new ReportScreen(surface(),"Игрок: "+Json.str(player,"name")+"\n"))),new Action("Общение…",()->PersonalProfileScreen.ignores(surface(),Json.str(player,"name"))));
    if(!self&&ModerationVoteScreen.enabled())rows.add(new Action("Голосование о нарушении…",()->minecraft.setScreen(new ModerationVoteScreen(surface(),player))));
-   if(ServerMenuClient.admin()||actions.size()>1||resetPermission)rows.add(new Action("Модерация…",()->minecraft.setScreen(new PlayerActionsScreen(surface(),player,actions,true))));
+   if(ServerMenuClient.module("reports")&&(ServerMenuClient.admin()||actions.size()>1)||resetPermission)rows.add(new Action("Модерация…",()->minecraft.setScreen(new PlayerActionsScreen(surface(),player,actions,true))));
   }
   }
   var available=new ArrayList<String>();for(var entry:actions){if(!moderationOnly)continue;String action=entry.getAsString();if(action.equals("tell"))continue;if(online||Set.of("ban","pardon").contains(action))available.add(action);}

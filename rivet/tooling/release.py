@@ -37,28 +37,6 @@ def package(root, artifact, output):
             raise ValueError("Invalid bundled protocol versions")
     output.mkdir(parents=True, exist_ok=True)
     shutil.copyfile(jars[0], output / name)
-    tracked = subprocess.check_output(["git", "-C", str(root), "ls-files", "-z", "--", "template/"]).decode().split("\0")
-    entries = [Path(p) for p in tracked if p and (root / p).is_file()]
-    required = {Path("template/rivet.json"), Path("template/.github/workflows/rivet.yml")}
-    entries = sorted(set(entries) | {p for p in required if (root / p).is_file()})
-    if not required.issubset(entries):
-        raise ValueError("The complete template must be committed before release")
-    with zipfile.ZipFile(output / "template.zip", "w", zipfile.ZIP_DEFLATED) as archive:
-        for relative in sorted(entries):
-            source = root / relative
-            if source.is_symlink():
-                raise ValueError(f"Template symlinks are not supported: {relative}")
-            entry = zipfile.ZipInfo(relative.relative_to("template").as_posix(), (1980, 1, 1, 0, 0, 0))
-            entry.compress_type = zipfile.ZIP_DEFLATED
-            entry.external_attr = 0o100644 << 16
-            data = source.read_bytes()
-            if relative.as_posix() == "template/.github/workflows/rivet.yml":
-                revision = "main"
-                text = data.decode()
-                text = re.sub(r"(seed\.yml@)[^\s]+", lambda m: m[1]+revision, text)
-                text = re.sub(r"(tooling-ref: )[^\s]+", lambda m: m[1]+revision, text)
-                data = text.encode()
-            archive.writestr(entry, data)
     repository = os.environ.get("GITHUB_REPOSITORY", "abrosdaniel/rivet")
     neo = re.search(r"^neoVersion=(.+)$", (root / "gradle.properties").read_text(), re.M)
     if neo is None:
@@ -70,7 +48,7 @@ def package(root, artifact, output):
         size=(output / name).stat().st_size, helperProtocolVersion=protocols["helper"])])
     core = output / "core.json"
     core.write_text(json.dumps(descriptor, indent=2) + "\n")
-    files = [output / name, output / "template.zip", core]
+    files = [output / name, core]
     sums = output / "SHA256SUMS.txt"
     sums.write_text("".join(hashlib.sha256(p.read_bytes()).hexdigest() + "  " + p.name + "\n" for p in files))
     return files + [sums]

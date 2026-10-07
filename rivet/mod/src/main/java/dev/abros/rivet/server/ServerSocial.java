@@ -28,7 +28,7 @@ final class ServerSocial {
  static void stop(){generation=new Object();presence.clear();metadata.clear();groups.clear();loading.clear();rates.clear();}
  static Object generation(){return generation;}
  static void active(ServerPlayer p){presence.put(p.getUUID(),new Presence(p.position(),p.getYRot(),System.currentTimeMillis()));}
- static void suggestGroups(ServerPlayer p,com.mojang.brigadier.suggestion.SuggestionsBuilder builder){memberships(p);var own=groups.get(p.getUUID());if(own!=null)own.groups.keySet().forEach(builder::suggest);}
+ static void suggestGroups(ServerPlayer p,com.mojang.brigadier.suggestion.SuggestionsBuilder builder){if(!ServerDatabase.settings().modules().enabled("groups"))return;memberships(p);var own=groups.get(p.getUUID());if(own!=null)own.groups.keySet().forEach(builder::suggest);}
  private static void memberships(ServerPlayer p){long now=System.currentTimeMillis();UUID id=p.getUUID();if(groups.containsKey(id)&&groups.get(id).until>now||!loading.add(id))return;var store=ServerFeatures.communityStore();if(store==null){loading.remove(id);return;}Object epoch=generation;
   try{ServerFeatures.storage(()->{Map<String,String> result=new LinkedHashMap<>();try{for(var row:store.playerGroups(id.toString()))result.put(Json.str(row,"id"),Json.str(row,"title"));}catch(Exception error){com.mojang.logging.LogUtils.getLogger().warn("Cannot load chat memberships",error);}var data=Map.copyOf(result);p.server.execute(()->{if(epoch!=generation)return;loading.remove(id);if(p.server.getPlayerList().getPlayer(id)==p)groups.put(id,new Membership(System.currentTimeMillis()+15000,data));});});}catch(java.util.concurrent.RejectedExecutionException full){loading.remove(id);}
  }

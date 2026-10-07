@@ -1,0 +1,9 @@
+{
+  "servers": [
+    {
+      "id": "ruslaanchik",
+      "name": "Ruslaanchik",
+      "address": "mc-ruslaanchik.ebash.id:25566"
+    }
+  ]
+}

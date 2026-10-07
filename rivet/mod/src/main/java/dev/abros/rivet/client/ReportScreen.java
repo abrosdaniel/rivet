@@ -36,7 +36,7 @@ final class ReportScreen extends Screen implements CommunityScreen.Receiver {
         UiActions.close(new dev.abros.rivet.core.NativeLayout.Box(x+w/2+3,y+panelHeight()-26,w/2-3,20),this::addRenderableWidget,this::onClose);
         updateInputs();setInitialFocus(message);
     }
-    private void updateInputs(){if(send!=null){send.active=!busy;send.setMessage(Component.literal(busy?"Отправка…":pending!=null?"Повторить отправку":"Отправить"));}if(message!=null)message.active=!busy&&pending==null;}
+    private void updateInputs(){if(send!=null){send.active=!busy;send.setMessage(Client.tr(busy?"server.sending":pending!=null?"server.retryReport":"server.reviewReport"));}if(message!=null)message.active=!busy&&pending==null;}
     private void sendReport(){
         if(busy)return;
         if(pending!=null){busy=true;status="Повторная отправка…";updateInputs();ServerMenuClient.request(session.retry(System.currentTimeMillis()));return;}
@@ -44,9 +44,9 @@ final class ReportScreen extends Screen implements CommunityScreen.Receiver {
         draft.save(message.getValue());busy=true;status="";updateInputs();
         Client.IO.submit(()->{
             var j=new JsonObject();j.addProperty("action","report");j.addProperty("message",initial+text);j.addProperty("category",category);j.addProperty("coreVersion",dev.abros.rivet.Rivet.VERSION);
-            var active=Client.hub==null?null:Client.hub.active();j.addProperty("packVersion",active==null?"":active.version());j.addProperty("repository",active==null?"":active.repository());
+            j.addProperty("packHash",Client.hub==null?"":Client.hub.activeHash());
             try{String audit=Client.hub==null?"Unavailable":String.join("\n",Client.hub.audit());j.addProperty("audit",audit.substring(0,Math.min(2000,audit.length())));}catch(Exception ex){j.addProperty("audit","Verification failed");}
-            minecraft.execute(()->{if(minecraft.screen!=this){busy=false;return;}pending=j.deepCopy();status="Отправка…";ServerMenuClient.request(session.begin(j,true,System.currentTimeMillis()));});
+            minecraft.execute(()->{if(minecraft.screen!=this){busy=false;return;}busy=false;updateInputs();String preview=Client.tr("server.report.reviewText").getString()+"\n\n"+Client.tr("server.message").getString()+":\n"+Json.str(j,"message")+"\n\n"+Client.tr("server.report.details").getString()+"\ncategory: "+Json.str(j,"category")+"\nRivet: "+Json.str(j,"coreVersion")+"\npackHash: "+Json.str(j,"packHash")+"\naudit:\n"+Json.str(j,"audit");minecraft.setScreen(new ReviewScreen(this,Client.tr("server.preview"),preview,Client.tr("server.send"),()->{pending=j.deepCopy();busy=true;status="Отправка…";minecraft.setScreen(this);updateInputs();ServerMenuClient.request(session.begin(j,true,System.currentTimeMillis()));},true));});
         });
     }
     @Override public void render(GuiGraphics g,int x,int y,float d){UiDialog.render(parent,this,g,d,()->{super.render(g,x,y,d);int w=Math.min(460,width-32),left=(width-w)/2;UiHeading.dialog(g,font,title,left,top(),w);if(!initial.isBlank())Ui.text(g,font,font.plainSubstrByWidth(initial.strip(),w),left,top()+28,UiPalette.color(0xEEEEEE));Ui.status(g,font,status,left,top()+panelHeight()-49,w,top()+panelHeight()-28);});}

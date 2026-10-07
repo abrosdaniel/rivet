@@ -100,7 +100,6 @@ jobs:
         with:
           python-version: '3.12'
       - run: pip install -r rivet/tooling/requirements.txt
-      - run: python rivet/tooling/seed/rivet.py validate template
       - run: python -m unittest discover -s rivet/tooling/tests
 
   ui:
@@ -187,6 +186,15 @@ jobs:
           set -o pipefail
           timeout --signal=TERM --kill-after=20s 5m xvfb-run -a -s '-screen 0 1280x1024x24' ./gradlew :mod:runClient -PrivetUiHarness -I ui-client.init.gradle --no-daemon --console=plain 2>&1 | tee visual-tab.log
           python3 rivet/tooling/verify_ui_snapshots.py unused checks visual-tab.log RIVET_TAB_LAYOUT_OK
+      - name: Check settings and confirmation flows
+        timeout-minutes: 6
+        env:
+          RIVET_AUDIT_FIXES_UI: '1'
+          LIBGL_ALWAYS_SOFTWARE: '1'
+        run: |
+          set -o pipefail
+          timeout --signal=TERM --kill-after=20s 5m xvfb-run -a -s '-screen 0 1280x1024x24' ./gradlew :mod:runClient -PrivetUiHarness -I ui-client.init.gradle --no-daemon --console=plain 2>&1 | tee visual-settings.log
+          python3 rivet/tooling/verify_ui_snapshots.py unused checks visual-settings.log RIVET_AUDIT_FIXES_UI_OK
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
         if: failure()
         with:

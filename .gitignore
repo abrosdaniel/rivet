@@ -25,3 +25,6 @@ rivet/deploy/.env
 
 # Isolated compatibility worlds and downloaded optional test mods
 **/run-compatibility-*/
+
+# Generated isolated UI runtime
+**/build-ui-harness/

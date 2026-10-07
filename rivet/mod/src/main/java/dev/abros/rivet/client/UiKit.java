@@ -32,4 +32,13 @@ final class UiKit {
   if(checked)UiIcons.draw(g,UiIcons.CHECK,x-1,y-1,color);
  }
  static String fit(net.minecraft.client.gui.Font font,String text,int width){if(width<=0)return "";if(text.isEmpty()||font.width(text)<=width)return text;if(width<font.width("…"))return "";return font.plainSubstrByWidth(text,Math.max(0,width-font.width("…")))+"…";}
+ /** Shorten rich text without flattening its colours, styles or actions. */
+ static net.minecraft.network.chat.Component fit(net.minecraft.client.gui.Font font,net.minecraft.network.chat.Component text,int width){
+  if(width<=0)return net.minecraft.network.chat.Component.empty();
+  if(font.width(text)<=width)return text;
+  int ellipsis=font.width("…");if(width<ellipsis)return net.minecraft.network.chat.Component.empty();
+  var out=net.minecraft.network.chat.Component.empty();
+  font.substrByWidth(text,width-ellipsis).visit((style,part)->{out.append(net.minecraft.network.chat.Component.literal(part).withStyle(style));return java.util.Optional.empty();},net.minecraft.network.chat.Style.EMPTY);
+  return out.append("…");
+ }
 }

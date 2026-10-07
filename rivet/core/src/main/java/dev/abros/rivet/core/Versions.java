@@ -25,8 +25,6 @@ public final class Versions {
         String minimum=requirement.endsWith(".x")?requirement.substring(0,requirement.length()-1)+"0":requirement;
         return sameMajor(installed,minimum)&&compare(installed,minimum)>=0;
     }
-    /** Retained for callers compiled against the earlier API. */
-    public static boolean supportsBranch(String installed,String requirement){return supportsRequirement(installed,requirement);}
     public static int compare(String a,String b){
         String[] aa=a.split("\\+",2)[0].split("-",2),bb=b.split("\\+",2)[0].split("-",2);
         String[] av=aa[0].split("\\."),bv=bb[0].split("\\.");if(av.length!=3||bv.length!=3)throw new IllegalArgumentException("SemVer required");

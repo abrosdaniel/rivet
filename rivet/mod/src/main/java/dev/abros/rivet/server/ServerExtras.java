@@ -20,9 +20,10 @@ final class ServerExtras {
     static void menu(JsonObject value){menu=value.deepCopy();}
     static JsonObject menu(){return menu.deepCopy();}
     static JsonArray actions(ServerPlayer p){var result=new JsonArray();for(String action:List.of("tell","kick","warn","ban","pardon","kill","vmute","vunmute")){
-        var node=p.server.getCommands().getDispatcher().getRoot().getChild(action.equals("warn")?"kick":action);if(node!=null&&node.canUse(p.createCommandSourceStack()))result.add(action);
+        if(!action.equals("tell")&&!ServerDatabase.settings().modules().enabled("reports"))continue;var node=p.server.getCommands().getDispatcher().getRoot().getChild(action.equals("warn")?"kick":action);if(node!=null&&node.canUse(p.createCommandSourceStack()))result.add(action);
     }return result;}
     static void moderate(ServerPlayer p,JsonObject j)throws Exception{
+        ServerDatabase.settings().modules().require("reports");
         String action=Json.str(j,"operation");if(!List.of("kick","warn","ban","pardon","kill","vmute","vunmute").contains(action))throw new IllegalArgumentException("Unknown moderation action");
         String targetId=UUID.fromString(Json.str(j,"target")).toString();var target=p.server.getPlayerList().getPlayer(UUID.fromString(targetId));
         if(target==null&&!List.of("ban","pardon").contains(action))throw new IllegalArgumentException("Player is offline");

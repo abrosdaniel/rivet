@@ -7,7 +7,7 @@ import java.util.*;
 public final class CommunityAdministration {
  private final PgDatabase db;private final CommunityStore store;
  public CommunityAdministration(PgDatabase db,CommunityStore store){this.db=db;this.store=store;}
- public JsonObject pin(String actor,String message,int minutes)throws Exception{
+ public JsonObject pin(String actor,String message,int minutes)throws Exception{store.modules().require("server");
   if(message.length()>500||message.codePoints().anyMatch(c->Character.isISOControl(c)&&c!='\n')||minutes<1||minutes>10080)throw new IllegalArgumentException("Сообщение: до 500 символов, срок: 1–10080 минут");
   return db.communityTransaction(()->{db.lock("community:pin");var pin=new JsonObject();pin.addProperty("text",message.strip());pin.addProperty("until",System.currentTimeMillis()+minutes*60000L);pin.addProperty("author",actor);store.record("state","pinned-announcement",pin);store.audit(actor,message.isBlank()?"announcement unpinned":"announcement pinned",message.strip());CommunityOutbox.add(db,"home","","");return pin;});
  }

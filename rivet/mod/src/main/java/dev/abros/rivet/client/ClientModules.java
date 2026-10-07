@@ -13,6 +13,8 @@ final class ClientModules {
   SkinClient.install();
   ServerMenuClient.install(bus);
   SocialClient.install();
+  RivetTab.install();
+  PlayerNameplates.install();
   ClientChat.install();
   ClientNavigation.install();
   RivetHud.install(bus);

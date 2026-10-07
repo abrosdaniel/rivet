@@ -102,11 +102,12 @@ public final class RivetChatIdentityHarness {
   check(PlayerNameplates.enabled(),"Server nameplate setting missing");
   try{
    var styled=nameplate();PlayerNameplates.render(styled);check(styled.getContent().getString().equals("[ENGINEER] Dev [TEST]"),"Nameplate metadata missing: "+styled.getContent().getString());check(styled.canRender()==net.neoforged.neoforge.common.util.TriState.DEFAULT,"Visibility forced");
-   ServerMenuClient.state.addProperty("nameplatesEnabled",false);var disabled=nameplate();PlayerNameplates.render(disabled);check(disabled.getContent().equals(disabled.getOriginalContent()),"Server disable ignored");
-   ServerMenuClient.state.addProperty("nameplatesEnabled",true);var hidden=nameplate();hidden.setCanRender(net.neoforged.neoforge.common.util.TriState.FALSE);PlayerNameplates.render(hidden);check(hidden.getContent().equals(hidden.getOriginalContent())&&hidden.canRender()==net.neoforged.neoforge.common.util.TriState.FALSE,"Hidden label modified");
+   ServerMenuClient.state.addProperty("nameplateMode","base");var disabled=nameplate();PlayerNameplates.render(disabled);check(disabled.getContent().equals(disabled.getOriginalContent()),"Server disable ignored");
+   ServerMenuClient.state.addProperty("nameplateMode","rivet");var hidden=nameplate();hidden.setCanRender(net.neoforged.neoforge.common.util.TriState.FALSE);PlayerNameplates.render(hidden);check(hidden.getContent().equals(hidden.getOriginalContent())&&hidden.canRender()==net.neoforged.neoforge.common.util.TriState.FALSE,"Hidden label modified");
+   ServerMenuClient.state.addProperty("nameplateMode","hidden");var suppressed=nameplate();suppressed.setContent(Component.literal("Custom name"));PlayerNameplates.render(suppressed);check(suppressed.canRender()==net.neoforged.neoforge.common.util.TriState.FALSE,"Hidden mode did not suppress label");ServerMenuClient.state.addProperty("nameplateMode","rivet");
    var custom=nameplate();custom.setContent(Component.literal("Custom name"));PlayerNameplates.render(custom);check(custom.getContent().getString().equals("Custom name"),"Other mod name overwritten");
    var plain=new JsonObject();plain.addProperty("prefix","");plain.addProperty("suffix","");SocialClient.players.put(mc.player.getUUID(),plain);var empty=nameplate();PlayerNameplates.render(empty);check(empty.getContent().equals(empty.getOriginalContent()),"Absent metadata modified name");
-   ServerMenuClient.state.remove("nameplatesEnabled");check(!PlayerNameplates.enabled(),"Old server unexpectedly enabled nameplates");
+   ServerMenuClient.state.remove("nameplateMode");ServerMenuClient.state.remove("nameplatesEnabled");check(!PlayerNameplates.enabled(),"Old server unexpectedly enabled nameplates");
    System.out.println("RIVET_NAMEPLATES_OK LuckPerms prefix/name/suffix + server disable + vanilla visibility + other mod ownership + absent metadata + old server");
   }finally{for(var key:java.util.Set.copyOf(ServerMenuClient.state.keySet()))ServerMenuClient.state.remove(key);for(var entry:state.entrySet())ServerMenuClient.state.add(entry.getKey(),entry.getValue());if(profile!=null)SocialClient.players.put(mc.player.getUUID(),profile);}
  }

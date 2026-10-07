@@ -11,6 +11,8 @@ def configuration(template, mode, port):
                "auth": {"mode": '"base"' if mode == "base" else '"false"'}}
     if mode == "disabled":
         changes.update(skins={"enabled": "false"}, chat={"enabled": "false"})
+        for feature in ("groups", "tasks", "storage", "board", "events", "polls", "ideas", "reports", "server"):
+            changes[feature] = {"enabled": "false"}
     lines = template.splitlines()
     section = ""
     for n, line in enumerate(lines):

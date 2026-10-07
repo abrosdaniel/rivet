@@ -55,7 +55,16 @@ dependencies {
 
 // Explicit developer build only: fixtures are not included in release artifacts.
 if (project.hasProperty('rivetUiHarness')) {
-    sourceSets.main.java.srcDir 'src/uiHarness/java'
+    sourceSets {
+        uiHarness {
+            java.srcDir 'src/uiHarness/java'
+            compileClasspath += sourceSets.main.compileClasspath + sourceSets.main.output
+            runtimeClasspath += sourceSets.main.runtimeClasspath + output
+        }
+    }
+    if (!project.hasProperty('rivetPackaged')) {
+        neoForge.mods.rivet.sourceSet sourceSets.uiHarness
+    }
 }
 
 if (project.hasProperty('rivetSkinSmoke')) {
@@ -109,7 +118,7 @@ tasks.register('checkMenuArchitecture') {
                 violations.add("${source.name}: request lifecycle and paging belong to the core controller")
         }
         coreSources.each { source ->
-            if (source.getText('UTF-8') =~ /import\s+(net\.minecraft|net\.neoforged|dev\.abros\.rivet\.client)\./)
+            if (source.getText('UTF-8') =~ /import\s+(net\.minecraft|net\.neoforged(?!\.jarjar\.(selection|metadata)\.)|dev\.abros\.rivet\.client)\./)
                 violations.add("${source.name}: core must stay independent of Minecraft and UI")
         }
         if (!violations.empty) throw new GradleException(violations.join('\n'))
@@ -146,11 +155,14 @@ tasks.register('checkModuleComposition') {
         def owners = [
             'AuthClient': 'ClientModules.java', 'SkinClient': 'ClientModules.java',
             'SocialClient': 'ClientModules.java', 'ClientChat': 'ClientModules.java',
+            'RivetTab': 'ClientModules.java', 'PlayerNameplates': 'ClientModules.java',
             'ClientNavigation': 'ClientModules.java', 'RivetHud': 'ClientModules.java',
             'AuthServer': 'ServerModules.java', 'ServerSkins': 'ServerModules.java',
             'ServerFeatures': 'ServerModules.java', 'ServerSocial': 'ServerModules.java',
             'ServerChat': 'ServerModules.java', 'ServerNavigation': 'ServerModules.java',
-            'ServerPlayerStatistics': 'ServerModules.java', 'ServerModerationVotes': 'ServerModules.java'
+            'ServerPlayerStatistics': 'ServerModules.java', 'ServerModerationVotes': 'ServerModules.java',
+            'ServerTaskStocks': 'ServerModules.java', 'ServerReportsModule': 'ServerModules.java',
+            'ServerManagement': 'ServerModules.java', 'ServerPack': 'ServerModules.java'
         ]
         def violations = []
         sources.each { source ->

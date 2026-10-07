@@ -15,7 +15,7 @@ class CommunityReportsTest {
     @org.junit.jupiter.api.BeforeEach void connect()throws Exception{database=new CommunityStore(TestDatabase.database(game),CommunityStore.defaults());}
     @org.junit.jupiter.api.AfterEach void disconnect()throws Exception{database.close();}
     @TempDir Path game;
-    JsonObject report(){var j=new JsonObject();j.addProperty("message","Connection failed");j.addProperty("uuid","spoofed");j.addProperty("log","not allowed");j.addProperty("coreVersion","1.0.0");return j;}
+    JsonObject report(){var j=new JsonObject();j.addProperty("message","Connection failed");j.addProperty("uuid","spoofed");j.addProperty("log","not allowed");j.addProperty("coreVersion","1.0.0");j.addProperty("packHash","a".repeat(64));j.addProperty("packVersion","obsolete");j.addProperty("repository","obsolete");return j;}
     @Test void bulkRechecksRevisionsAndReplaysWithoutDuplicateChanges()throws Exception{
         var store=new CommunityReports(database);String actor=UUID.randomUUID().toString();long now=System.currentTimeMillis();String first=store.submit(UUID.randomUUID(),"First",report(),now),second=store.submit(UUID.randomUUID(),"Second",report(),now+1);
         var command=new JsonObject();command.addProperty("request",UUID.randomUUID().toString());command.addProperty("operation","bulkPreview");command.addProperty("change","resolved");var items=new com.google.gson.JsonArray();for(String id:java.util.List.of(first,second)){var item=new JsonObject();item.addProperty("id",id);item.addProperty("revision",1);items.add(item);}command.add("items",items);
@@ -34,7 +34,7 @@ class CommunityReportsTest {
     }
     @Test void storesOnlyAllowedFieldsAndServerIdentity()throws Exception{
         var store=new CommunityReports(database);UUID player=UUID.randomUUID();String id=store.submit(player,"Player",report(),System.currentTimeMillis());
-        var saved=store.list(0).get(0).getAsJsonObject();assertEquals(id,Json.str(saved,"id"));assertEquals(player.toString(),Json.str(saved,"uuid"));assertFalse(saved.has("log"));
+        var saved=store.list(0).get(0).getAsJsonObject();assertEquals(id,Json.str(saved,"id"));assertEquals(player.toString(),Json.str(saved,"uuid"));assertFalse(saved.has("log"));assertEquals("a".repeat(64),Json.str(saved,"packHash"));assertFalse(saved.has("packVersion"));assertFalse(saved.has("repository"));
     }
     @Test void rateLimitIsPerPlayer()throws Exception{
         var store=new CommunityReports(database);UUID p=UUID.randomUUID();long now=System.currentTimeMillis();store.submit(p,"Player",report(),now);

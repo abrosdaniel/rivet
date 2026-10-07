@@ -16,3 +16,11 @@ if (project.hasProperty('postgresTests')) tasks.named('check') { dependsOn 'post
 
 // NeoForge provides NightConfig at runtime; standalone core tests need the parser.
 dependencies { compileOnly 'com.electronwill.night-config:toml:3.8.3'; testImplementation 'com.electronwill.night-config:toml:3.8.3' }
+
+// NeoForge supplies the same JarJar selector used to validate published packs.
+dependencies { compileOnly "net.neoforged:JarJarSelector:0.4.1"; testImplementation "net.neoforged:JarJarSelector:0.4.1" }
+
+// NeoForge supplies Maven version ranges used by its mod metadata.
+dependencies { compileOnly "org.apache.maven:maven-artifact:3.8.5"; testImplementation "org.apache.maven:maven-artifact:3.8.5" }
+
+repositories { maven { url = 'https://maven.neoforged.net/releases'; content { includeModule 'net.neoforged', 'JarJarSelector'; includeModule 'net.neoforged', 'JarJarMetadata' } } }

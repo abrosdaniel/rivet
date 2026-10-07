@@ -4,7 +4,7 @@ import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.network.chat.Component;
 /** TAB/chat preferences share compound dialog and controls with all Rivet settings. */
-final class SocialSettingsScreen extends ScrollScreen {
+final class SocialSettingsScreen extends ScrollScreen implements SettingsTarget {
  private final Screen parent;private UiDialog dialog;private int tab;
  SocialSettingsScreen(Screen parent){super(Component.literal("Настройки Rivet"));this.parent=parent;}
  SocialSettingsScreen(Screen parent,int tab){this(parent);this.tab=tab;}
@@ -19,6 +19,7 @@ final class SocialSettingsScreen extends ScrollScreen {
   else{label=switch(row){case 3->"Размер текста";case 4->"Расстояние между строками";case 5->"Прозрачность текста";default->"Прозрачность фона";};var option=switch(row){case 3->minecraft.options.chatScale();case 4->minecraft.options.chatLineSpacing();case 5->minecraft.options.chatOpacity();default->minecraft.options.textBackgroundOpacity();};addRenderableWidget(UiActions.button(Component.literal(label+": "+Math.round(option.get()*100)+"% ▾"),UiActions.Tone.NORMAL,"",v->minecraft.setScreen(new ChoicePopup(this,label,List.of("25%","50%","75%","100%"),i->{option.set((i+1)/4d);minecraft.options.save();minecraft.gui.getChat().rescaleChat();minecraft.setScreen(this);},v))).bounds(b.x(),yy,scrollLayout().content().width(),24).build());continue;}
   addRenderableWidget(new UiToggle(label,b.x(),yy,scrollLayout().content().width(),enabled,action));
  } }
+ public void revealSetting(String id){revealRow(SettingsCatalog.row(tab+3,id));rebuildWidgets();}
  private void resetSection(){var s=SocialSettings.INSTANCE;if(tab==0){s.grouping=0;s.density=1;s.columnWidth=190;s.tabOpacity=.65;s.heads=true;s.ping=false;s.footer=true;}else{s.dedupe=true;s.hints=true;s.hintOpacity=.95;minecraft.options.chatScale().set(1d);minecraft.options.chatLineSpacing().set(0d);minecraft.options.chatOpacity().set(1d);minecraft.options.textBackgroundOpacity().set(.5d);minecraft.options.save();minecraft.gui.getChat().rescaleChat();}s.save();}
 
  @Override public void renderBackground(GuiGraphics g,int x,int y,float d){UiDialog.surface(g,dialog.frame().x(),dialog.frame().y(),dialog.frame().width(),dialog.frame().height());}

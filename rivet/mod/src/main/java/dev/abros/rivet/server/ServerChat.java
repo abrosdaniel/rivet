@@ -40,7 +40,7 @@ final class ServerChat {
   if(e.getMessage().getString().equals(e.getRawText()))e.setMessage(sender(content(player,parsed.text()),player));
  }
  private static void groupChat(ServerPlayer player,dev.abros.rivet.core.ChatChannels.Message message){
-  if(!ServerDatabase.settings().flag("chat.group")){player.sendSystemMessage(Component.literal("Чат объединений выключен на сервере."));return;}
+  if((!ServerDatabase.settings().flag("chat.group")||!ServerDatabase.settings().modules().enabled("groups"))){player.sendSystemMessage(Component.literal("Чат объединений выключен на сервере."));return;}
   var store=ServerFeatures.communityStore();if(store==null)return;Object epoch=ServerSocial.generation();
   try{ServerFeatures.storage(()->{try{var own=store.playerGroups(player.getUUID().toString());var matches=own.stream().filter(row->message.group().isBlank()||Json.str(row,"title").equalsIgnoreCase(message.group())||Json.str(row,"id").equals(message.group())).toList();
    player.server.execute(()->{if(epoch!=ServerSocial.generation()||player.server.getPlayerList().getPlayer(player.getUUID())!=player||!AuthServer.authenticated(player))return;

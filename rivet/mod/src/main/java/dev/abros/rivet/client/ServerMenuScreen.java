@@ -39,13 +39,26 @@ final class ServerMenuScreen extends ScrollScreen implements CommunityScreen.Rec
         nav.build(tab,this::addRenderableWidget);
         if(tab.equals("admin")&&!ServerMenuClient.staff()){CommunityScreen.open(parent,"home");return;}
         content.bounds(nav.left(),70,UiWorkspace.fit(width,height).page().width(),Math.max(30,height-145));
-        if(tab.equals("help")){addRenderableWidget(UiActions.button(Component.literal("Интерфейс и голос…"),UiActions.Tone.NORMAL,"",b->minecraft.setScreen(new ChoicePopup(this,"Настройки клиента",List.of("Доступность интерфейса","Диагностика Plasmo Voice"),i->minecraft.setScreen(i==0?new AccessibilityScreen(this):new VoiceDiagnosticsScreen(this))))).bounds(nav.left(),42,Math.min(180,UiWorkspace.fit(width,height).page().width()),20).build());if(System.getenv("RIVET_PILOT_UI")!=null)addRenderableWidget(UiActions.button(Component.literal("UI Kit"),UiActions.Tone.NORMAL,"",b->minecraft.setScreen(new UiKitShowcaseScreen(this))).bounds(nav.right()-94,42,80,20).build());
-          UiActions.row(new dev.abros.rivet.core.NativeLayout.Box(nav.left(),height-58,nav.right()-nav.left()-20,20),this::addRenderableWidget,UiActions.action(Client.tr("server.report").getString(),()->minecraft.setScreen(new ReportScreen(this)),true),UiActions.action(Client.tr("server.myReports").getString(),()->FeatureListScreen.open(this,"myReports"),true));}
+        if(tab.equals("help")){
+            stateKey=stateFlag("hasLinks")+":"+Json.opt(ServerMenuClient.state,"help","");
+            var actions=new ArrayList<UiActions.Action>();
+            actions.add(UiActions.action("Интерфейс и голос…",()->minecraft.setScreen(new ChoicePopup(this,"Настройки клиента",List.of("Доступность интерфейса","Диагностика Plasmo Voice"),i->minecraft.setScreen(i==0?new AccessibilityScreen(this):new VoiceDiagnosticsScreen(this)))),true));
+            if(stateFlag("hasLinks"))actions.add(UiActions.action(Client.tr("server.links").getString(),()->FeatureListScreen.open(this,"links"),true));
+            UiActions.row(new dev.abros.rivet.core.NativeLayout.Box(nav.left(),42,UiWorkspace.fit(width,height).page().width(),20),this::addRenderableWidget,actions.toArray(UiActions.Action[]::new));
+            if(ServerMenuClient.module("reports"))UiActions.row(new dev.abros.rivet.core.NativeLayout.Box(nav.left(),height-58,nav.right()-nav.left()-20,20),this::addRenderableWidget,UiActions.action(Client.tr("server.report").getString(),()->minecraft.setScreen(new ReportScreen(this)),true),UiActions.action(Client.tr("server.myReports").getString(),()->FeatureListScreen.open(this,"myReports"),true));
+        }
 
         if(tab.equals("admin")){
             int left=nav.left(),available=UiWorkspace.fit(width,height).page().width();
             boolean server=ServerMenuClient.may("rivet.announce")||ServerMenuClient.may("rivet.maintenance")||ServerMenuClient.may("rivet.restart");
-            var groups=List.of("overview","reports","server","diagnostics","tools");UiTabs.build(this,font,new dev.abros.rivet.core.NativeLayout.Box(left,42,available,20),List.of("Обзор","Обращения","Сервер","Диагностика","Инструменты"),Math.max(0,groups.indexOf(adminGroup)),this::addRenderableWidget,n->group(groups.get(n)),true);
+            var groups=new ArrayList<String>(List.of("overview"));var tabLabels=new ArrayList<String>(List.of("Обзор"));
+            if(ServerMenuClient.may("rivet.reports")){groups.add("reports");tabLabels.add("Обращения");}
+            if(server||ServerMenuClient.admin()&&ServerMenuClient.supports("player-tools")){groups.add("server");tabLabels.add("Сервер");}
+            if(ServerMenuClient.may("rivet.diagnostics")){groups.add("diagnostics");tabLabels.add("Диагностика");}
+            if(ServerMenuClient.admin()){groups.add("tools");tabLabels.add("Инструменты");}
+            boolean allowedChild=adminGroup.equals("messages")&&ServerMenuClient.may("rivet.announce")||adminGroup.equals("data")&&ServerMenuClient.admin()&&ServerMenuClient.supports("admin-tools");
+            if(!groups.contains(adminGroup)&&!allowedChild)adminGroup="overview";
+            UiTabs.build(this,font,new dev.abros.rivet.core.NativeLayout.Box(left,42,available,20),tabLabels,Math.max(0,groups.indexOf(adminGroup)),this::addRenderableWidget,n->group(groups.get(n)),true);
             summaries.clear();stateKey=modeKey();
             dashboardSections.clear();
             if(Set.of("overview","reports","diagnostics","tools").contains(adminGroup)){
@@ -126,7 +139,7 @@ final class ServerMenuScreen extends ScrollScreen implements CommunityScreen.Rec
     }
     @Override public void removed(){refreshOnReturn=true;}
     void refreshPermissions(){if(!ServerMenuClient.admin()){overviewSession.cancel();overviewBusy=false;overviewData=new JsonObject();}rebuildWidgets();}
-    @Override public void tick(){if(tab.equals("admin")&&!ServerMenuClient.staff()){CommunityScreen.open(parent,"home");}else if(tab.equals("admin")&&!stateKey.equals(modeKey()))rebuildWidgets();if(overviewSession.timeout(System.currentTimeMillis())){overviewBusy=false;overviewNotice="Нет ответа. Обновите сводку.";if(overviewRefresh!=null)overviewRefresh.active=true;}}
+    @Override public void tick(){if(tab.equals("admin")&&!ServerMenuClient.staff()){CommunityScreen.open(parent,"home");}else if(tab.equals("admin")&&!stateKey.equals(modeKey())||tab.equals("help")&&!stateKey.equals(stateFlag("hasLinks")+":"+Json.opt(ServerMenuClient.state,"help","")))rebuildWidgets();if(overviewSession.timeout(System.currentTimeMillis())){overviewBusy=false;overviewNotice="Нет ответа. Обновите сводку.";if(overviewRefresh!=null)overviewRefresh.active=true;}}
     private String body(){var j=ServerMenuClient.state;
         if(tab.equals("help"))return Json.opt(j,"help","")+"\n\n"+Client.tr("server.helptext").getString();
         return Client.tr("server.admintext").getString();

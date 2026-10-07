@@ -37,7 +37,7 @@ public final class RivetSocialWorldHarness {
   if(stage==84){capture(mc,"chat-hints-off-gui-"+(frame+1)+".png");SocialSettings.INSTANCE.hints=true;frame++;stage=80;next=now+100;return;}
 
  }
- private static void capture(Minecraft mc,String name){net.minecraft.client.Screenshot.grab(new java.io.File("/private/tmp/rivet-social-preview"),name,mc.getMainRenderTarget(),msg->{});}
+ private static void capture(Minecraft mc,String name){UiCaptureHarness.grab(new java.io.File("/private/tmp/rivet-social-preview"),name,mc.getMainRenderTarget(),msg->{});}
  private static void check(boolean valid,String text){if(!valid)throw new IllegalStateException(text);}
  private static final class Preview extends Screen {Preview(){super(Component.literal("TAB fixture"));}@Override public void render(GuiGraphics g,int x,int y,float d){RivetTab.draw(g,x,y,sample);}@Override public boolean isPauseScreen(){return false;}}
 }

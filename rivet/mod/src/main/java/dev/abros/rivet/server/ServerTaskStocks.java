@@ -20,6 +20,7 @@ import java.util.concurrent.RejectedExecutionException;
 /** Bounded checks on the game thread; database writes run on the storage worker. Never loads chunks. */
 public final class ServerTaskStocks {
  private static final Map<String,JsonObject> bindings=new LinkedHashMap<>();private static final Set<String> pending=new HashSet<>();private static CommunityTasks tasks;private static int tick,cursor;private static long generation;
+ public static void install(){NeoForge.EVENT_BUS.addListener((net.neoforged.neoforge.event.tick.ServerTickEvent.Post event)->tick(event.getServer()));}
  static void stop(){generation++;tasks=null;bindings.clear();pending.clear();tick=cursor=0;}
  static void start(MinecraftServer server,CommunityStore store)throws Exception{tasks=new CommunityTasks(ServerDatabase.get(),store);bindings.clear();pending.clear();generation++;tick=cursor=0;for(var e:tasks.bindings()){var row=e.getAsJsonObject();bindings.put(Json.str(row,"key"),row);}}
  public static void signEdited(ServerPlayer player,SignBlockEntity sign,boolean front){if(tasks==null||!AuthServer.authenticated(player))return;var text=sign.getText(front);String marker=text.getMessage(0,false).getString().strip();String key=player.serverLevel().dimension().location()+":"+sign.getBlockPos().asLong();if(!TaskCodes.isMarker(marker)){if(bindings.containsKey(key))remove(player.server,key);return;}

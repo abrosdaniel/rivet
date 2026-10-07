@@ -14,7 +14,14 @@ public class TextScreen extends ScrollScreen {
     protected int panelTop(){return UiDialog.top(height,340);}
     protected int panelBottom(){return height-panelTop();}
     @Override public void renderBackground(GuiGraphics g,int x,int y,float d){UiDialog.draw(g,width,Math.min(520,width-40),panelTop(),panelBottom());}
- @Override protected void init(){lines=new ArrayList<>();for(var paragraph:literal?text.lines().map(Component::literal).toList():Markdown.parse(text)){lines.addAll(font.split(paragraph,Math.min(520,width-40)));if(paragraph.getString().isEmpty())lines.add(FormattedCharSequence.EMPTY);}scrollArea(lines.size(),new dev.abros.rivet.core.NativeLayout.Box((width-Math.min(520,width-40))/2,panelTop()+32,Math.max(0,Math.min(520,width-40)),Math.max(0,(panelBottom()-footer)-(panelTop()+32))),12);UiActions.close(new dev.abros.rivet.core.NativeLayout.Box((width-Math.min(520,width-40))/2,panelBottom()-26,Math.min(520,width-40),20),this::addRenderableWidget,this::onClose);}
+ @Override protected void init(){
+     int w=Math.max(0,Math.min(520,width-40)),left=(width-w)/2;
+     var viewport=new dev.abros.rivet.core.NativeLayout.Box(left,panelTop()+32,w,Math.max(0,panelBottom()-footer-panelTop()-32));
+     int readingWidth=dev.abros.rivet.core.ScrollLayout.fit(viewport).content().width();
+     lines=new ArrayList<>();for(var paragraph:literal?text.lines().map(Component::literal).toList():Markdown.parse(text)){if(paragraph.getString().isEmpty())lines.add(FormattedCharSequence.EMPTY);else lines.addAll(font.split(paragraph,Math.max(1,readingWidth)));}
+     scrollArea(lines.size(),viewport,12);actions(new dev.abros.rivet.core.NativeLayout.Box(left,panelBottom()-26,w,20));
+ }
+ protected void actions(dev.abros.rivet.core.NativeLayout.Box area){UiActions.close(area,this::addRenderableWidget,this::onClose);}
     @Override protected void rowsChanged(){}
     @Override public void render(GuiGraphics g,int mx,int my,float pt){UiDialog.render(parent,this,g,pt,()->{super.render(g,mx,my,pt);UiHeading.dialog(g,font,title,(width-(Math.min(520,width-40)))/2,panelTop(),Math.min(520,width-40));int x=(width-Math.min(520,width-40))/2;for(int i=firstRow;i<lines.size()&&panelTop()+32+(i-firstRow)*12<panelBottom()-footer;i++)Ui.text(g,font,lines.get(i),x,panelTop()+32+(i-firstRow)*12,UiPalette.color(0xEEEEEE));});}
     @Override public boolean mouseClicked(double x,double y,int button){int left=(width-Math.min(520,width-40))/2;int row=(int)((y-panelTop()-32)/12)+firstRow;if(button==0&&x>=left&&x<width-left&&y>=panelTop()+32&&y<panelBottom()-footer&&row>=0&&row<lines.size()){var style=font.getSplitter().componentStyleAtWidth(lines.get(row),(int)x-left);if(style!=null&&style.getClickEvent()!=null)return handleComponentClicked(style);}return super.mouseClicked(x,y,button);}

@@ -8,11 +8,14 @@ import java.util.concurrent.atomic.AtomicBoolean;
 public final class CoreUpdater {
     public static final String REPOSITORY="https://github.com/abrosdaniel/rivet";
     public static final String RELEASES="https://api.github.com/repos/abrosdaniel/rivet/releases?per_page=100";
-    public record Update(String version,Manifest.FileEntry artifact,boolean preservesProtocols){}
+    public record Update(String version,Cache.Artifact artifact,boolean preservesProtocols){}
     private static final java.util.concurrent.ExecutorService METADATA=new java.util.concurrent.ThreadPoolExecutor(4,4,0,java.util.concurrent.TimeUnit.SECONDS,
         new java.util.concurrent.ArrayBlockingQueue<>(100),r->{var t=new Thread(r,"Rivet release metadata");t.setDaemon(true);return t;},new java.util.concurrent.ThreadPoolExecutor.AbortPolicy());
     private final Remote remote;
-    public CoreUpdater(Remote remote){this.remote=remote;}
+    private final UpdateMetadataCache metadata;
+    public CoreUpdater(Remote remote){this(remote,null);}
+    public CoreUpdater(Remote remote,Path metadataDirectory){this.remote=remote;this.metadata=metadataDirectory==null?null:new UpdateMetadataCache(metadataDirectory);}
+    private byte[] metadata(String url,int limit)throws Exception{return metadata==null?remote.bytes(url,limit):metadata.read(remote,url,limit);}
     public Optional<Update> check(String runningVersion,String minecraft,String neoForge)throws Exception{
         return available(runningVersion,minecraft,neoForge,1).stream().findFirst();
     }
@@ -24,7 +27,7 @@ public final class CoreUpdater {
         var versions=new java.util.TreeSet<String>((a,b)->Versions.compare(b,a));
         for(int page=1;page<=100;page++){
             String url=RELEASES+(page==1?"":"&page="+page);
-            var releases=JsonParser.parseString(new String(remote.bytes(url,4*1024*1024),StandardCharsets.UTF_8));
+            var releases=JsonParser.parseString(new String(metadata(url,4*1024*1024),StandardCharsets.UTF_8));
             if(!releases.isJsonArray())throw new IllegalArgumentException("Invalid official release list");
             for(var value:releases.getAsJsonArray()){
                 var release=value.getAsJsonObject();if(release.get("draft").getAsBoolean()||(release.has("prerelease")&&release.get("prerelease").getAsBoolean()))continue;
@@ -56,7 +59,7 @@ public final class CoreUpdater {
     }
     private Optional<Update> descriptor(String version,String minecraft,String neoForge)throws Exception{
         String base=REPOSITORY+"/releases/download/v"+version+"/";
-        var descriptor=Json.parse(new String(remote.bytes(base+"core.json",1024*1024),StandardCharsets.UTF_8));Schema.validate("core-release",descriptor);
+        var descriptor=Json.parse(new String(metadata(base+"core.json",1024*1024),StandardCharsets.UTF_8));Schema.validate("core-release",descriptor);
         if(!version.equals(Json.str(descriptor,"version")))throw new IllegalArgumentException("Official release version mismatch");
         for(var value:descriptor.getAsJsonArray("artifacts")){
             var artifact=value.getAsJsonObject();
@@ -64,7 +67,7 @@ public final class CoreUpdater {
             if(artifact.get("java").getAsInt()>Runtime.version().feature())continue;
             String url=Json.str(artifact,"url");
             if(!officialArtifact(url,version,minecraft))throw new IllegalArgumentException("Update must belong to its official release");
-            return Optional.of(new Update(version,new Manifest.FileEntry("rivet","mods/rivet-"+version+"-mc"+minecraft+"-neoforge.jar",version,List.of(url),Json.str(artifact,"sha256"),artifact.get("size").getAsLong(),"enforce"),WireProtocols.compatible(descriptor.getAsJsonObject("protocols"))));
+            return Optional.of(new Update(version,new Cache.Artifact("mods/rivet-"+version+"-mc"+minecraft+"-neoforge.jar",List.of(url),Json.str(artifact,"sha256"),artifact.get("size").getAsLong()),WireProtocols.compatible(descriptor.getAsJsonObject("protocols"))));
         }
         return Optional.empty();
     }
