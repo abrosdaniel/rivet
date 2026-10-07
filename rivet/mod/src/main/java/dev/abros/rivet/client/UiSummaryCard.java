@@ -13,12 +13,12 @@ final class UiSummaryCard extends Button {
  static UiSummaryCard compact(int x,int y,int width,String title,String value,List<String> details,int accent,Runnable action){var card=new UiSummaryCard(x,y,width,title,value,details,accent,action);card.setHeight(62);return card;}
  @Override protected void renderWidget(GuiGraphics g,int mx,int my,float delta){
   int x=getX(),y=getY(),w=getWidth(),color=UiPalette.color(accent);var font=Minecraft.getInstance().font;
-  UiKit.plate(g,x,y,w,getHeight(),UiTheme.mix(UiKit.surface(),UiPalette.color(0xFF314350),UiTheme.hover(this)*0.55f));
-  UiKit.detail(g,x,y,w,getHeight());g.fill(x+12,y+10,x+14,y+18,color);if(isFocused())g.renderOutline(x,y,w,getHeight(),color);
+  UiKit.plate(g,x,y,w,getHeight(),UiTheme.mix(UiKit.surface(),UiKit.surface(UiKit.Surface.HOVER),UiTheme.hover(this)));
+  if(isFocused())g.renderOutline(x,y,w,getHeight(),color);
   g.enableScissor(x+8,y+5,x+w-8,y+getHeight()-5);
-  UiTypography.draw(g,font,title,x+20,y+10,w-48,UiTypography.Role.TITLE);
-  Ui.text(g,font,UiKit.fit(font,value,w-26),x+12,y+29,color,false);
-  for(int i=0;i<Math.min(getHeight()==62?1:2,details.size());i++)Ui.text(g,font,UiKit.fit(font,details.get(i),w-26),x+12,y+(getHeight()==62?46:52)+i*14,UiKit.text(),false);
+  UiTypography.draw(g,font,title,x+12,y+9,w-40,UiTypography.Role.TITLE);
+  Ui.text(g,font,UiKit.fit(font,value,w-26),x+12,y+27,color,false);
+  for(int i=0;i<Math.min(getHeight()==62?1:2,details.size());i++)Ui.text(g,font,UiKit.fit(font,details.get(i),w-26),x+12,y+(getHeight()==62?46:52)+i*14,UiKit.muted(),false);
   UiIcons.draw(g,UiIcons.RIGHT,x+w-23,y+9,color);g.disableScissor();
  }
 }

@@ -20,6 +20,7 @@ final class AccessibilityScreen extends ScrollScreen {
  static int skinStride(){load();return new int[]{36,46,58}[density];}
  static int motionMillis(){load();return motion==2?240:120;}
  static java.time.ZoneId zone(){load();try{return serverTime?java.time.ZoneId.of(Json.opt(ServerMenuClient.state,"timezone",java.time.ZoneId.systemDefault().getId())):java.time.ZoneId.systemDefault();}catch(Exception ex){return java.time.ZoneId.systemDefault();}}
+ static boolean highContrast(){load();return contrast;}
  static int background(int color){load();return opaque?color|0xFF000000:color;}
  static int foreground(int color){load();return contrast?(UiPalette.light()?0x24131D:0xFFFFFF):UiPalette.color(color);}
 
@@ -33,7 +34,7 @@ final class AccessibilityScreen extends ScrollScreen {
    setting("Тема интерфейса",UiPalette.name(),UiPalette.names(),UiPalette.selected(),n->{try{UiPalette.select(n);save();}catch(Exception ex){error="Не удалось сохранить тему";}});
    setting("Прозрачные панели",opaque?"Выключены":"Включены",java.util.List.of("Включены","Выключены"),opaque?1:0,n->{opaque=n==1;save();});
    setting("Плотность интерфейса",java.util.List.of("Компактная","Сбалансированная","Просторная").get(density),java.util.List.of("Компактная","Сбалансированная","Просторная"),density,n->{density=n;compact=n==0;save();});
-   setting("Детали оформления",java.util.List.of("Минимальные","Сдержанные","Выразительные").get(decoration),java.util.List.of("Минимальные","Сдержанные","Выразительные"),decoration,n->{decoration=n;save();});
+
 
    setting("Масштаб GUI Minecraft",minecraft.options.guiScale().get()==0?"Автоматически":String.valueOf(minecraft.options.guiScale().get()),java.util.List.of("Автоматически","1","2","3","4"),minecraft.options.guiScale().get(),n->{minecraft.options.guiScale().set(n);minecraft.options.save();minecraft.resizeDisplay();});
    setting("Часовой пояс",serverTime?"Серверный":"Местный",java.util.List.of("Местное время","Время сервера"),serverTime?1:0,n->{serverTime=n==1;save();});
@@ -41,14 +42,15 @@ final class AccessibilityScreen extends ScrollScreen {
    setting("Анимации",java.util.List.of("Выключены","Лёгкие","Выразительные").get(motion),java.util.List.of("Выключены","Лёгкие","Выразительные"),motion,n->{motion=n;reducedMotion=n==0;save();});
   }
   setting("Профиль оформления","Выбрать…",java.util.List.of("Компактный","Минимальный","Подробный"),0,n->minecraft.setScreen(new UiConfirmDialog(yes->{if(yes)UiPresentationProfiles.apply(n);minecraft.setScreen(this);},Component.literal("Применить профиль?"),Component.literal("Изменятся плотность, состав виджета, TAB и подсказки. Тема, расположение и серверные настройки сохранятся."))));
-  var body=layout.body();scrollArea(settings.size()*2+4,new dev.abros.rivet.core.NativeLayout.Box(body.x(),body.y(),body.width(),Math.max(0,body.height())),22);for(int n=0;n<settings.size();n++){int row=n*2;if(row<firstRow||row+1>=firstRow+visibleRows)continue;var setting=settings.get(n);int y=body.y()+(row-firstRow)*22;addRenderableWidget(UiActions.button(Component.literal(setting.value()+" ▾"),UiActions.Tone.NORMAL,"",b->{if(isThemePicker(setting))minecraft.setScreen(new UiThemePicker(this));else minecraft.setScreen(new ChoicePopup(this,setting.label(),setting.choices(),i->setting.change().accept(i),b).current(setting.selected()));}).bounds(body.x(),y+16,scrollLayout().content().width(),20).build());}
-  int row=settings.size()*2;if(row>=firstRow&&row+2<firstRow+visibleRows){var sample=new com.google.gson.JsonObject();sample.addProperty("section","task");sample.addProperty("title","Построить мост");sample.addProperty("attention","7K2P · В работе");sample.addProperty("preview","Подготовить материалы");sample.addProperty("footer","Ответственный: вы · Завтра");preview=new CommunityCard(body.x(),body.y()+(row-firstRow)*22,scrollLayout().content().width(),62,sample,()->{});addRenderableWidget(preview);}
+  var body=layout.body();int stride=28;scrollArea(settings.size()+3,new dev.abros.rivet.core.NativeLayout.Box(body.x(),body.y(),body.width(),Math.max(0,body.height())),stride);
+  for(int n=0;n<settings.size();n++){if(n<firstRow||n>=firstRow+visibleRows)continue;var setting=settings.get(n);int y=body.y()+(n-firstRow)*stride;addRenderableWidget(UiActions.button(Component.literal(setting.label()+": "+setting.value()+" ▾"),UiActions.Tone.NORMAL,"",b->{if(isThemePicker(setting))minecraft.setScreen(new UiThemePicker(this));else minecraft.setScreen(new ChoicePopup(this,setting.label(),setting.choices(),i->setting.change().accept(i),b).current(setting.selected()));}).bounds(body.x(),y,scrollLayout().content().width(),24).build());}
+  int row=settings.size();if(row>=firstRow&&row+2<firstRow+visibleRows){var sample=new com.google.gson.JsonObject();sample.addProperty("section","task");sample.addProperty("title","Построить мост");sample.addProperty("attention","7K2P · В работе");sample.addProperty("preview","Подготовить материалы");sample.addProperty("footer","Ответственный: вы · Завтра");preview=new CommunityCard(body.x(),body.y()+(row-firstRow)*stride,scrollLayout().content().width(),62,sample,()->{});addRenderableWidget(preview);}
 
  }
  private boolean isThemePicker(Setting setting){return setting.label().equals("Тема интерфейса");}
  private void resetSection(){opaque=false;density=1;compact=false;decoration=1;contrast=false;serverTime=false;motion=1;reducedMotion=false;try{UiPalette.select(0);}catch(Exception ex){error="Не удалось восстановить тему";}minecraft.options.guiScale().set(3);minecraft.options.save();minecraft.resizeDisplay();save();}
  @Override public void renderBackground(GuiGraphics g,int x,int y,float d){UiDialog.surface(g,layout.frame().x(),layout.frame().y(),layout.frame().width(),layout.frame().height());}
- @Override public void render(GuiGraphics g,int x,int y,float d){UiDialog.render(parent,this,g,d,()->{super.render(g,x,y,d);UiHeading.dialog(g,font,title,layout.header().x(),layout.frame().y(),layout.header().width());for(int n=0;n<settings.size();n++){int row=n*2;if(row<firstRow||row+1>=firstRow+visibleRows)continue;Ui.text(g,font,settings.get(n).label(),layout.body().x(),layout.body().y()+(row-firstRow)*22,UiKit.text(),false);}if(!error.isEmpty())Ui.status(g,font,error,layout.footer().x(),layout.footer().y(),layout.footer().width(),layout.footer().y()+20);});}
+ @Override public void render(GuiGraphics g,int x,int y,float d){UiDialog.render(parent,this,g,d,()->{super.render(g,x,y,d);UiHeading.dialog(g,font,title,layout.header().x(),layout.frame().y(),layout.header().width());if(!error.isEmpty())Ui.status(g,font,error,layout.footer().x(),layout.footer().y(),layout.footer().width(),layout.footer().y()+20);});}
  @Override public boolean isPauseScreen(){return false;}
- @Override public void onClose(){minecraft.setScreen(parent);}
+ @Override public void onClose(){UiNavigation.back(this,parent);}
 }

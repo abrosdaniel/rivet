@@ -14,6 +14,7 @@ final class ClientCompatibilityRegistry {
  static void updateMap(JsonArray places,JsonArray players){LAYERS.call(()->{ManagedXaeroLayer.update(places,players);return true;},()->false);if(!LAYERS.available())clearMap();}
  static void clearMap(){ManagedXaeroLayer.clear();}
  static void reset(){clearMap();XaeroMapBridge.reset();ALL.forEach(OptionalIntegration::reset);}
+ static boolean voiceAvailable(){return VOICE.available();}
  static java.util.List<String> voice(){return VOICE.call(PlasmoVoiceClientAdapter::inspect,()->java.util.List.of("Plasmo Voice: "+VOICE.status(),"UDP: неизвестно","Микрофон: неизвестно"));}
  static JsonArray diagnostics(){var rows=new JsonArray();ALL.forEach(a->{var row=a.diagnostics();var caps=new JsonArray();caps.add(row.get("id").getAsString().split(":",2)[1]);row.add("capabilities",caps);rows.add(row);});return rows;}
  static long revision(){ALL.forEach(OptionalIntegration::available);return ALL.stream().mapToLong(OptionalIntegration::revision).max().orElse(0);}

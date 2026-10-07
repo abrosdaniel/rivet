@@ -9,7 +9,7 @@ class UiEditBox extends EditBox {
  @Override public void renderWidget(GuiGraphics g,int mx,int my,float delta){
   if(!isVisible())return;
   boolean border=isBordered();int x=getX(),y=getY(),w=getWidth(),h=getHeight();
-  setTextColor(UiKit.text());setTextColorUneditable(UiKit.muted());setTextShadow(!UiPalette.light());
+  setTextColor(UiKit.text());setTextColorUneditable(UiKit.muted());setTextShadow(false);
   if(!border){super.renderWidget(g,mx,my,delta);return;}
   UiKit.surface(g,x,y,w,h,UiPalette.inputSurface());
   g.renderOutline(x,y,w,h,UiFields.outline(this));

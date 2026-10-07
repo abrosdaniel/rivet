@@ -11,6 +11,7 @@ final class UiGeometryHarness {
   if(screen instanceof TaskScreen task && task.listGeometry()!=null)verifyScroll(screen,task.listGeometry());
 
 
+  verifyListAlignment(screen);
   for(var child:screen.children())if(child instanceof Button button){
    var command=UiActions.commandOf(button);String label=button.getMessage().getString();
    if((label.equals("Обновить")||label.equals("Повторить"))&&command==null)throw new IllegalStateException(screen.getClass().getSimpleName()+": local refresh/retry button");
@@ -19,6 +20,17 @@ final class UiGeometryHarness {
     if(workspace&&button.getY()==UiWorkspace.fit(screen.width,screen.height).footer().y()){var footer=UiPageFooter.workspace(screen.width,screen.height);var slot=command==UiActions.Command.BACK||command==UiActions.Command.CLOSE?footer.end():footer.start();if(button.getX()!=slot.x()||button.getWidth()!=slot.width())throw new IllegalStateException(screen.getClass().getSimpleName()+": footer alignment drift");}
 if(button.getHeight()!=UiActions.CONTROL_HEIGHT||button.getWidth()>UiActions.COMMAND_WIDTH)throw new IllegalStateException(screen.getClass().getSimpleName()+": invalid command size");
     if(screen.width>=420&&button.getWidth()!=UiActions.COMMAND_WIDTH)throw new IllegalStateException(screen.getClass().getSimpleName()+": command width drift: "+command+" "+button.getWidth());}
+  }
+ }
+ private static void verifyListAlignment(Screen screen){
+  for(var child:screen.children())if(child instanceof net.minecraft.client.gui.components.AbstractWidget card && (card instanceof CommunityCard || card instanceof PlayerRow)){
+   for(var field:screen.children())if(field instanceof net.minecraft.client.gui.components.EditBox input && input.getX()==card.getX() && input.getY()<card.getY()){
+    for(var control:screen.children())if(control instanceof Button find && find.getMessage().getString().equals("Найти") && find.getY()==input.getY()){
+     int edge=find.getX()+find.getWidth();
+     for(var adjacent:screen.children())if(adjacent instanceof net.minecraft.client.gui.components.AbstractWidget neighbour && neighbour.visible && neighbour.getY()==input.getY() && neighbour.getX()>=input.getX() && neighbour.getX()<card.getX()+card.getWidth()+10)edge=Math.max(edge,neighbour.getX()+neighbour.getWidth());
+     if(edge!=card.getX()+card.getWidth())throw new IllegalStateException(screen.getClass().getSimpleName()+": toolbar and list have different trailing edges");
+    }
+   }
   }
  }
  private static void verifyScroll(Screen screen,dev.abros.rivet.core.ScrollLayout layout){

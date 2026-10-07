@@ -9,7 +9,8 @@ final class GroupsSection {
   boolean manage=j.get("manage").getAsBoolean();
   if(!manage&&host.groupTab.equals("requests"))host.groupTab="overview";
   if(CommunityScreen.plus()&&Set.of("tasks","places").contains(host.groupTab)){CommunityTools.groupItems(host,j);return;}
-  if(host.groupTab.equals("members")){
+  if(host.groupTab.equals("events")){host.text("События объединения");boolean found=host.data.has("related")&&host.data.getAsJsonArray("related").asList().stream().anyMatch(e->Json.str(e.getAsJsonObject(),"section").equals("events"));if(!found)host.text("Событий пока нет.");}
+  else if(host.groupTab.equals("members")){
    host.text("Участников: "+j.get("membersCount").getAsInt());
    if(CommunityScreen.plus()&&host.owner(j))host.secondary("Помощники: исключение участников",()->net.minecraft.client.Minecraft.getInstance().setScreen(new ChoicePopup(host.surface(),"Помощники могут исключать обычных участников",List.of("Запретить","Разрешить"),i->{var b=new JsonObject();b.addProperty("enabled",i==1);host.send("plusAssistantRemoval",b);})));
    for(var entry:j.getAsJsonObject("members").entrySet()){

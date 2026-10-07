@@ -10,7 +10,7 @@ final class SidebarButton extends Button {
  @Override protected void renderWidget(GuiGraphics g,int mx,int my,float dt){
   int x=getX(),y=getY();float t=UiTheme.hover(this);if(selected){UiKit.surface(g,x,y,width,height,UiTheme.mix(UiKit.surface(),UiKit.accent(),0.14f));g.fill(x,y+4,x+2,y+height-4,UiKit.accent());}else if(t>0)g.fill(x,y,x+width,y+height,UiTheme.mix(UiPalette.color(0x002B3A45),UiPalette.color(0xC032444F),t));
 
-  var font=Minecraft.getInstance().font;Ui.text(g,font,UiKit.fit(font,getMessage().getString(),Math.max(1,width-16)),getX()+8,getY()+6,selected?UiKit.text():UiKit.muted(),false);
-  if(isFocused())g.renderOutline(getX(),getY(),width,height,UiPalette.color(0xFFE2BE75));
+  var font=Minecraft.getInstance().font;Ui.text(g,font,UiKit.fit(font,getMessage().getString(),Math.max(1,width-16)),getX()+8,getY()+(height-8)/2,selected?UiKit.text():UiKit.muted(),false);
+  if(isFocused()&&Minecraft.getInstance().getLastInputType().isKeyboard())g.renderOutline(getX(),getY(),width,height,UiKit.accent());
  }
 }

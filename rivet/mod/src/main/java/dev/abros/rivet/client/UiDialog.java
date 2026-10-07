@@ -22,6 +22,6 @@ record UiDialog(NativeLayout.Box frame, NativeLayout.Box header, NativeLayout.Bo
  static void surface(GuiGraphics g,int left,int top,int width,int height){
   g.fill(0,0,net.minecraft.client.Minecraft.getInstance().getWindow().getGuiScaledWidth(),net.minecraft.client.Minecraft.getInstance().getWindow().getGuiScaledHeight(),0xAA090E14);
   UiKit.material(g,left,top,width,height);
-  g.renderOutline(left,top,width,height,UiPalette.outline());
+  g.renderOutline(left,top,width,height,UiKit.border());
  }
 }

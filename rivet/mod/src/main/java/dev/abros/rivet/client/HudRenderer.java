@@ -33,7 +33,7 @@ final class HudRenderer {
     if(block.section().equals("profile"))HudProfile.draw(g,0,row,w,preview);
     else if(block.section().equals("server")&&!block.title().equals("Перезапуск сервера")){String online=UiKit.fit(mc.font,block.text(),Math.max(30,w/2-12));int ow=mc.font.width(online);text(g,block.title(),10,row+5,Math.max(0,w-ow-28),UiKit.text());text(g,online,w-ow-10,row+5,ow,UiKit.muted());}
     else{String icon=block.section().equals("tasks")?UiIcons.CHECK:block.section().equals("events")?UiIcons.REFRESH:UiIcons.RIGHT;UiIcons.draw(g,icon,9,row+6,UiKit.accent());text(g,block.title(),26,row+4,w-38,UiKit.text());text(g,block.text(),26,row+17,w-38,UiKit.muted());if(block.progress()>=0){g.fill(26,row+29,w-10,row+31,UiPalette.scrollTrack());g.fill(26,row+29,26+(int)((w-36)*block.progress()),row+31,UiKit.accent());}}
-    if(row+rh<h-6)g.fill(10,row+rh-1,w-10,row+rh,alpha(UiKit.muted(),.15));
+    if(row+rh<h-6)g.fill(10,row+rh-1,w-10,row+rh,alpha(UiKit.border(),.55));
     int index=row;int px=x,py=y;float factor=scale;hits.add(new Hit(px,py+index*factor,pw,rh*factor,()->{if(!block.section().equals("profile"))RivetHud.open(block.section(),block.target(),block.group());}));row+=rh;}g.pose().popPose();
   }}
   widgetHits=hits.size();
@@ -44,7 +44,7 @@ final class HudRenderer {
  }
  private static int blockHeight(Block b,boolean preview){return b.section().equals("profile")?HudProfile.height(preview):b.section().equals("server")&&!b.title().equals("Перезапуск сервера")?24:38;}
  private static int alpha(int color,double fade){return color&0xFFFFFF|Math.max(5,(int)(255*fade))<<24;}
- private static void surface(GuiGraphics g,int x,int y,int w,int h,float opacity){int color=UiKit.surface()&0xFFFFFF|((int)(255*opacity)<<24);UiKit.surface(g,x,y,w,h,color);g.fill(x+6,y,x+w-6,y+1,UiPalette.color(0x40526674));UiKit.detail(g,x,y,w,h);}
+ private static void surface(GuiGraphics g,int x,int y,int w,int h,float opacity){int color=UiKit.surface()&0xFFFFFF|((int)(255*opacity)<<24);UiKit.surface(g,x,y,w,h,color);}
  private static void text(GuiGraphics g,String value,int x,int y,int w,int color){g.drawString(Minecraft.getInstance().font,UiKit.fit(Minecraft.getInstance().font,value,w),x,y,color,false);}
  static boolean click(double x,double y,boolean widget){if(Minecraft.getInstance().options.hideGui||net.minecraft.Util.getMillis()-drawn>250)return false;for(int n=widgetHits;n<hits.size();n++){var hit=hits.get(n);if(hit.contains(x,y)){hit.action().run();return true;}}if(widget)for(int n=0;n<widgetHits;n++){var hit=hits.get(n);if(hit.contains(x,y)){hit.action().run();return true;}}return false;}
 }

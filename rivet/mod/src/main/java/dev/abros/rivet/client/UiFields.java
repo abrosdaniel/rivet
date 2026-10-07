@@ -6,7 +6,7 @@ import java.util.function.Consumer;
 final class UiFields {
  private static final java.util.Map<net.minecraft.client.gui.components.AbstractWidget,String> issues=new java.util.WeakHashMap<>();
  static void issue(net.minecraft.client.gui.components.AbstractWidget widget,String message){if(message==null||message.isBlank()){issues.remove(widget);widget.setTooltip(null);}else{issues.put(widget,message);widget.setTooltip(net.minecraft.client.gui.components.Tooltip.create(Component.literal(widget.getMessage().getString()+": "+message)));}}
- static int outline(net.minecraft.client.gui.components.AbstractWidget widget){return issues.containsKey(widget)?UiPalette.color(0xFFEF7777):widget.isFocused()?UiKit.accent():UiPalette.outline();}
+ static int outline(net.minecraft.client.gui.components.AbstractWidget widget){return issues.containsKey(widget)?UiPalette.color(0xFFEF7777):widget.isFocused()?UiKit.accent():UiKit.border();}
  static UiEditBox text(Font font,int x,int y,int width,int height,String label,String hint,int limit,String value,Consumer<String> changed){
   var input=new UiEditBox(font,x,y,width,height,Component.literal(label));input.setHint(Component.literal(hint));input.setMaxLength(limit);input.setValue(value);input.setResponder(changed);return input;
  }

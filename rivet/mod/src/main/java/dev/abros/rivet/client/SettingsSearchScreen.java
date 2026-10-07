@@ -26,5 +26,5 @@ final class SettingsSearchScreen extends ScrollScreen {
  @Override public void renderBackground(GuiGraphics g,int x,int y,float d){UiDialog.surface(g,dialog.frame().x(),dialog.frame().y(),dialog.frame().width(),dialog.frame().height());}
  @Override public void render(GuiGraphics g,int x,int y,float d){UiDialog.render(parent,this,g,d,()->{super.render(g,x,y,d);UiHeading.dialog(g,font,title,dialog.header().x(),dialog.frame().y(),dialog.header().width());if(results.isEmpty())UiEmptyState.draw(g,font,"Настройки не найдены","Попробуйте «пинг», «прозрачность» или название раздела.",dialog.body().x(),dialog.body().y()+32,dialog.body().width(),dialog.body().bottom());});}
  @Override public boolean isPauseScreen(){return false;}
- @Override public void onClose(){minecraft.setScreen(parent);}
+ @Override public void onClose(){UiNavigation.back(this,parent);}
 }

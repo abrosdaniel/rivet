@@ -15,26 +15,34 @@ public final class UiTheme {
  static float hover(AbstractWidget w){float target=w.isHoveredOrFocused()?1:0;if(!AccessibilityScreen.animations())return target;long now=System.nanoTime();var state=motion.get(w);if(state==null){motion.put(w,new HoverState(target,now));return target;}float step=Math.min(1,(now-state.at)/(AccessibilityScreen.motionMillis()*1000000f));state.at=now;state.value+=Math.copySign(Math.min(Math.abs(target-state.value),step),target-state.value);return state.value;}
 
  static int mix(int a,int b,float t){int out=0;for(int shift=0;shift<=24;shift+=8)out|=((int)(((a>>>shift)&255)*(1-t)+((b>>>shift)&255)*t))<<shift;return out;}
- static void panel(GuiGraphics g,int x,int y,int w,int h,int color){if(w<=0||h<=0)return;int material=AccessibilityScreen.background(color);g.fill(x+2,y+h,x+w+2,y+h+2,UiPalette.color(0x30000000));UiKit.plate(g,x,y,w,h,material);UiKit.detail(g,x,y,w,h);}
+ static void panel(GuiGraphics g,int x,int y,int w,int h,int color){UiKit.surface(g,x,y,w,h,AccessibilityScreen.background(color));}
 
  public static void shell(Screen s,GuiGraphics g){if(s instanceof CommunityScreen||s instanceof TaskScreen||s instanceof ReportQueueScreen||s instanceof ServerMenuScreen||s instanceof ServerInfoScreen||s instanceof FeatureListScreen f&&f.kind.equals("players"))UiWorkspace.fit(s.width,s.height).draw(g);}
 
  public static void button(AbstractButton b,GuiGraphics g){
-  var font=Minecraft.getInstance().font;int x=b.getX(),y=b.getY(),w=b.getWidth(),h=b.getHeight();String text=b.getMessage().getString(),raw=text;float t=b.active?hover(b):0;var style=UiActions.style(b);int color=b.active?switch(style.tone()){case PRIMARY->UiPalette.color(0xFF8CBFA2);case DANGER->UiPalette.color(0xFFDB7777);default->UiPalette.color(0xFFE2BE75);}:UiPalette.color(0xFF687580);
-  int base=!b.active?UiPalette.color(0xFF20272D):UiPalette.color(0xFF293844);
-  int surface=mix(base,style.tone()==UiActions.Tone.PRIMARY?UiPalette.color(0xFF326554):style.tone()==UiActions.Tone.DANGER?UiPalette.color(0xFF6D3D48):UiPalette.color(0xFF3D5261),t);
-  UiKit.plate(g,x,y,w,h,surface);
-  if(b.isFocused())g.renderOutline(x,y,w,h,color);
-  boolean field=text.endsWith(" ▾");if(field){g.fill(x+w-22,y+1,x+w-1,y+h-1,UiPalette.color(0x40202C35));g.fill(x+w-23,y+5,x+w-22,y+h-5,mix(surface,color,0.18f));}
-  if(b.active&&style.tone()!=UiActions.Tone.NORMAL)g.fill(x+3,y+5,x+5,y+h-5,color);
-  if(text.equals("×")||text.equals("+")||text.equals("↑")||text.equals("↓")){UiIcons.draw(g,text.equals("×")?UiIcons.CLEAR:text.equals("↑")?UiIcons.UP:text.equals("↓")?UiIcons.DOWN:UiIcons.PLUS,x+(w-12)/2,y+(h-12)/2,b.active?UiPalette.color(0xFFE7EDF1):UiPalette.color(0xFF687580));return;}
+  var font=Minecraft.getInstance().font;int x=b.getX(),y=b.getY(),w=b.getWidth(),h=b.getHeight();String text=b.getMessage().getString();var style=UiActions.style(b);
+  int accent=style.tone()==UiActions.Tone.DANGER?UiPalette.color(0xFFDB7777):UiKit.accent();
+  float hover=b.active?hover(b):0;
+  int base=UiKit.surface(UiKit.Surface.CONTROL);
+  if(style.tone()==UiActions.Tone.PRIMARY)base=accent;else if(style.tone()==UiActions.Tone.DANGER)base=mix(UiKit.surface(),accent,0.12f);
+  UiKit.surface(g,x,y,w,h,b.active?mix(base,style.tone()==UiActions.Tone.PRIMARY?mix(accent,UiKit.onAccent(),.10f):UiKit.surface(UiKit.Surface.HOVER),hover):UiKit.surface());
+  if(b.isFocused())UiKit.focus(g,x,y,w,h);
+  if(text.equals("×")||text.equals("+")||text.equals("↑")||text.equals("↓")){UiIcons.draw(g,text.equals("×")?UiIcons.CLEAR:text.equals("↑")?UiIcons.UP:text.equals("↓")?UiIcons.DOWN:UiIcons.PLUS,x+(w-12)/2,y+(h-12)/2,b.active?UiKit.text():UiKit.muted());return;}
   boolean dropdown=text.endsWith(" ▾");if(dropdown)text=text.substring(0,text.length()-2);if(text.startsWith("+ "))text=text.substring(2);
-  String symbol=dropdown?"":style.icon();int trailing=dropdown?18:0;if(font.width(text)+30+trailing>w)symbol="";int reserve=symbol.isEmpty()?0:18;
-  String shown=font.width(text)>w-12-reserve-trailing?font.plainSubstrByWidth(text,Math.max(1,w-12-reserve-trailing-font.width("…")))+"…":text;
-  int tx=dropdown?x+8:x+(w-font.width(shown)-reserve)/2,ty=y+(h-8)/2;
-  if(!symbol.isEmpty())UiIcons.draw(g,symbol,tx,y+(h-12)/2,color);
-  Ui.text(g,font,shown,tx+reserve,ty,b.active?UiKit.text():UiPalette.color(0x82909C),false);
-  if(dropdown)UiIcons.draw(g,UiIcons.DOWN,x+w-16,y+(h-12)/2,b.active?UiPalette.color(0xFFE2BE75):UiPalette.color(0xFF687580));
+  int foreground=b.active?(style.tone()==UiActions.Tone.PRIMARY?UiKit.onAccent():UiKit.text()):UiKit.muted(),ty=y+(h-8)/2;
+  // A settings selector is a label/value row; its original message and native hit box stay intact.
+  int split=text.indexOf(": ");
+  if(dropdown&&split>0&&w>=180){
+   String label=text.substring(0,split),value=text.substring(split+2);int valueWidth=Math.min(font.width(value),Math.max(24,w/2-24));
+   Ui.text(g,font,UiKit.fit(font,label,w-valueWidth-40),x+UiKit.INSET,ty,foreground,false);
+   String shown=UiKit.fit(font,value,valueWidth);Ui.text(g,font,shown,x+w-24-font.width(shown),ty,b.active?UiKit.accent():UiKit.muted(),false);
+  }else{
+   String icon=dropdown?"":style.icon();int trailing=dropdown?18:0;if(font.width(text)+30+trailing>w)icon="";int reserve=icon.isEmpty()?0:18;
+   String shown=UiKit.fit(font,text,w-16-reserve-trailing);int tx=dropdown?x+UiKit.INSET:x+(w-font.width(shown)-reserve)/2;
+   if(!icon.isEmpty())UiIcons.draw(g,icon,tx,y+(h-12)/2,b.active?(style.tone()==UiActions.Tone.PRIMARY?foreground:accent):UiKit.muted());
+   if(style.tone()==UiActions.Tone.PRIMARY&&b.active)g.drawString(font,shown,tx+reserve,ty,foreground,false);else Ui.text(g,font,shown,tx+reserve,ty,foreground,false);
+  }
+  if(dropdown)UiIcons.draw(g,UiIcons.DOWN,x+w-16,y+(h-12)/2,b.active?UiKit.muted():UiPalette.color(0xFF687580));
  }
  public static boolean keyboard(Screen screen,int key){
   if(!owns(screen)||screen.getFocused() instanceof EditBox||screen.getFocused() instanceof MultiLineEditBox||key!=264&&key!=265)return false;

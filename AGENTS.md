@@ -17,3 +17,25 @@ Use concise names within their section (for example display.nameplates, chat.coo
 # Visual regression coverage
 
 Run complete UI flows in the default theme at three GUI scales. Cover light and high-contrast profiles separately; sample every other theme on representative screens at GUI 3 instead of multiplying every scenario by every theme. Keep palette contrast checks for all themes. Each suite reports its planned frame count; CI verifies the exact count and rejects missing or extra PNGs.
+
+# UI design system
+
+Use the shared Rivet UI Kit documented in UI_KIT.md for every new or changed screen.
+Reuse semantic colours, spacing, actions, fields, navigation, states and workspace slots.
+Do not introduce page-local bevels, ornament textures or custom button/field renderers.
+Keep native keyboard editing, focus, narration and user preferences. Add new reusable
+components and their states to the live catalogue before using them across screens.
+
+# UI flow preservation
+
+Improve styling, spacing and responsive layout without changing existing entry points,
+turning dialogs into pages, or adding main navigation sections. Keep profiles, settings
+and edit forms modal unless the user explicitly requests a structural change. Ask before
+making uncertain flow changes. Use the My Tasks page as the alignment reference for
+list/detail pages: shared content top and boundaries, list controls inside the list column.
+
+# Reordering UI
+
+Use drag-and-drop with the shared UiDragHandle for every user-controlled list order.
+Do not add up/down buttons or move-up/move-down menu entries. Keep visibility controls
+separate from drag handles; cancel on Esc or a drop outside valid rows.

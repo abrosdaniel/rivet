@@ -17,9 +17,9 @@ final class UiSkinCard extends Button {
  @Override protected void renderWidget(GuiGraphics g,int mx,int my,float d){
   int x=getX(),y=getY(),w=getWidth(),h=getHeight();float hover=UiTheme.hover(this);
   UiKit.plate(g,x,y,w,h,UiTheme.mix(UiKit.surface(),UiPalette.color(0xFF344657),hover));
-  UiKit.detail(g,x,y,w,h);
+
   int border=selected?UiPalette.color(0xFFE2BE75):UiPalette.color(0xFF526674);
-  
+
   if(selected)g.fill(x,y+5,x+2,y+h-5,border);if(isFocused())g.renderOutline(x,y,w,h,border);
   var font=net.minecraft.client.Minecraft.getInstance().font;
   if(grid){int size=Math.min(28,h-24);PlayerFaceRenderer.draw(g,appearance(entry),x+(w-size)/2,y+6,size);Ui.centered(g,font,UiKit.fit(font,getMessage().getString(),w-12),x+w/2,y+h-13,UiKit.text());}

@@ -7,6 +7,9 @@ import net.minecraft.network.chat.Component;
 final class UiMultiLineEditBox extends MultiLineEditBox {
  private final Font font;private final Component placeholder;private int limit=-1;private long focusAt;
  UiMultiLineEditBox(Font font,int x,int y,int w,int h,Component placeholder,Component title){super(font,x,y,w,h,placeholder,title);this.font=font;this.placeholder=placeholder;}
+ record EditingState(int cursor,int anchor,double scroll){}
+ EditingState editingState(){var field=((dev.abros.rivet.mixin.MultiLineFieldAccessor)(Object)this).rivet$textField();var selected=field.getSelected();return new EditingState(field.cursor(),field.cursor()==selected.beginIndex()?selected.endIndex():selected.beginIndex(),scrollAmount());}
+ void restoreEditing(EditingState state){var field=((dev.abros.rivet.mixin.MultiLineFieldAccessor)(Object)this).rivet$textField();field.setSelecting(false);field.seekCursor(net.minecraft.client.gui.components.Whence.ABSOLUTE,Math.min(state.anchor(),getValue().length()));field.setSelecting(true);field.seekCursor(net.minecraft.client.gui.components.Whence.ABSOLUTE,Math.min(state.cursor(),getValue().length()));field.setSelecting(false);setScrollAmount(state.scroll());}
  @Override public void setCharacterLimit(int value){super.setCharacterLimit(value);limit=value;}
  @Override protected void renderBackground(GuiGraphics g){UiKit.surface(g,getX(),getY(),width,height,UiPalette.inputSurface());g.renderOutline(getX(),getY(),width,height,UiFields.outline(this));}
  @Override public void setFocused(boolean focused){super.setFocused(focused);if(focused)focusAt=net.minecraft.Util.getMillis();}

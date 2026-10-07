@@ -20,18 +20,16 @@ abstract class ScrollScreen extends Screen {
   return super.addRenderableWidget(child);
  }
  private void move(double value){position=Math.max(0,Math.min(value,Math.max(0,count-visibleRows)));int next=(int)position;if(next!=firstRow){firstRow=next;rowsChanged();}if(position>=Math.max(0,count-visibleRows))onScrollEnd();}
- @Override protected void rebuildWidgets(){
-  var previous=getFocused();String label=previous instanceof net.minecraft.client.gui.components.AbstractWidget widget?widget.getMessage().getString():null;
-  int cursor=previous instanceof net.minecraft.client.gui.components.EditBox edit?edit.getCursorPosition():-1;
-  layout=null;super.rebuildWidgets();ButtonHints.apply(this);
-  if(label!=null)for(var child:children())if(child.getClass()==previous.getClass()&&child instanceof net.minecraft.client.gui.components.AbstractWidget widget&&widget.getMessage().getString().equals(label)){setFocused(child);if(cursor>=0&&child instanceof net.minecraft.client.gui.components.EditBox edit)edit.setCursorPosition(Math.min(cursor,edit.getValue().length()));break;}
- }
+ @Override protected void rebuildWidgets(){UiKeyboard.remember(this);layout=null;super.rebuildWidgets();ButtonHints.apply(this);UiKeyboard.restore(this);}
+ @Override public void resize(net.minecraft.client.Minecraft mc,int width,int height){UiKeyboard.remember(this);super.resize(mc,width,height);UiKeyboard.restore(this);}
+ /** Cancel the current gesture before navigation handles Escape. */
+ boolean cancelInteraction(){if(!dragging)return false;dragging=false;return true;}
  protected void onScrollEnd(){}
  final void revealRow(int row){restoreScroll(row);}
  protected void restoreScroll(int row){position=Math.max(0,row);firstRow=(int)position;}
  protected void resetScroll(){position=0;firstRow=0;}
  protected void rowsChanged(){rebuildWidgets();}
- @Override public boolean mouseScrolled(double x,double y,double dx,double dy){if(super.mouseScrolled(x,y,dx,dy))return true;if(visibleRows>0&&dy!=0&&x>=scrollLeft()&&x<right+trackWidth()&&y>=top&&y<bottom){move(position-dy*3);return true;}return false;}
+ @Override public boolean mouseScrolled(double x,double y,double dx,double dy){if(MenuSidebar.scrollFor(this,x,y,dy))return true;if(super.mouseScrolled(x,y,dx,dy))return true;if(visibleRows>0&&dy!=0&&x>=scrollLeft()&&x<right+trackWidth()&&y>=top&&y<bottom){move(position-dy*3);return true;}return false;}
  protected int scrollLeft(){if(layout!=null)return layout.viewport().x();return children().stream().filter(c->c instanceof net.minecraft.client.gui.components.AbstractWidget w&&w.getY()>=top&&w.getY()<bottom).mapToInt(c->((net.minecraft.client.gui.components.AbstractWidget)c).getX()).min().orElse(right);}
  private int trackWidth(){return layout==null?dev.abros.rivet.core.ScrollLayout.TRACK_WIDTH:layout.track().width();}
  private int thumb(){return UiScrollbar.thumb(top,bottom,visibleRows,count);}
@@ -40,6 +38,6 @@ abstract class ScrollScreen extends Screen {
  @Override public boolean mouseClicked(double x,double y,int button){if(visibleRows>0&&button==0&&count>visibleRows&&x>=right&&x<right+trackWidth()&&y>=top&&y<bottom){int start=thumbTop();boolean grabbed=y>=start&&y<start+thumb();dragOffset=grabbed?y-start:thumb()/2.0;dragging=true;if(!grabbed)seek(y);return true;}return super.mouseClicked(x,y,button);}
  @Override public boolean mouseDragged(double x,double y,int button,double dx,double dy){if(dragging&&button==0){seek(y);return true;}return super.mouseDragged(x,y,button,dx,dy);}
  @Override public boolean mouseReleased(double x,double y,int button){dragging=false;return super.mouseReleased(x,y,button);}
- @Override public boolean keyPressed(int key,int scan,int modifiers){if((getFocused() instanceof net.minecraft.client.gui.components.EditBox||getFocused() instanceof net.minecraft.client.gui.components.MultiLineEditBox)&&getFocused().keyPressed(key,scan,modifiers))return true;switch(key){case 266:move(position-visibleRows);return true;case 267:move(position+visibleRows);return true;case 268:move(0);return true;case 269:move(count);return true;default:return super.keyPressed(key,scan,modifiers);}}
- @Override public void render(GuiGraphics g,int x,int y,float delta){super.render(g,x,y,delta);if(layout!=null)UiScrollbar.draw(g,layout.track(),visibleRows,count,position);}
+ @Override public boolean keyPressed(int key,int scan,int modifiers){if(key==256&&cancelInteraction())return true;if((getFocused() instanceof net.minecraft.client.gui.components.EditBox||getFocused() instanceof net.minecraft.client.gui.components.MultiLineEditBox)&&getFocused().keyPressed(key,scan,modifiers))return true;switch(key){case 266:move(position-visibleRows);return true;case 267:move(position+visibleRows);return true;case 268:move(0);return true;case 269:move(count);return true;default:return super.keyPressed(key,scan,modifiers);}}
+ @Override public void render(GuiGraphics g,int x,int y,float delta){super.render(g,x,y,delta);MenuSidebar.drawFor(this,g);if(layout!=null)UiScrollbar.draw(g,layout.track(),visibleRows,count,position);}
 }

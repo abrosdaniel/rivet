@@ -25,7 +25,7 @@ final class CommunityScreen extends ScrollScreen {
     private final List<int[]> rowCards=new ArrayList<>();
     int beginCard(){return rows.size();}
     void endCard(int start){rowCards.add(new int[]{start,rows.size()});text("");}
-    private void renderRowCards(GuiGraphics g,int x,int top,int w,int bottom){g.enableScissor(x-4,top,x+w+4,bottom);for(var card:rowCards){int y=top+(card[0]-firstRow)*24,end=top+(card[1]-firstRow)*24;if(end<=top||y>=bottom)continue;g.fill(x-4,y-2,x+w+4,end,AccessibilityScreen.background(UiPalette.color(0xB02D3B46)));g.renderOutline(x-4,y-2,w+8,end-y+2,UiPalette.color(0xFF526674));}g.disableScissor();}
+    private void renderRowCards(GuiGraphics g,int x,int top,int w,int bottom){g.enableScissor(x-4,top,x+w+4,bottom);for(var card:rowCards){int y=top+(card[0]-firstRow)*24,end=top+(card[1]-firstRow)*24;if(end<=top||y>=bottom)continue;g.fill(x-4,y-2,x+w+4,end,AccessibilityScreen.background(UiKit.surface()));}g.disableScissor();}
     private final dev.abros.rivet.core.CommunityWorkspace model;
     void invalidate(){if(inlineParent!=null)inlineParent.model.invalidate();model.invalidate();for(var child:expanded.values())child.invalidate();}
     void invalidate(String topic,String id){if(!home()&&!topic.isEmpty()&&!topic.equals(section))return;if(!id.isEmpty()&&!itemId.isEmpty()&&!itemId.equals(id)&&!topic.equals("home"))return;model.invalidate();for(var child:expanded.values())if(id.isEmpty()||child.itemId.equals(id))child.invalidate(topic,id);}
@@ -44,13 +44,13 @@ final class CommunityScreen extends ScrollScreen {
     private record Anchor(String id){}
     private Anchor anchor(){if(!data.has("entries"))return null;var entries=displayEntries();if(entries.isEmpty())return null;int n=Math.min(firstRow,entries.size()-1);return new Anchor(Json.str(entries.get(n).getAsJsonObject(),"id"));}
     private void restore(Anchor anchor){if(anchor==null||!data.has("entries"))return;int n=0;for(var entry:displayEntries()){if(Json.str(entry.getAsJsonObject(),"id").equals(anchor.id)){if(firstRow!=n){restoreScroll(n);refreshUi();}return;}n++;}}
-    private UiListDetail masterDetail(){return UiListDetail.fit(new dev.abros.rivet.core.NativeLayout.Box(left(),bodyTop(),Math.min(880,navigation.right()-left()-20),Math.max(0,height-bodyTop()-82)),230,height>=300);}
+    private UiListDetail masterDetail(){return UiListDetail.fit(UiWorkspace.fit(width,height).page(),230,height>=300);}
     private boolean splitLayout(){return inlineParent==null&&itemId.isEmpty()&&!home()&&masterDetail().split();}
     private int listWidth(){return masterDetail().list().width();}
     private int detailLeft(){return left()+listWidth()+12;}
     private CommunityScreen selected(){return expanded.isEmpty()?null:expanded.values().iterator().next();}
     private void inlineWidgets(int top){
-        var entries=displayEntries();int bottom=height-(home()?40:splitLayout()?82:60),stride=Math.min(home()&&height<320?56:AccessibilityScreen.cardStride(),Math.max(24,bottom-top));scrollArea(entries.size(),new dev.abros.rivet.core.NativeLayout.Box(left(),top,Math.max(0,contentWidth()),Math.max(0,(bottom)-(top))),stride);
+        var entries=displayEntries();int bottom=height-(home()?40:splitLayout()?82:60),stride=home()&&height<320?56:AccessibilityScreen.cardStride();for(var entry:entries)stride=Math.max(stride,CommunityCard.height(font,entry.getAsJsonObject(),contentWidth()-12,stride-6)+6);stride=Math.min(stride,Math.max(36,bottom-top));scrollArea(entries.size(),new dev.abros.rivet.core.NativeLayout.Box(left(),top,Math.max(0,contentWidth()),Math.max(0,(bottom)-(top))),stride);
         for(int n=firstRow;n<Math.min(entries.size(),firstRow+visibleRows);n++){
             var entry=entries.get(n).getAsJsonObject();
             var card=new CommunityCard(left(),top+(n-firstRow)*stride,contentWidth(),stride-6,entry,()->openEntry(entry));card.selected=selected()!=null&&selected().itemId.equals(Json.str(entry,"id"));addRenderableWidget(card);
@@ -61,43 +61,43 @@ final class CommunityScreen extends ScrollScreen {
         var child=selected();if(child==null)return;child.prepareInline(this);child.rows.clear();
         if(child.data.has("detail"))child.detail(child.data.getAsJsonObject("detail"));
         int x=detailLeft(),w=masterDetail().detail().width(),top=child.bodyTop();
-        child.visibleRows=Math.max(1,(height-82-top)/24);child.firstRow=Math.max(0,Math.min(child.firstRow,Math.max(0,child.rows.size()-child.visibleRows)));
-        child.detailControls(this,x,contentTop(),w);drawRowWidgets(child,x+8,top,w-16);
+        child.visibleRows=Math.max(1,(UiWorkspace.fit(width,height).page().bottom()-top-8)/24);child.firstRow=Math.max(0,Math.min(child.firstRow,Math.max(0,child.rows.size()-child.visibleRows)));
+        child.detailControls(this,x,42,w);drawRowWidgets(child,x+8,top,w-16);
         var footer=UiPageFooter.fit(new dev.abros.rivet.core.NativeLayout.Box(x,height-54,w,20));
         if(child.model.uncertain())footer.start(UiActions.Command.RETRY,this::addRenderableWidget,child::retryOrLoad);else if(child.model.more())button("Загрузить ещё",footer.start().x(),footer.start().y(),footer.start().width(),child::retryOrLoad);
-        footer.end(UiActions.Command.CLOSE,this::addRenderableWidget,()->{expanded.clear();refreshUi();});
+
     }
     private void retryOrLoad(){if(model.busy())return;if(model.uncertain())model.retry();else if(model.more())nextPage();else load();status=model.status();}
 
     private int contentBottom(){return height-(!itemId.isEmpty()&&inlineParent==null?58:82);}
-    private int bodyTop(){return (inlineParent==null?40:inlineParent.contentTop())+(section.equals("groups")?76:48);}
+    private int bodyTop(){return 42+(section.equals("groups")?76:48);}
     private void drawRowWidgets(CommunityScreen child,int x,int top,int w){
         for(int n=child.firstRow;n<Math.min(child.rows.size(),child.firstRow+child.visibleRows);n++){
             var row=child.rows.get(n);int y=top+(n-child.firstRow)*24;
-            if(!row.buttons.isEmpty()){int bw=Math.min((w-4*(row.buttons.size()-1))/row.buttons.size(),row.buttons.stream().mapToInt(a->font.width(a.label)+20).max().orElse(100));for(int i=0;i<row.buttons.size();i++){var action=row.buttons.get(i);var control=button(font.plainSubstrByWidth(action.label,bw-12),x+i*(bw+4),y,bw,()->{if(!child.model.busy())action.click.run();});control.setTooltip(control.getMessage().getString().equals(action.label)?null:Tooltip.create(Component.literal(action.label)));child.controlsBusy=child.model.busy();control.active=!child.model.busy();}}
+            if(!row.buttons.isEmpty()){int bw=(w-6*(row.buttons.size()-1))/row.buttons.size();for(int i=0;i<row.buttons.size();i++){var action=row.buttons.get(i);var control=button(font.plainSubstrByWidth(action.label,bw-12),x+i*(bw+6),y,bw,()->{if(!child.model.busy())action.click.run();});control.setTooltip(control.getMessage().getString().equals(action.label)?null:Tooltip.create(Component.literal(action.label)));child.controlsBusy=child.model.busy();control.active=!child.model.busy();}}
             else if(row.checked!=null){var bar=new UiChoiceRow(x,y,w,row.label,row.checked,row.progress,0xFFB49AE8,()->{if(!child.model.busy()&&row.click!=null)row.click.run();});bar.active=!child.model.busy()&&row.click!=null;child.controlsBusy=child.model.busy();addRenderableWidget(bar);}
-            else if(row.click!=null){int buttonWidth=child.itemId.isEmpty()?w:Math.min(w,Math.max(88,Math.min(240,font.width(row.label)+24)));var control=button(font.plainSubstrByWidth(row.label,buttonWidth-12),x,y,buttonWidth,()->{if(!child.model.busy())row.click.run();});control.setTooltip(control.getMessage().getString().equals(row.label)?null:Tooltip.create(Component.literal(row.label)));child.controlsBusy=child.model.busy();control.active=!child.model.busy();}
+            else if(row.click!=null){int buttonWidth=w;var control=button(font.plainSubstrByWidth(row.label,buttonWidth-12),x,y,buttonWidth,()->{if(!child.model.busy())row.click.run();});control.setTooltip(control.getMessage().getString().equals(row.label)?null:Tooltip.create(Component.literal(row.label)));child.controlsBusy=child.model.busy();control.active=!child.model.busy();}
         }
     }
     private void detailControls(CommunityScreen host,int x,int y,int w){
         if(!moreActions.isEmpty())host.button("Действия ▾",x+w-90,y+4,82,this::showMore);
         if(section.equals("groups")&&data.has("detail")){
             boolean manage=data.getAsJsonObject("detail").get("manage").getAsBoolean();
-            var tabs=plus()?manage?List.of("overview","members","tasks","places","requests"):List.of("overview","members","tasks","places"):manage?List.of("overview","members","requests"):List.of("overview","members");
+            var tabs=plus()?manage?List.of("overview","members","tasks","events","places","requests"):List.of("overview","members","tasks","events","places"):manage?List.of("overview","members","requests"):List.of("overview","members");
             var labels=tabs.stream().map(CommunityScreen::groupTabLabel).toList();
             UiTabs.build(host,font,new dev.abros.rivet.core.NativeLayout.Box(x+8,y+40,w-16,20),labels,tabs.indexOf(groupTab),host::addRenderableWidget,n->{groupTab=tabs.get(n);resetScroll();if(inlineParent!=null)inlineParent.detailPosition=0;refreshUi();},!model.busy());
 
         }
     }
-    private static String groupTabLabel(String tab){return switch(tab){case "overview"->"Обзор";case "members"->"Участники";case "tasks"->"Задачи";case "places"->"Места";default->"Заявки";};}
+    private static String groupTabLabel(String tab){return switch(tab){case "overview"->"Обзор";case "members"->"Участники";case "tasks"->"Задачи";case "events"->"События";case "places"->"Места";default->"Заявки";};}
     private void renderDetailPane(GuiGraphics g){
-        int x=detailLeft(),w=masterDetail().detail().width();g.fill(x,contentTop(),x+w,height-82,AccessibilityScreen.background(UiPalette.color(0xD01B252E)));var child=selected();
-        if(child==null){Ui.text(g,font,"Выберите запись",x+10,contentTop()+12,UiPalette.color(0xBAC6D2));return;}
-        if(child.data.has("detail")){var j=child.data.getAsJsonObject("detail");Ui.text(g,font,font.plainSubstrByWidth(Json.str(j,"title"),w-104),x+8,contentTop()+8,UiKit.text(),false);Ui.text(g,font,font.plainSubstrByWidth(child.detailStatus(j),w-16),x+8,contentTop()+24,child.accent());}
-        int top=child.bodyTop();child.renderRowCards(g,x+8,top,w-16,height-82);g.enableScissor(x,top,x+w,height-82);
-        for(int n=child.firstRow;n<Math.min(child.rows.size(),child.firstRow+child.visibleRows);n++){var row=child.rows.get(n);if(row.click==null&&row.progress<0&&row.buttons.isEmpty()&&row.checked==null)Ui.text(g,font,row.label,x+8,top+(n-child.firstRow)*24+6,AccessibilityScreen.foreground(UiPalette.color(0xEEEEEE)));}
+        int x=detailLeft(),w=masterDetail().detail().width();g.fill(x,42,x+w,UiWorkspace.fit(width,height).page().bottom(),AccessibilityScreen.background(UiKit.surface()));var child=selected();
+        if(child==null){Ui.text(g,font,"Выберите запись",x+10,54,UiPalette.color(0xBAC6D2));return;}
+        if(child.data.has("detail")){var j=child.data.getAsJsonObject("detail");Ui.text(g,font,font.plainSubstrByWidth(Json.str(j,"title"),w-104),x+8,50,UiKit.text(),false);Ui.text(g,font,font.plainSubstrByWidth(child.detailStatus(j),w-16),x+8,66,child.accent());}
+        int top=child.bodyTop();child.renderRowCards(g,x+8,top,w-16,UiWorkspace.fit(width,height).page().bottom()-8);g.enableScissor(x,top,x+w,UiWorkspace.fit(width,height).page().bottom()-8);
+        for(int n=child.firstRow;n<Math.min(child.rows.size(),child.firstRow+child.visibleRows);n++){var row=child.rows.get(n);if(row.click==null&&row.progress<0&&row.buttons.isEmpty()&&row.checked==null)UiParagraph.draw(g,font,row.label,x+8,top+(n-child.firstRow)*24+2,UiKit.text());}
         g.disableScissor();
-        UiScrollbar.draw(g,dev.abros.rivet.core.ScrollLayout.fit(new dev.abros.rivet.core.NativeLayout.Box(x+8,top,Math.max(0,w-16),Math.max(0,height-82-top))).track(),child.visibleRows,child.rows.size(),child.firstRow);
+        UiScrollbar.draw(g,dev.abros.rivet.core.ScrollLayout.fit(new dev.abros.rivet.core.NativeLayout.Box(x+8,top,Math.max(0,w-16),Math.max(0,UiWorkspace.fit(width,height).page().bottom()-8-top))).track(),child.visibleRows,child.rows.size(),child.firstRow);
         if(!child.status.isEmpty())Ui.status(g,font,child.status,x,height-78,w,height-56);
     }
     private String detailStatus(JsonObject j){return section.equals("groups")&&Json.str(j,"status").equals("open")?(j.has("recruiting")&&j.get("recruiting").getAsBoolean()?"Набор открыт":"Набор закрыт"):status(Json.str(j,"status"));}
@@ -105,7 +105,7 @@ final class CommunityScreen extends ScrollScreen {
     boolean leavePage(){if(!model.leave())return false;for(var child:expanded.values())if(!child.leavePage())return false;ServerMenuClient.cancelReads(surface());return true;}
 
     void refreshPermissions(){refreshUi();}
-    private static final Map<String,String> NAMES=Map.ofEntries(Map.entry("home","Главная"),Map.entry("tasks","Мои задачи"),Map.entry("players","Игроки"),Map.entry("board","Доска объявлений"),Map.entry("groups","Объединения"),Map.entry("events","События"),Map.entry("polls","Голосования"),Map.entry("ideas","Предложения"),Map.entry("notifications","Уведомления"),Map.entry("info","Сервер"),Map.entry("help","Помощь"),Map.entry("admin","Администрирование"));
+    private static final Map<String,String> NAMES=Map.ofEntries(Map.entry("profile","Мой профиль"),Map.entry("settings","Настройки"),Map.entry("home","Главная"),Map.entry("tasks","Мои задачи"),Map.entry("players","Игроки"),Map.entry("board","Доска объявлений"),Map.entry("groups","Объединения"),Map.entry("events","События"),Map.entry("polls","Голосования"),Map.entry("ideas","Предложения"),Map.entry("notifications","Уведомления"),Map.entry("info","Сервер"),Map.entry("help","Помощь"),Map.entry("admin","Администрирование"));
     CommunityScreen(Screen parent,String section,String id){super(Component.literal(name(section)));this.parent=parent;this.section=section;itemId=id;model=new dev.abros.rivet.core.CommunityWorkspace(section,id,ServerMenuClient::request,System::currentTimeMillis);}
     static String name(String section){if(section.equals("groups")&&ServerMenuClient.state.has("communityConfig"))return Json.opt(ServerMenuClient.state.getAsJsonObject("communityConfig"),"groupsTitle",NAMES.get(section));return NAMES.getOrDefault(section,section);}
     static void open(Screen parent,String section){net.minecraft.client.Minecraft.getInstance().setScreen(new CommunityScreen(parent,section,""));}
@@ -114,32 +114,38 @@ final class CommunityScreen extends ScrollScreen {
     static boolean can(JsonObject item,String action){return item.has("actions")&&item.getAsJsonArray("actions").contains(new JsonPrimitive(action));}
     boolean owner(JsonObject j){return me().equals(Json.opt(j,"owner",""));}
     private int navigationLeft(){return navigation.left();}
-    private int left(){if(inlineParent!=null)return inlineParent.detailLeft();int base=navigationLeft();return home()?base+Math.max(0,(navigation.right()-base-20-864)/2):base;}
+    private int left(){if(inlineParent!=null)return inlineParent.detailLeft();return navigationLeft();}
     private int profileLeft(){return left()+contentWidth()+12;}
+    private int controlsWidth(){return UiSearchToolbar.contentWidth(contentWidth());}
+    private int homeTop(){return UiWorkspace.fit(width,height).page().y();}
     private boolean home(){return section.equals("home")&&itemId.isEmpty();}
     private int groupScroll;
-    private boolean sideProfile(){return home()&&height>=360&&navigation.right()-left()>=490;}
-    private int contentWidth(){if(inlineParent!=null)return inlineParent.masterDetail().detail().width()-8;if(splitLayout())return listWidth();return home()?Math.min(640,navigation.right()-left()-20-(sideProfile()?224:0)):Math.min(680,navigation.right()-left()-20);}
+    private boolean sideProfile(){return home()&&height>=360&&UiWorkspace.fit(width,height).page().right()-left()>=490;}
+    private int contentWidth(){if(inlineParent!=null)return inlineParent.masterDetail().detail().width()-8;if(splitLayout())return listWidth();return UiWorkspace.fit(width,height).page().right()-left()-(sideProfile()?224:0);}
     private Button button(String label,int x,int y,int w,Runnable callback){return button(label,UiActions.Tone.NORMAL,"",x,y,w,callback);}
     private Button button(String label,UiActions.Tone tone,String icon,int x,int y,int w,Runnable callback){return addRenderableWidget(UiActions.button(Component.literal(label),tone,icon,b->callback.run()).bounds(x,y,w,20).build());}
     @Override protected void init(){controlsBusy=model.busy();
         if(data.has("detail")){rows.clear();detail(data.getAsJsonObject("detail"));}else if(data.has("entries")){rows.clear();list();}
         notificationButton=null;
         navigation.build(section,control->{addRenderableWidget(control);if(control.getMessage().getString().equals(MenuSidebar.inboxLabel(width)))notificationButton=control;});
-        UiPageFooter.workspace(width,height).end(UiActions.Command.BACK,this::addRenderableWidget,this::onClose);
+        UiPageFooter.workspace(width,height).end(UiNavigation.exitCommand(this,parent),this::addRenderableWidget,this::onClose);
         if(itemId.isEmpty()&&!section.equals("home")){
-            search=UiSearchToolbar.build(this,font,left(),76,contentWidth(),query,mine?1:participating?2:0,sort,archive||trash,this::addRenderableWidget,v->query=v,this::resetList,n->{mine=n==1;participating=n==2;resetList();},v->{sort=v;resetList();},()->{query="";mine=false;participating=false;archive=false;trash=false;sort="default";resetList();refreshUi();},!model.busy());
+            search=UiSearchToolbar.build(this,font,left(),42,controlsWidth(),query,mine?1:participating?2:0,sort,archive||trash,this::addRenderableWidget,v->query=v,this::resetList,n->{mine=n==1;participating=n==2;resetList();},v->{sort=v;resetList();},()->{query="";mine=false;participating=false;archive=false;trash=false;sort="default";resetList();refreshUi();},!model.busy());
 
         }
         if(home()){
             if(TaskScreen.available()){
-                button("Поиск по серверу",UiActions.Tone.NORMAL,UiIcons.SEARCH,left(),76,Math.min(140,contentWidth()),()->minecraft.setScreen(new GlobalSearchScreen(this)));if(contentWidth()>=190)button("⋯",left()+148,76,24,()->minecraft.setScreen(new HomeWidgetsScreen(this)));
+                button("Поиск по серверу",UiActions.Tone.NORMAL,UiIcons.SEARCH,left(),homeTop(),Math.max(1,controlsWidth()-30),()->minecraft.setScreen(new GlobalSearchScreen(this)));if(contentWidth()>=190)button("⋯",left()+controlsWidth()-24,homeTop(),24,()->{if(sideProfile())minecraft.setScreen(new HomeWidgetsScreen(this));else profileActions();}).setTooltip(Tooltip.create(Component.literal(sideProfile()?"Виджеты главной":"Профиль, виджеты и настройки")));
             }
             if(sideProfile()){
-                int px=profileLeft(),by=184;
-                if(SkinClient.available())button("Скины",px+9,by,58,()->SkinsScreen.open(this));
-                if(plus())button("О себе",px+71,by,62,()->minecraft.setScreen(new PersonalProfileScreen(this)));
-                button("Настройки",px+137,by,66,()->minecraft.setScreen(new AccessibilityScreen(this)));
+                int px=profileLeft(),by=homeTop()+108;
+                var profileActions=new ArrayList<UiActions.Action>();
+                if(SkinClient.available())profileActions.add(UiActions.action("Скины",()->SkinsScreen.open(this),true));
+                if(plus())profileActions.add(UiActions.action("О себе",()->minecraft.setScreen(new PersonalProfileScreen(this)),true));
+                profileActions.add(UiActions.action("Настройки",()->minecraft.setScreen(new AccessibilityScreen(this)),true));
+                var tracks=new dev.abros.rivet.core.NativeLayout.Track[profileActions.size()];
+                for(int n=0;n<tracks.length;n++)tracks[n]=n==tracks.length-1?dev.abros.rivet.core.NativeLayout.Track.flex(1):dev.abros.rivet.core.NativeLayout.Track.fixed(font.width(profileActions.get(n).label())+16);
+                UiActions.row(new dev.abros.rivet.core.NativeLayout.Box(px+9,by,194,20),this::addRenderableWidget,tracks,profileActions.toArray(UiActions.Action[]::new));
                 if(AuthClient.available())button("Безопасность",px+9,by+24,194,()->AuthAccountScreen.open(this));
                 groupWidgets();
             }
@@ -153,14 +159,15 @@ final class CommunityScreen extends ScrollScreen {
             if(!itemId.isEmpty())detailControls(this,left(),40,contentWidth());else if(splitLayout())detailWidgets();
         }
         if(itemId.isEmpty()){
-            if(!home()&&!section.equals("notifications"))button((trash?"Удалённые":archive?"Архив":"Активные")+" ▾",navigation.right()-120,44,100,()->{if(!model.busy())minecraft.setScreen(new ChoicePopup(this,"Записи",List.of("Активные","Архив","Удалённые · 30 дней"),i->{archive=i==1;trash=i==2;resetList();}).anchorLabel((trash?"Удалённые":archive?"Архив":"Активные")+" ▾").current(trash?2:archive?1:0));});
-            if(data.has("canCreate")&&data.get("canCreate").getAsBoolean()&&Set.of("board","groups","events","polls","ideas").contains(section))button(createLabel(),UiActions.Tone.PRIMARY,UiIcons.PLUS,left(),height-54,Math.min(170,Math.max(60,contentWidth()-62)),this::create);
+            if(!home()&&!section.equals("notifications"))button((trash?"Удалённые":archive?"Архив":"Активные")+" ▾",left()+Math.max(0,controlsWidth()-(controlsWidth()-6)/2),toolbarBottom(),(controlsWidth()-6)/2,()->{if(!model.busy())minecraft.setScreen(new ChoicePopup(this,"Записи",List.of("Активные","Архив","Удалённые · 30 дней"),i->{archive=i==1;trash=i==2;resetList();}).anchorLabel((trash?"Удалённые":archive?"Архив":"Активные")+" ▾").current(trash?2:archive?1:0));});
+            if(data.has("canCreate")&&data.get("canCreate").getAsBoolean()&&Set.of("board","groups","events","polls","ideas").contains(section))button(createLabel(),UiActions.Tone.PRIMARY,UiIcons.PLUS,left(),toolbarBottom(),(controlsWidth()-6)/2,this::create);
             if(section.equals("notifications"))button("Прочитать всё",left(),height-54,125,()->send("read",new JsonObject()));
         }
         UiPageFooter.workspace(width,height).start(model.uncertain()?UiActions.Command.RETRY:UiActions.Command.REFRESH,this::addRenderableWidget,()->{if(model.uncertain()){model.retry();status=model.status();}else{load();if(selected()!=null)selected().load();}});
         if(!loaded){loaded=true;load();}
     }
-    private int contentTop(){return home()?(TaskScreen.available()?104:76):itemId.isEmpty()?132:bodyTop();}
+    private int toolbarBottom(){return 42+UiSearchToolbar.height(controlsWidth(),height,!query.isBlank()||mine||participating||archive||trash||!sort.equals("default"));}
+    private int contentTop(){return home()?homeTop()+(TaskScreen.available()?28:0):itemId.isEmpty()?toolbarBottom()+(section.equals("notifications")?4:26):bodyTop();}
     private JsonArray displayEntries(){
         var result=new JsonArray();
         if(home()&&data.has("pinnedAnnouncement")){var pin=data.getAsJsonObject("pinnedAnnouncement");if(pin.get("until").getAsLong()>System.currentTimeMillis()&&!Json.str(pin,"text").isBlank()){
@@ -182,7 +189,7 @@ final class CommunityScreen extends ScrollScreen {
         if(id.startsWith("local:task:")&&TaskScreen.available()){minecraft.setScreen(new TaskScreen(this,Json.opt(entry,"group",""),id.substring("local:task:".length())));return;}if(id.startsWith("local:task:")){var group=new CommunityScreen(this,"groups",Json.str(entry,"group"));group.groupTab="tasks";minecraft.setScreen(group);return;}
         if(id.equals("local:pinned")){minecraft.setScreen(new TextScreen(this,Component.literal("Объявление администрации"),Json.str(entry,"preview")+"\n\n"+Json.str(entry,"attention")));return;}
         if(id.equals("local:moderation-vote")){minecraft.setScreen(new ModerationVoteScreen(this,null));return;}
-        if(selected()!=null&&selected().itemId.equals(id))return;
+        if(splitLayout()&&selected()!=null&&selected().itemId.equals(id))return;
         var child=new CommunityScreen(this,Json.str(entry,"section"),id);child.invitationTarget=invitationTarget;
         if(!splitLayout()){minecraft.setScreen(child);return;}
         expanded.clear();detailPosition=0;child.prepareInline(this);expanded.put(id,child);child.loaded=true;child.load();refreshUi();
@@ -190,7 +197,7 @@ final class CommunityScreen extends ScrollScreen {
 
 
     static String statusLabel(String value){return status(value);}
-    private String createLabel(){return switch(section){case "board"->"Разместить объявление";case "groups"->"Создать объединение";case "events"->"Назначить событие";case "polls"->"Создать голосование";case "ideas"->"Предложить идею";default->"Создать";};}
+    private String createLabel(){return switch(section){case "board"->"Разместить";case "groups"->"Создать";case "events"->"Назначить";case "polls"->"Создать";case "ideas"->"Предложить";default->"Создать";};}
     private String subtitle(){return switch(section){case "home"->"Ваши события, задачи и объединения";case "board"->"Предложения игроков";case "groups"->"Найдите объединение или соберите свое";case "events"->"Встречи, участие и совместные планы";case "polls"->"Ваш голос в решениях сообщества";case "ideas"->"Идеи игроков";case "notifications"->"Ответы, приглашения и напоминания";default->name(section);};}
     private String emptyText(){return switch(section){case "home"->"Вы пока не записаны на ближайшие события.";case "board"->"Объявлений пока нет. Нажмите «Разместить объявление», чтобы предложить помощь или разместить запрос.";case "groups"->"Объединений пока нет. Нажмите «Создать объединение», чтобы собрать свою команду.";case "events"->"Ближайших событий нет. Новые встречи появятся здесь после публикации организатором.";case "polls"->"Сейчас нет голосований.";case "ideas"->"Предложений пока нет. Нажмите «Предложить идею», чтобы поделиться идеей для сервера.";case "notifications"->"Всё прочитано. Новые ответы и приглашения появятся здесь.";default->"Пока нет записей.";};}
     private int accent(){return switch(section){case "board"->UiPalette.color(0xFFE2BE75);case "groups"->UiPalette.color(0xFF79CBA6);case "events"->UiPalette.color(0xFF82B6F2);case "polls"->UiPalette.color(0xFFB49AE8);case "ideas"->UiPalette.color(0xFFF0A77C);default->UiPalette.color(0xFF8BC7CB);};}
@@ -202,9 +209,9 @@ final class CommunityScreen extends ScrollScreen {
     @Override public void renderBackground(GuiGraphics g,int x,int y,float d){
         super.renderBackground(g,x,y,d);
         if(splitLayout())renderDetailPane(g);
-        if(home()&&sideProfile()){ProfilePanel.render(g,font,profileLeft(),76,212,true,data);}
-        if(!data.has("detail")){g.fill(left(),40,home()?left()+contentWidth()+(sideProfile()?224:0):navigation.right()-16,70,AccessibilityScreen.background(UiPalette.color(0x901C2B36)));g.fill(left(),40,left()+2,70,accent());
-        Ui.text(g,font,font.plainSubstrByWidth(subtitle(),contentWidth()-124),left()+9,51,UiPalette.color(0xBAC6D2),false);}
+        if(home()&&sideProfile()){ProfilePanel.render(g,font,profileLeft(),homeTop(),212,true,data);}
+        if(!data.has("detail")){
+        }
         if(data.has("detail")){
             var item=data.getAsJsonObject("detail");g.fill(left(),40,left()+contentWidth(),rowCards.isEmpty()?contentBottom():bodyTop()-8,AccessibilityScreen.background(UiPalette.color(0xC51B252E)));g.fill(left(),40,left()+3,bodyTop()-8,accent());renderRowCards(g,left()+12,contentTop(),contentWidth()-24,contentBottom());
             String heading=name(section)+" › "+Json.str(item,"title");String info=Json.str(item,"author")+" · "+status(Json.str(item,"status"));
@@ -232,7 +239,7 @@ final class CommunityScreen extends ScrollScreen {
         if(!retainChoices){choices.clear();if(data.has("detail")&&data.getAsJsonObject("detail").has("myVote"))for(var choice:data.getAsJsonObject("detail").getAsJsonArray("myVote"))choices.add(choice.getAsInt());}
         rows.clear();if(data.has("detail"))detail(data.getAsJsonObject("detail"));else list();refreshUi();restore(anchor);
     }
-    void text(String text){for(String line:text.split("\n",-1)){if(line.isEmpty()){rows.add(new Row("",null));continue;}for(var part:font.getSplitter().splitLines(line,Math.max(40,contentWidth()-40),net.minecraft.network.chat.Style.EMPTY))rows.add(new Row(part.getString(),null));}}
+    void text(String text){for(String line:text.split("\n",-1)){if(line.isEmpty()){rows.add(new Row("",null));continue;}var lines=font.getSplitter().splitLines(line,Math.max(40,contentWidth()-40),net.minecraft.network.chat.Style.EMPTY);for(int n=0;n<lines.size();n+=2)rows.add(new Row(lines.get(n).getString()+(n+1<lines.size()?"\n"+lines.get(n+1).getString():""),null));}}
     void action(String name,Runnable action){rows.add(new Row(name,action));}
     void actionRow(List<Row> actions){
         if(actions.isEmpty())return;
@@ -255,7 +262,7 @@ final class CommunityScreen extends ScrollScreen {
         if(!section.equals("groups")||groupTab.equals("overview")){int intro=beginCard();text(Json.str(j,"description"));if(Set.of("board","events","groups").contains(section))LocationActions.render(this,j);endCard(intro);}
         boolean manage=j.get("manage").getAsBoolean();
         switch(section){case "board" -> BoardSection.render(this,j);case "ideas" -> IdeasSection.render(this,j);case "polls" -> PollsSection.render(this,j);case "events" -> EventsSection.render(this,j);case "groups" -> GroupsSection.render(this,j);}
-        if(data.has("related")&&(!section.equals("groups")||groupTab.equals("overview")))for(var related:data.getAsJsonArray("related")){var child=related.getAsJsonObject();action(name(Json.str(child,"section"))+": "+Json.str(child,"title"),()->minecraft.setScreen(new CommunityScreen(surface(),Json.str(child,"section"),Json.str(child,"id"))));}
+        if(data.has("related")&&(!section.equals("groups")||groupTab.equals("overview")||groupTab.equals("events")))for(var related:data.getAsJsonArray("related")){var child=related.getAsJsonObject();if(section.equals("groups")&&groupTab.equals("events")&&!Json.str(child,"section").equals("events"))continue;action(name(Json.str(child,"section"))+": "+Json.str(child,"title"),()->minecraft.setScreen(new CommunityScreen(surface(),Json.str(child,"section"),Json.str(child,"id"))));}
         if(plus())secondary("Поделиться в чате…",()->minecraft.setScreen(new ChatScreen("/rivet share "+section+" "+itemId)));
         if(can(j,"edit"))secondary("Редактировать",()->edit(j));
         else if(Set.of("board","events","groups").contains(section)&&can(j,"location"))secondary("Место…",()->{var preset=new JsonObject();preset.add("location",j.has("location")?j.get("location"):JsonNull.INSTANCE);form("Место","location",List.of(),preset);});
@@ -286,16 +293,18 @@ final class CommunityScreen extends ScrollScreen {
     @Override public boolean mouseScrolled(double x,double y,double dx,double dy){
         if(!home()&&sideProfile()&&data.has("groups")&&x>=navigation.right()-232&&y>=groupTop()&&y<groupTop()+groupRows()*76){int max=Math.max(0,data.getAsJsonArray("groups").size()-groupRows());groupScroll=Math.max(0,Math.min(max,groupScroll+(dy<0?1:dy>0?-1:0)));refreshUi();return true;}
         if(navigation.scroll(x,y,dy)){refreshUi();return true;}
-        if(splitLayout()&&x>=detailLeft()&&y>=contentTop()&&y<height-64){scrollDetail(-dy*3);return true;}
+        if(splitLayout()&&x>=detailLeft()&&y>=42&&y<UiWorkspace.fit(width,height).page().bottom()){scrollDetail(-dy*3);return true;}
         return super.mouseScrolled(x,y,dx,dy);
     }
-    @Override public boolean mouseClicked(double x,double y,int button){var child=selected();if(splitLayout()&&child!=null&&button==0&&x>=detailLeft()+masterDetail().detail().width()-14&&x<=detailLeft()+masterDetail().detail().width()-8&&y>=child.bodyTop()&&y<height-82){detailDragging=true;seekDetail(y);return true;}return super.mouseClicked(x,y,button);}
-    private void seekDetail(double y){var child=selected();if(child==null)return;int track=height-82-child.bodyTop(),thumb=Math.max(12,track*child.visibleRows/Math.max(1,child.rows.size()));detailPosition=0;scrollDetail((y-child.bodyTop()-thumb/2.0)/Math.max(1,track-thumb)*Math.max(0,child.rows.size()-child.visibleRows));}
+    @Override public boolean mouseClicked(double x,double y,int button){var child=selected();if(splitLayout()&&child!=null&&button==0&&x>=detailLeft()+masterDetail().detail().width()-14&&x<=detailLeft()+masterDetail().detail().width()-8&&y>=child.bodyTop()&&y<UiWorkspace.fit(width,height).page().bottom()-8){detailDragging=true;seekDetail(y);return true;}return super.mouseClicked(x,y,button);}
+    private void seekDetail(double y){var child=selected();if(child==null)return;int track=UiWorkspace.fit(width,height).page().bottom()-8-child.bodyTop(),thumb=Math.max(12,track*child.visibleRows/Math.max(1,child.rows.size()));detailPosition=0;scrollDetail((y-child.bodyTop()-thumb/2.0)/Math.max(1,track-thumb)*Math.max(0,child.rows.size()-child.visibleRows));}
     @Override public boolean mouseDragged(double x,double y,int button,double dx,double dy){if(detailDragging&&button==0){seekDetail(y);return true;}return super.mouseDragged(x,y,button,dx,dy);}
     @Override public boolean mouseReleased(double x,double y,int button){detailDragging=false;return super.mouseReleased(x,y,button);}
-    @Override public boolean keyPressed(int key,int scan,int modifiers){if((key==264||key==265)&&getFocused() instanceof CommunityCard focused&&focused.getX()==left()){var entries=displayEntries();int at=-1;for(int n=0;n<entries.size();n++)if(Json.str(entries.get(n).getAsJsonObject(),"id").equals(focused.targetId())){at=n;break;}if(at>=0){int next=Math.max(0,Math.min(entries.size()-1,at+(key==264?1:-1)));if(next<firstRow)restoreScroll(next);else if(next>=firstRow+visibleRows)restoreScroll(next-visibleRows+1);String target=Json.str(entries.get(next).getAsJsonObject(),"id");refreshUi();for(var c:children())if(c instanceof CommunityCard card&&card.targetId().equals(target)){setFocused(card);break;}return true;}}if((key==257||key==335)&&getFocused()==search){resetList();return true;}if(key==256&&selected()!=null){expanded.clear();refreshUi();return true;}if(splitLayout()&&selected()!=null&&getFocused() instanceof AbstractWidget widget&&widget.getX()>=detailLeft()){if(key==266||key==267){scrollDetail((key==266?-1:1)*selected().visibleRows);return true;}}return super.keyPressed(key,scan,modifiers);}
-    @Override public void render(GuiGraphics g,int x,int y,float d){super.render(g,x,y,d);UiHeading.page(g,font,Component.literal(name(section)),width);navigation.drawFrame(g);int top=contentTop();if(cards()&&displayEntries().isEmpty())UiState.draw(g,font,model.failed()||model.uncertain()?UiState.Kind.ERROR:model.busy()?UiState.Kind.LOADING:query.isBlank()&&!mine&&!participating?UiState.Kind.EMPTY:UiState.Kind.FILTERED,model.failed()||model.uncertain()?"Не удалось загрузить записи":model.busy()?"Загружаем записи…":query.isBlank()?"Здесь пока нет записей":"Ничего не найдено",model.failed()||model.uncertain()?status:model.busy()?"Получаем актуальные данные с сервера.":query.isBlank()?(mine?"У вас пока нет записей в этом разделе.":emptyText()):"Сбросьте поиск или измените запрос.",left()+8,top+8,contentWidth()-16,contentBottom());if(!cards())for(int n=firstRow;n<Math.min(rows.size(),firstRow+visibleRows);n++)if(rows.get(n).click==null&&rows.get(n).progress<0&&rows.get(n).buttons.isEmpty()&&rows.get(n).checked==null)Ui.text(g,font,rows.get(n).label,left()+12,top+(n-firstRow)*24+6,AccessibilityScreen.foreground(UiPalette.color(0xEEEEEE)));Ui.status(g,font,status,left(),contentBottom()+4,contentWidth(),height-30);}
+    boolean pendingMutation(){return model.busy()&&!model.reading()||expanded.values().stream().anyMatch(CommunityScreen::pendingMutation);}
+    @Override boolean cancelInteraction(){if(pendingMutation())return false;if(super.cancelInteraction())return true;if(selected()!=null){expanded.clear();refreshUi();return true;}return false;}
+    @Override public boolean keyPressed(int key,int scan,int modifiers){if((key==264||key==265)&&getFocused() instanceof CommunityCard focused&&focused.getX()==left()){var entries=displayEntries();int at=-1;for(int n=0;n<entries.size();n++)if(Json.str(entries.get(n).getAsJsonObject(),"id").equals(focused.targetId())){at=n;break;}if(at>=0){int next=Math.max(0,Math.min(entries.size()-1,at+(key==264?1:-1)));if(next<firstRow)restoreScroll(next);else if(next>=firstRow+visibleRows)restoreScroll(next-visibleRows+1);String target=Json.str(entries.get(next).getAsJsonObject(),"id");refreshUi();for(var c:children())if(c instanceof CommunityCard card&&card.targetId().equals(target)){setFocused(card);break;}return true;}}if((key==257||key==335)&&getFocused()==search){resetList();return true;}if(splitLayout()&&selected()!=null&&getFocused() instanceof AbstractWidget widget&&widget.getX()>=detailLeft()){if(key==266||key==267){scrollDetail((key==266?-1:1)*selected().visibleRows);return true;}}return super.keyPressed(key,scan,modifiers);}
+    @Override public void render(GuiGraphics g,int x,int y,float d){super.render(g,x,y,d);UiHeading.page(g,font,Component.literal(name(section)),width);navigation.drawFrame(g);int top=contentTop();if(cards()&&displayEntries().isEmpty())UiState.draw(g,font,model.failed()||model.uncertain()?UiState.Kind.ERROR:model.busy()?UiState.Kind.LOADING:query.isBlank()&&!mine&&!participating?UiState.Kind.EMPTY:UiState.Kind.FILTERED,model.failed()||model.uncertain()?"Не удалось загрузить записи":model.busy()?"Загружаем записи…":query.isBlank()?"Здесь пока нет записей":"Ничего не найдено",model.failed()||model.uncertain()?status:model.busy()?"Получаем актуальные данные с сервера.":query.isBlank()?(mine?"У вас пока нет записей в этом разделе.":emptyText()):"Сбросьте поиск или измените запрос.",left()+8,top+8,contentWidth()-16,contentBottom());if(!cards())for(int n=firstRow;n<Math.min(rows.size(),firstRow+visibleRows);n++)if(rows.get(n).click==null&&rows.get(n).progress<0&&rows.get(n).buttons.isEmpty()&&rows.get(n).checked==null)UiParagraph.draw(g,font,rows.get(n).label,left()+12,top+(n-firstRow)*24+2,UiKit.text());Ui.status(g,font,status,left(),contentBottom()+4,contentWidth(),height-30);}
     @Override public void tick(){if(inlineParent==null)for(var child:expanded.values())child.tick();if(notificationButton!=null){int unread=ServerMenuClient.state.has("unread")?ServerMenuClient.state.get("unread").getAsInt():0;String caption=(width<420?"Входящие":"Уведомления")+(unread>0?" ("+unread+")":"");if(!notificationButton.getMessage().getString().equals(caption))notificationButton.setMessage(Component.literal(caption));}if(!ServerMenuClient.available())minecraft.setScreen(null);else{boolean changed=model.tick(filters());if(changed){status=model.status();refreshUi();}}}
-    @Override public void onClose(){model.close();ServerMenuClient.cancelReads(surface());if(parent instanceof CommunityScreen screen)screen.invalidate();minecraft.setScreen(parent);}
+    @Override public void onClose(){if(!leavePage())return;model.close();ServerMenuClient.cancelReads(surface());if(parent instanceof CommunityScreen screen)screen.invalidate();UiNavigation.back(this,parent);}
     @Override public boolean isPauseScreen(){return false;}
 }

@@ -38,34 +38,41 @@ final class ServerMenuScreen extends ScrollScreen implements CommunityScreen.Rec
     @Override protected void init(){
         nav.build(tab,this::addRenderableWidget);
         if(tab.equals("admin")&&!ServerMenuClient.staff()){CommunityScreen.open(parent,"home");return;}
-        content.bounds(nav.left(),70,nav.right()-nav.left()-14,Math.max(30,height-145));
-        if(tab.equals("help")){if(System.getenv("RIVET_PILOT_UI")!=null)addRenderableWidget(UiActions.button(Component.literal("UI Kit"),UiActions.Tone.NORMAL,"",b->minecraft.setScreen(new UiKitShowcaseScreen(this))).bounds(nav.right()-94,42,80,20).build());addRenderableWidget(UiActions.button(Component.literal("Интерфейс и голос…"),UiActions.Tone.NORMAL,"",b->minecraft.setScreen(new ChoicePopup(this,"Настройки клиента",List.of("Доступность интерфейса","Диагностика Plasmo Voice"),i->minecraft.setScreen(i==0?new AccessibilityScreen(this):new VoiceDiagnosticsScreen(this))))).bounds(nav.left(),42,Math.min(180,nav.right()-nav.left()-14),20).build());button("server.report",nav.left(),height-72,Math.min(180,(nav.right()-nav.left()-22)/2),()->minecraft.setScreen(new ReportScreen(this)));button("server.myReports",nav.left()+(nav.right()-nav.left())/2,height-72,Math.min(180,(nav.right()-nav.left()-22)/2),()->FeatureListScreen.open(this,"myReports"));}
+        content.bounds(nav.left(),70,UiWorkspace.fit(width,height).page().width(),Math.max(30,height-145));
+        if(tab.equals("help")){addRenderableWidget(UiActions.button(Component.literal("Интерфейс и голос…"),UiActions.Tone.NORMAL,"",b->minecraft.setScreen(new ChoicePopup(this,"Настройки клиента",List.of("Доступность интерфейса","Диагностика Plasmo Voice"),i->minecraft.setScreen(i==0?new AccessibilityScreen(this):new VoiceDiagnosticsScreen(this))))).bounds(nav.left(),42,Math.min(180,UiWorkspace.fit(width,height).page().width()),20).build());if(System.getenv("RIVET_PILOT_UI")!=null)addRenderableWidget(UiActions.button(Component.literal("UI Kit"),UiActions.Tone.NORMAL,"",b->minecraft.setScreen(new UiKitShowcaseScreen(this))).bounds(nav.right()-94,42,80,20).build());
+          UiActions.row(new dev.abros.rivet.core.NativeLayout.Box(nav.left(),height-58,nav.right()-nav.left()-20,20),this::addRenderableWidget,UiActions.action(Client.tr("server.report").getString(),()->minecraft.setScreen(new ReportScreen(this)),true),UiActions.action(Client.tr("server.myReports").getString(),()->FeatureListScreen.open(this,"myReports"),true));}
+
         if(tab.equals("admin")){
-            int left=nav.left(),available=Math.min(880,nav.right()-left-14);
+            int left=nav.left(),available=UiWorkspace.fit(width,height).page().width();
             boolean server=ServerMenuClient.may("rivet.announce")||ServerMenuClient.may("rivet.maintenance")||ServerMenuClient.may("rivet.restart");
-            if(!adminGroup.equals("overview"))addRenderableWidget(UiActions.button(Component.literal("К обзору"),UiActions.Tone.NORMAL,"",b->group("overview")).bounds(left,42,100,20).build());
+            var groups=List.of("overview","reports","server","diagnostics","tools");UiTabs.build(this,font,new dev.abros.rivet.core.NativeLayout.Box(left,42,available,20),List.of("Обзор","Обращения","Сервер","Диагностика","Инструменты"),Math.max(0,groups.indexOf(adminGroup)),this::addRenderableWidget,n->group(groups.get(n)),true);
             summaries.clear();stateKey=modeKey();
             dashboardSections.clear();
-            if(adminGroup.equals("overview")){
+            if(Set.of("overview","reports","diagnostics","tools").contains(adminGroup)){
+                if(Set.of("overview","reports").contains(adminGroup)){
                 if(ServerMenuClient.may("rivet.reports"))dashboardSections.add(new DashboardSection("Обращения · сводка",List.of()));
                 if(ServerMenuClient.may("rivet.reports")){
                     if(overviewData.has("attentionReports"))for(var entry:overviewData.getAsJsonArray("attentionReports")){var report=entry.getAsJsonObject();card(Json.opt(report,"player","Игрок"),Json.opt(report,"attentionReason","Ожидает ответа"),Json.opt(report,"message",""),Json.opt(report,"assignedName","").isBlank()?"Ответственный не назначен":"Ответственный: "+Json.opt(report,"assignedName",""),0xFFEF7777,()->minecraft.setScreen(new ReportDetailScreen(this,report,true)));}
                     if(summaries.isEmpty()&&!metric("openReports").equals("0"))card("Обращения игроков",overviewBusy?"Загрузка…":metric("openReports").equals("0")?"Все обращения обработаны":"Открыть очередь","Назначение ответственного и ответы","Открытые и закрытые обращения",metric("openReports").equals("0")?0xFF79CBA6:0xFFEF7777,()->FeatureListScreen.open(this,"reports"));
                     section("Обращения игроков");
                 }
+                }
                 boolean rivetErrors=overviewData.has("recentErrors")&&!overviewData.getAsJsonArray("recentErrors").isEmpty();
-                if(rivetErrors)card("Ошибки Rivet",overviewData.getAsJsonArray("recentErrors").size()+" последних ошибок","Открыть диагностику","Подробности и журнал",0xFFEF7777,()->minecraft.setScreen(new AdminDashboardScreen(this,true)));
-                if(server&&(stateFlag("maintenance")||scheduled())){card("Состояние сервера",stateFlag("maintenance")?"Обслуживание включено":"Остановка запланирована","Проверить режим и время остановки","Открыть управление сервером",0xFFF0A77C,()->group("server"));}
+                if(Set.of("overview","diagnostics").contains(adminGroup)&&rivetErrors)card("Ошибки Rivet",overviewData.getAsJsonArray("recentErrors").size()+" последних ошибок","Открыть диагностику","Подробности и журнал",0xFFEF7777,()->minecraft.setScreen(new AdminDashboardScreen(this,true)));
+                if(adminGroup.equals("overview")&&server&&(stateFlag("maintenance")||scheduled())){card("Состояние сервера",stateFlag("maintenance")?"Обслуживание включено":"Остановка запланирована","Проверить режим и время остановки","Открыть управление сервером",0xFFF0A77C,()->group("server"));}
                 if(!summaries.isEmpty())section("Требуют внимания");
-                if(server&&!stateFlag("maintenance")&&!scheduled())card("Сервер",stateFlag("maintenance")?"Обслуживание":"Вход открыт",scheduled()?"Остановка запланирована":"Остановка не запланирована",stateFlag("pinned")?"Объявление закреплено":"Нет закреплённого объявления",0xFF79CBA6,()->group("server"));
+                if(adminGroup.equals("diagnostics")){
                 if(!rivetErrors&&ServerMenuClient.admin()&&ServerMenuClient.supports("player-tools"))card("Состояние Rivet",overviewData.has("recentErrors")?overviewData.getAsJsonArray("recentErrors").isEmpty()?"Ошибок не зафиксировано":overviewData.getAsJsonArray("recentErrors").size()+" последних ошибок":"Нет данных об ошибках","Очередь записи: "+metric("storageQueue"),"Очередь чтения: "+metric("readQueue"),0xFFB49AE8,()->minecraft.setScreen(new AdminDashboardScreen(this,true)));
                 else if(!rivetErrors&&ServerMenuClient.may("rivet.diagnostics"))card("Состояние Rivet","Проверка подключений","Состояние мода и интеграций","Получить текущий отчёт",0xFFB49AE8,()->ServerMenuClient.request("diagnostics"));
                 if(ServerMenuClient.may("rivet.diagnostics")&&ServerMenuClient.supports("spark-diagnostics"))card("Производительность","spark","TPS, MSPT, CPU и память","Профилирование и история отчётов",0xFF79CBA6,()->minecraft.setScreen(new SparkDiagnosticsScreen(this)));
                 if(!summaries.isEmpty())section("Сервер и диагностика");
+                }
+                if(adminGroup.equals("tools")){
                 if(ServerMenuClient.admin()&&ServerMenuClient.supports("community-extensions"))card("Права ролей","Предпросмотр","Какие разделы и действия доступны","Без смены вашей роли",0xFFB49AE8,()->minecraft.setScreen(new RolePreviewScreen(this)));
                 if(ServerMenuClient.admin())card("Журнал действий","История администрации","Кто и что изменил","Открыть записи и подробности",0xFF82B6F2,()->FeatureListScreen.open(this,"history"));
                 if(ServerMenuClient.admin()&&ServerMenuClient.supports("admin-tools"))card("Данные сообщества","Экспорт","Выберите нужный раздел","Выгрузка данных с сервера",0xFFE2BE75,()->group("data"));
                 if(!summaries.isEmpty())section("Инструменты администрации");
+                }
             }else if(adminGroup.equals("server")){
                 if(ServerMenuClient.may("rivet.maintenance"))card("Вход игроков",stateFlag("maintenance")?"Обслуживание включено":"Открыт",stateFlag("maintenance")?Json.opt(ServerMenuClient.state,"maintenanceReason",""):"Игроки могут подключаться",stateFlag("maintenance")?"Нажмите, чтобы завершить":"Включить обслуживание с причиной",0xFF79CBA6,()->action(stateFlag("maintenance")?"maintenanceOff":"maintenance"));
                 if(ServerMenuClient.may("rivet.restart"))card("Остановка сервера",scheduled()?"Запланирована":"Не запланирована","Перезапуск выполняется панелью",scheduled()?"Отменить запланированную остановку":"Указать время и причину остановки",0xFFEF7777,()->action(scheduled()?"restartOff":"restart"));
@@ -82,11 +89,19 @@ final class ServerMenuScreen extends ScrollScreen implements CommunityScreen.Rec
                 String[] sections={"","board","groups","events","polls","ideas"},labels={"Все разделы","Доска объявлений","Объединения","События","Голосования","Предложения"};
                 for(int i=0;i<sections.length;i++){String section=sections[i];card(labels[i],"Выгрузить данные","Экспорт выбранного раздела","Файл создаётся на сервере",0xFFE2BE75,()->export(section));}
             }
+            if(Set.of("overview","reports").contains(adminGroup)&&available<420){
+                var responsive=new ArrayList<DashboardSection>();
+                for(var section:dashboardSections)if(!section.items.isEmpty())responsive.add(section);else{
+                    String[] keys={"openReports","unassignedReports","highReports"},labels={"Открытые обращения","Без ответственного","Высокий приоритет"};
+                    for(int i=0;i<keys.length;i++){String key=keys[i];responsive.add(new DashboardSection(i==0?section.title:"",List.of(new Summary(labels[i],metric(key),List.of("Открыть очередь обращений"),UiKit.ACCENT,()->minecraft.setScreen(new ReportQueueScreen(this,key.equals("unassignedReports")?"unassigned":key.equals("highReports")?"high":"all"))))));}
+                }
+                dashboardSections.clear();dashboardSections.addAll(responsive);
+            }
             int columns=columns(),tileWidth=(available-8*(columns-1))/columns;
-            if(adminGroup.equals("overview")){
-                scrollArea(dashboardSections.size(),new dev.abros.rivet.core.NativeLayout.Box(left,42,Math.max(0,available),Math.max(0,(height-64)-(42))),86);
+            if(Set.of("overview","reports","diagnostics","tools").contains(adminGroup)){
+                scrollArea(dashboardSections.size(),new dev.abros.rivet.core.NativeLayout.Box(left,74,Math.max(0,available),Math.max(0,(height-64)-(74))),86);
                 for(int row=firstRow;row<Math.min(dashboardSections.size(),firstRow+visibleRows);row++){
-                    int y=42+(row-firstRow)*86;var section=dashboardSections.get(row);
+                    int y=74+(row-firstRow)*86;var section=dashboardSections.get(row);
                     if(section.items.isEmpty()){String[] keys={"openReports","unassignedReports","highReports"},labels={"Открытые обращения","Без ответственного","Высокий приоритет"};int statWidth=(available-8)/3;for(int i=0;i<3;i++){String key=keys[i];if(ServerMenuClient.may("rivet.reports"))addRenderableWidget(UiMetricCard.compact(left+i*(statWidth+4),y+18,statWidth,labels[i],metric(key),()->minecraft.setScreen(ServerMenuClient.supports("community-extensions")?new ReportQueueScreen(this,key.equals("unassignedReports")?"unassigned":key.equals("highReports")?"high":"all"):new FeatureListScreen(this,"reports"))));}if(ServerMenuClient.may("rivet.reports"))addRenderableWidget(UiActions.button(Component.literal("Все обращения"),UiActions.Tone.NORMAL,"",b->FeatureListScreen.open(this,"reports")).bounds(left,y+60,110,20).build());continue;}
                     int count=section.items.size(),cardWidth=(available-8*(Math.min(count,columns)-1))/Math.max(1,Math.min(count,columns));
                     for(int n=0;n<Math.min(count,columns);n++){var item=section.items.get(n);addRenderableWidget(UiSummaryCard.compact(left+n*(cardWidth+8),y+18,cardWidth,item.title,item.value,item.details,item.accent,item.action));}
@@ -98,7 +113,7 @@ final class ServerMenuScreen extends ScrollScreen implements CommunityScreen.Rec
             }
 
         }
-        UiPageFooter.workspace(width,height).end(UiActions.Command.BACK,this::addRenderableWidget,this::onClose);
+        UiPageFooter.workspace(width,height).end(tab.equals("admin")&&!adminGroup.equals("overview")?UiActions.Command.BACK:UiNavigation.exitCommand(this,parent),this::addRenderableWidget,this::onClose);
         if(tab.equals("admin")&&adminGroup.equals("overview")&&(!overviewLoaded||refreshOnReturn)){refreshOnReturn=false;loadOverview();}
     }
     private void action(String name){
@@ -116,8 +131,8 @@ final class ServerMenuScreen extends ScrollScreen implements CommunityScreen.Rec
         if(tab.equals("help"))return Json.opt(j,"help","")+"\n\n"+Client.tr("server.helptext").getString();
         return Client.tr("server.admintext").getString();
     }
-    @Override public void render(GuiGraphics g,int x,int y,float d){super.render(g,x,y,d);UiHeading.page(g,font,Component.literal(tab.equals("admin")?sectionTitle():ServerMenuClient.header()),width);nav.drawFrame(g);content.text(body());if(!tab.equals("admin"))content.render(g,font);
-        if(tab.equals("admin")&&adminGroup.equals("overview"))for(int row=firstRow;row<Math.min(dashboardSections.size(),firstRow+visibleRows);row++)Ui.text(g,font,UiKit.fit(font,dashboardSections.get(row).title,nav.right()-nav.left()-20),nav.left(),42+(row-firstRow)*86,UiKit.muted(),false);
+    @Override public void render(GuiGraphics g,int x,int y,float d){super.render(g,x,y,d);UiHeading.page(g,font,Component.literal(tab.equals("admin")?sectionTitle():"Помощь"),width);nav.drawFrame(g);content.text(body());if(!tab.equals("admin"))content.render(g,font);
+        if(tab.equals("admin")&&Set.of("overview","reports","diagnostics","tools").contains(adminGroup))for(int row=firstRow;row<Math.min(dashboardSections.size(),firstRow+visibleRows);row++)Ui.text(g,font,UiKit.fit(font,dashboardSections.get(row).title,nav.right()-nav.left()-20),nav.left(),74+(row-firstRow)*86,UiKit.muted(),false);
         Ui.status(g,font,adminGroup.equals("overview")&&!overviewNotice.isEmpty()?overviewNotice:ServerMenuClient.result,nav.left(),height-48,nav.right()-nav.left()-20,height-32);}
     @Override public boolean keyPressed(int key,int scan,int modifiers){
         if(!tab.equals("admin")&&(key==266||key==267)){content.scroll(nav.left()+8,106,key==266?6:-6);return true;}
@@ -128,7 +143,7 @@ final class ServerMenuScreen extends ScrollScreen implements CommunityScreen.Rec
     @Override public boolean mouseDragged(double x,double y,int b,double dx,double dy){return b==0&&content.drag(y)||super.mouseDragged(x,y,b,dx,dy);}
     @Override public boolean mouseReleased(double x,double y,int b){content.release();return super.mouseReleased(x,y,b);}
     @Override public boolean isPauseScreen(){return false;}
-    @Override public void onClose(){if(tab.equals("admin")&&!adminGroup.equals("overview")){group(adminGroup.equals("messages")?"server":"overview");return;}overviewSession.cancel();minecraft.setScreen(parent);}
+    @Override public void onClose(){if(tab.equals("admin")&&!adminGroup.equals("overview")){group(adminGroup.equals("messages")?"server":"overview");return;}overviewSession.cancel();UiNavigation.back(this,parent);}
 
     private static final class ActionForm extends Screen {
         private final Screen parent;private final String action;private EditBox message,duration;private String error="";private boolean urgent;
@@ -161,9 +176,9 @@ final class ServerMenuScreen extends ScrollScreen implements CommunityScreen.Rec
             if(timed())Ui.text(g,font,durationLabel(),left,top()+84,AccessibilityScreen.foreground(UiPalette.color(0xEEEEEE)));
             Ui.status(g,font,error.isEmpty()?(action.equals("pinAnnouncement")?"Сообщение появится на главной до окончания указанного срока.":Client.tr("server.form."+action).getString()):error,left,top()+(timed()?130:122),Math.min(420,width-40),bottom()-36);
         });}
-        @Override public void tick(){if(!ServerMenuClient.available())minecraft.setScreen(null);else if(!ServerMenuClient.may("rivet."+(action.equals("pinAnnouncement")?"announce":action)))minecraft.setScreen(parent);}
+        @Override public void tick(){if(!ServerMenuClient.available())minecraft.setScreen(null);else if(!ServerMenuClient.may("rivet."+(action.equals("pinAnnouncement")?"announce":action)))UiNavigation.back(this,parent);}
         @Override public boolean isPauseScreen(){return false;}
-        @Override public void onClose(){minecraft.setScreen(parent);}
+        @Override public void onClose(){UiNavigation.back(this,parent);}
     }
 
 }

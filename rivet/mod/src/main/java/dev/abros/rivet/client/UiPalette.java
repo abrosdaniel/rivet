@@ -43,7 +43,8 @@ final class UiPalette {
  private static int lightText(Palette p){return p.id.equals("love-pink")?0x382431:blend(p.accent,0x111111,.60f);}
  private static int lightMuted(Palette p){return p.id.equals("love-pink")?0x583744:blend(p.accent,0x202020,.25f);}
  static int outline(){var p=THEMES.get(selected());return light()?0xFF000000|blend(p.surface,p.accent,.65f):0xFF000000|blend(p.surface,p.accent,0.60f);}
- static int inputSurface(){var p=THEMES.get(selected());return light()?0xFF000000|blend(p.surface,0xFFFFFF,.35f):color(0xFF13202A);}
+ static int foundation(int role){var p=THEMES.get(selected());boolean bright=light(p);int rgb=switch(role){case 0->blend(p.surface,bright?0xFFFFFF:0x030507,bright?.48f:.34f);case 1->blend(p.surface,bright?0xFFFFFF:p.surface,bright?.72f:0);case 2->blend(p.surface,bright?0xFFFFFF:0xAAB6C1,bright?.30f:.08f);default->blend(p.surface,bright?0xFFFFFF:0x030507,bright?.85f:.18f);};return 0xFF000000|rgb;}
+ static int inputSurface(){return foundation(3); }
  static int insetSurface(){var p=THEMES.get(selected());return light()?0xFF000000|blend(p.surface,p.accent,.13f):color(0xFF102338);}
  static int scrollTrack(){var p=THEMES.get(selected());return 0xFF000000|(light()?blend(p.surface,p.accent,.16f):blend(p.surface,0x030507,0.3f));}
  static int scrollThumb(){var p=THEMES.get(selected());return 0xFF000000|p.accent;}

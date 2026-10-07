@@ -6,7 +6,7 @@ import java.util.*;
 import java.util.function.Consumer;
 /** Compound action footer. Widths and gaps are computed once for every host. */
 final class UiActions {
- static final int CONTROL_HEIGHT=20, COMMAND_WIDTH=96, GAP=6;
+ static final int CONTROL_HEIGHT=UiKit.CONTROL_HEIGHT, COMMAND_WIDTH=96, GAP=UiKit.SPACE_SMALL+2;
  enum Command {
   REFRESH("server.refresh",UiIcons.REFRESH), RETRY("retry",UiIcons.REFRESH), BACK("back",""), CLOSE("close",""), LIST("backToList","");
   final String label,icon;Command(String label,String icon){this.label=label;this.icon=icon;}
@@ -33,8 +33,13 @@ final class UiActions {
  static List<Button> row(NativeLayout.Box area,Consumer<AbstractWidget> add,NativeLayout.Track[] tracks,Action... actions){
   if(tracks.length!=actions.length)throw new IllegalArgumentException("Action tracks must match actions");
   var boxes=NativeLayout.row(area,6,tracks);
+  int natural=Arrays.stream(actions).mapToInt(a->net.minecraft.client.Minecraft.getInstance().font.width(a.label())+24).sum()+6*Math.max(0,actions.length-1);
+  if(actions.length>1&&area.height()>=44&&natural>area.width()){
+   int columns=(actions.length+1)/2;var flow=new ArrayList<NativeLayout.Box>();
+   for(int i=0;i<actions.length;i++)flow.add(new NativeLayout.Box(area.x()+(i%columns)*(area.width()+6)/columns,area.y()+i/columns*24,(area.width()-6*(columns-1))/columns,CONTROL_HEIGHT));boxes=flow;
+  }
   var widgets=new ArrayList<Button>();
-  for(int i=0;i<actions.length;i++){var a=actions[i];var b=boxes.get(i);var widget=Button.builder(a.label(),ignored->a.run().run()).bounds(b.x(),b.y(),b.width(),Math.min(CONTROL_HEIGHT,b.height())).build();style(widget,a.tone(),a.icon());widget.active=a.enabled();if(!a.enabled()&&!a.reason().isBlank())widget.setTooltip(Tooltip.create(Component.literal(a.reason())));add.accept(widget);widgets.add(widget);}
+  for(int i=0;i<actions.length;i++){var a=actions[i];var b=boxes.get(i);var widget=Button.builder(a.label(),ignored->a.run().run()).bounds(b.x(),b.y(),b.width(),CONTROL_HEIGHT).build();style(widget,a.tone(),a.icon());if(net.minecraft.client.Minecraft.getInstance().font.width(a.label())>b.width()-16)widget.setTooltip(Tooltip.create(a.label()));widget.active=a.enabled();if(!a.enabled()&&!a.reason().isBlank())widget.setTooltip(Tooltip.create(Component.literal(a.reason())));add.accept(widget);widgets.add(widget);}
   return List.copyOf(widgets);
  }
  static Button close(NativeLayout.Box area,Consumer<AbstractWidget> add,Runnable close){int w=Math.min(COMMAND_WIDTH,area.width());return command(Command.CLOSE,new NativeLayout.Box(area.right()-w,area.y(),w,CONTROL_HEIGHT),add,close);}

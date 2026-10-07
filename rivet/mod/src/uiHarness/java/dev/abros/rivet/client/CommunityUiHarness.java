@@ -95,7 +95,7 @@ public final class CommunityUiHarness {
     case 69 -> clickCard();
     case 70 -> clickLabel("Действия ▾");
     case 71 -> clickLabel("Редактировать");
-    case 72 -> clickPrefix("Место:");
+    case 72 -> {clickLabel("Параметры ▾");clickLabel("Место…");}
     case 73 -> {if(!(mc.screen instanceof LocationEditor))throw new IllegalStateException("Existing location was not preserved");mc.screen.onClose();}
     case 74 -> {open("normal");mc.options.guiScale().set(1);mc.resizeDisplay();}
     case 75 -> {mc.setScreen(new NotificationPopup(mc.screen));}

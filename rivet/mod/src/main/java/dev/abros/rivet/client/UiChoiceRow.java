@@ -18,6 +18,6 @@ final class UiChoiceRow extends Button {
   if(progress>=0)g.fill(x,y,x+(int)(w*progress),y+getHeight(),UiTheme.mix(UiKit.surface(),accent,0.35f));
   UiKit.checkbox(g,x+UiKit.INSET,y+5,checked,accent);
   var font=Minecraft.getInstance().font;Ui.text(g,font,UiKit.fit(font,getMessage().getString(),w-32),x+26,y+6,UiKit.text(),false);
-  if(hover)g.renderOutline(x,y,w,getHeight(),accent);
+  if(isFocused())g.renderOutline(x,y,w,getHeight(),accent);
  }
 }

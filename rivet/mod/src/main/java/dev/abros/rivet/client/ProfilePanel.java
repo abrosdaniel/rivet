@@ -12,7 +12,7 @@ final class ProfilePanel {
    if(mc.player!=null)net.minecraft.client.gui.components.PlayerFaceRenderer.draw(g,mc.player.getSkin(),x+10,y+12,30);
    Ui.text(g,font,UiKit.fit(font,Json.opt(state,"name","Игрок"),w-62),x+50,y+14,UiKit.text(),false);
    Ui.text(g,font,"В сети",x+50,y+29,UiPalette.color(0x79CBA6),false);
-   g.fill(x+10,y+50,x+w-10,y+51,UiPalette.color(0xFF46535E));
+   UiKit.divider(g,x+10,y+50,w-20);
    String total="—";if(data.has("selfStatistics")&&data.getAsJsonObject("selfStatistics").has("totalMillis")){long minutes=data.getAsJsonObject("selfStatistics").get("totalMillis").getAsLong()/60000;total=minutes/60+" ч "+minutes%60+" м";}
    metric(g,font,x+10,y+61,w-20,"Время игры",total);
    metric(g,font,x+10,y+79,w-20,"Онлайн",DisplayCounts.text(state,"online","—")+" / "+DisplayCounts.text(state,"maximum","—"));

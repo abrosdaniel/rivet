@@ -16,18 +16,23 @@ public final class HubScreen extends ScrollScreen {
  private final ServerStatusPinger pinger=new ServerStatusPinger();private long lastPing;
  public HubScreen(Screen parent){super(Client.tr("projects"));this.parent=parent;}
  public HubScreen(Screen parent,RepositoryClient.Release installed){this(parent);release=installed;initialRequested=true;}
- @Override protected void init(){String entered=url==null?"":url.getValue();var area=UiPage.body(width,height);contentLeft=area.x();contentWidth=area.width();leftWidth=Math.min(270,Math.max(90,(contentWidth-20)/3));rightX=contentLeft+leftWidth+10;rightWidth=area.right()-rightX;paneWidth=Math.max(30,(rightWidth-10)/2);rulesX=rightX+paneWidth+10;
+ private int compactTab;private boolean compact(){return UiPage.body(width,height).width()<640||height<320;}
+ @Override protected void init(){String entered=url==null?"":url.getValue();var area=UiPage.body(width,height);contentLeft=area.x();contentWidth=area.width();leftWidth=Math.min(270,Math.max(90,(contentWidth-20)/3));rightX=contentLeft+leftWidth+10;rightWidth=area.right()-rightX;paneWidth=Math.max(30,(rightWidth-10)/2);rulesX=rightX+paneWidth+10;if(compact()){leftWidth=contentWidth;rightX=contentLeft;rightWidth=contentWidth;paneWidth=contentWidth;rulesX=contentLeft;}
   url=addRenderableWidget(UiFields.text(font,contentLeft,32,contentWidth-80,20,Client.tr("repository")));url.setMaxLength(2048);url.setValue(entered);url.moveCursorToStart(false);url.setHint(Component.literal("https://github.com/owner/repo"));
   addButton=addRenderableWidget(UiActions.button(Client.tr("add.project"),UiActions.Tone.NORMAL,"",b->fetch(url.getValue(),false,true)).bounds(contentLeft+contentWidth-64,32,64,20).build());
   List<String> saved=Client.hub==null?List.of():Client.hub.saved();double offset=projectColumn==null?0:projectColumn.offset;
-  projectColumn=addRenderableWidget(new ProjectColumn(contentLeft,100,leftWidth,height-164,saved,serverStatuses,()->release==null?"":release.manifest().repository(),repo->select(repo,false),repo->select(repo,true),this::refreshProject,this::buildProject,this::remove));projectColumn.offset=offset;
-  addRenderableWidget(UiActions.button(Client.tr("registry"),UiActions.Tone.NORMAL,"",b->catalog()).bounds(contentLeft,60,leftWidth-5,20).build());
+  projectColumn=addRenderableWidget(new ProjectColumn(contentLeft,compact()?112:100,leftWidth,height-(compact()?176:164),saved,serverStatuses,()->release==null?"":release.manifest().repository(),repo->select(repo,false),repo->select(repo,true),this::refreshProject,this::buildProject,this::remove));projectColumn.offset=offset;if(compact())projectColumn.visible=compactTab==0;
+  if(!compact())addRenderableWidget(UiActions.button(Client.tr("registry"),UiActions.Tone.NORMAL,"",b->catalog()).bounds(contentLeft,60,leftWidth-5,20).build());
   var settingsButton=addRenderableWidget(UiActions.button(Component.literal("Загрузки…"),UiActions.Tone.NORMAL,"",b->minecraft.setScreen(new DownloadSettingsScreen(this))).bounds(contentLeft,height-32,110,20).build());settingsButton.active=Client.hub!=null&&!busy;
   int half=(contentWidth-4)/2;
   cacheButton=addRenderableWidget(UiActions.button(Client.tr("clearcache"),UiActions.Tone.NORMAL,"",b->clearCache()).bounds(contentLeft,height-58,half,20).build());
   exportButton=addRenderableWidget(UiActions.button(Client.tr("diagnostics.export"),UiActions.Tone.NORMAL,"",b->exportDiagnostics()).bounds(contentLeft+4+half,height-58,half,20).build());
   UiPageFooter.fit(new dev.abros.rivet.core.NativeLayout.Box(contentLeft,height-32,contentWidth,20)).end(UiActions.Command.BACK,this::addRenderableWidget,this::onClose);
-  newsPane.bounds(rightX,94,paneWidth,Math.max(32,height-158));rulesPane.bounds(rulesX,94,paneWidth,Math.max(32,height-158));
+  if(compact()){
+   UiTabs.build(this,font,new NativeLayout.Box(contentLeft,60,contentWidth,20),List.of("Проекты","Новости","Правила"),compactTab,this::addRenderableWidget,n->{compactTab=n;rebuildWidgets();},true);
+   newsPane.bounds(rightX,100,compactTab==1?paneWidth:0,compactTab==1?Math.max(0,height-184):0);rulesPane.bounds(rulesX,100,compactTab==2?paneWidth:0,compactTab==2?Math.max(0,height-184):0);
+   if(compactTab==0)addRenderableWidget(UiActions.button(Client.tr("registry"),UiActions.Tone.NORMAL,"",b->catalog()).bounds(contentLeft+contentWidth-88,84,88,20).build());
+  }else{newsPane.bounds(rightX,94,paneWidth,Math.max(32,height-158));rulesPane.bounds(rulesX,94,paneWidth,Math.max(32,height-158));}
   refreshActions();if(!initialRequested&&Client.hub!=null){initialRequested=true;String repo=Client.hub.selectedRepository();if(repo.isEmpty()&&Client.hub.active()!=null)repo=Client.hub.active().repository();if(!repo.isEmpty())fetch(repo);else{newsPane.text(Client.tr("chooseproject").getString());rulesPane.text(Client.tr("chooseproject").getString());}}
  }
  private void refreshActions(){boolean ready=Client.hub!=null&&!busy&&Client.pending.isEmpty();if(cacheButton!=null)cacheButton.active=ready;if(exportButton!=null)exportButton.active=Client.hub!=null&&!busy;projectColumn.active=ready;addButton.active=Client.hub!=null&&!busy;}
@@ -89,7 +94,7 @@ public final class HubScreen extends ScrollScreen {
     }
 
 
- private void select(String repo,boolean join){if(busy)return;var found=releases.get(repo);if(found==null){fetch(repo,join);return;}try{Client.hub.rememberProject(found.manifest());}catch(Exception e){status=Errors.message(e);}if(release!=found){newsPane.text("");rulesPane.text("");}release=found;rebuildWidgets();loadPane(found,"news",newsPane);loadPane(found,"rules",rulesPane);if(join)connect();}
+ private void select(String repo,boolean join){if(busy)return;var found=releases.get(repo);if(found==null){fetch(repo,join);return;}try{Client.hub.rememberProject(found.manifest());}catch(Exception e){status=Errors.message(e);}if(compact()){compactTab=1;}if(release!=found){newsPane.text("");rulesPane.text("");}release=found;rebuildWidgets();loadPane(found,"news",newsPane);loadPane(found,"rules",rulesPane);if(join)connect();}
  private void refreshProject(String repo){if(loading.add(repo))loadProject(repo,true);}
  private void loadProject(String repo,boolean refreshDetails){loadAttempted.add(repo);track(repositories().fetch(repo,refreshDetails)).whenCompleteAsync((found,failure)->{
   loading.remove(repo);if(!Client.hub.saved().contains(repo))return;
@@ -105,9 +110,9 @@ public final class HubScreen extends ScrollScreen {
  @Override public boolean mouseDragged(double x,double y,int button,double dx,double dy){if(button==0&&(newsPane.drag(y)||rulesPane.drag(y)))return true;return super.mouseDragged(x,y,button,dx,dy);}
  @Override public boolean mouseReleased(double x,double y,int button){newsPane.release();rulesPane.release();return super.mouseReleased(x,y,button);}
  @Override public void renderBackground(GuiGraphics g,int x,int y,float delta){super.renderBackground(g,x,y,delta);UiPage.draw(g,width,height);}
- @Override public void render(GuiGraphics g,int x,int y,float delta){super.render(g,x,y,delta);UiHeading.page(g,font,title,width);Ui.text(g,font,Client.tr("saved.projects"),contentLeft,86,UiPalette.color(0xBBBBBB));
-  if(release!=null){var manifest=release.manifest();Ui.text(g,font,font.plainSubstrByWidth(Client.hub.projectName(manifest)+" · "+manifest.version(),rightWidth),rightX,60,Branding.accent(manifest));String state=Client.tr(Client.hub.activeHash().equals(release.hash())?"project.active":Client.hub.active()!=null&&Client.hub.active().repository().equals(manifest.repository())?"update.available":"project.savedonly").getString();String incompatible=Client.hub.incompatibility(manifest);if(!incompatible.isEmpty())state=Client.tr("requires",incompatible).getString();var server=Client.hub.selectedServer(manifest);if(server!=null)state+=" · "+server.name();Ui.text(g,font,font.plainSubstrByWidth(state,rightWidth),rightX,72,UiPalette.color(0xBBBBBB));}
-  Ui.text(g,font,Client.tr("news"),rightX,84,UiPalette.color(0xE2BE75));Ui.text(g,font,Client.tr("rules"),rulesX,84,UiPalette.color(0xE2BE75));newsPane.render(g,font);rulesPane.render(g,font);
+ @Override public void render(GuiGraphics g,int x,int y,float delta){super.render(g,x,y,delta);UiHeading.page(g,font,title,width);if(!compact()||compactTab==0)Ui.text(g,font,Client.tr("saved.projects"),contentLeft,86,UiPalette.color(0xBBBBBB));
+  if(release!=null&&!compact()){var manifest=release.manifest();Ui.text(g,font,font.plainSubstrByWidth(Client.hub.projectName(manifest)+" · "+manifest.version(),rightWidth),rightX,60,Branding.accent(manifest));String state=Client.tr(Client.hub.activeHash().equals(release.hash())?"project.active":Client.hub.active()!=null&&Client.hub.active().repository().equals(manifest.repository())?"update.available":"project.savedonly").getString();String incompatible=Client.hub.incompatibility(manifest);if(!incompatible.isEmpty())state=Client.tr("requires",incompatible).getString();var server=Client.hub.selectedServer(manifest);if(server!=null)state+=" · "+server.name();Ui.text(g,font,font.plainSubstrByWidth(state,rightWidth),rightX,72,UiPalette.color(0xBBBBBB));}
+  if(!compact())Ui.text(g,font,Client.tr("news"),rightX,84,UiPalette.color(0xE2BE75));if(!compact())Ui.text(g,font,Client.tr("rules"),rulesX,84,UiPalette.color(0xE2BE75));newsPane.render(g,font);rulesPane.render(g,font);
   Ui.status(g,font,status,contentLeft,height-82,contentWidth,height-62);
  }
  @Override public void removed(){generation++;for(var read:reads)read.cancel(true);reads.clear();loading.clear();loadAttempted.clear();busy=false;pinger.removeAll();initialRequested=false;}
