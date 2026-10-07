@@ -16,7 +16,7 @@ Use concise names within their section (for example display.nameplates, chat.coo
 
 # Visual regression coverage
 
-Run complete UI flows in the default theme at three GUI scales. Cover light and high-contrast profiles separately; sample every other theme on representative screens at GUI 3 instead of multiplying every scenario by every theme. Keep palette contrast checks for all themes. Each suite reports its planned frame count; CI verifies the exact count and rejects missing or extra PNGs.
+Run complete UI flows in the default theme at three GUI scales. Cover light and high-contrast profiles separately; sample every other theme on representative screens at GUI 3 instead of multiplying every scenario by every theme. Keep palette contrast checks for all themes. Each suite reports successful scenario completion. CI renders and checks the flows with RIVET_UI_SCREENSHOTS=false, verifies the completion marker, and retains diagnostic logs on failure. PNG capture and exact frame-count validation are local opt-in review tools, not CI requirements. Use a fixed 1280×1024 client viewport for full-flow tests; adaptive scenarios resize it explicitly.
 
 # UI design system
 

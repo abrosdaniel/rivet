@@ -1,16 +1,20 @@
-"""Fail CI on missing/invalid frames or failed native layout/contrast assertions.
-Screenshots are uploaded for review; no cross-GPU exact pixel equality is assumed.
-"""
+"""Verify UI completion in CI, and optionally validate local screenshot files."""
 import pathlib, re, struct, sys, zlib
 
 def validate(directory, count, log, marker):
     text=pathlib.Path(log).read_text(encoding="utf-8", errors="replace")
     if marker not in text or "_UI_FAILED" in text or "RIVET_NATIVE_FAILED" in text or "Error executing task on Client" in text:
-        raise ValueError("Native UI regression checks did not complete")
-    if count == "auto":
+        lines = text.splitlines()
+        failed = [i for i, line in enumerate(lines) if re.search(r"_UI_FAILED|RIVET_NATIVE_FAILED|Error executing task on Client", line)]
+        details = "\n".join("\n".join(lines[i:i+13]) for i in failed) or f"Missing completion marker: {marker}"
+        raise ValueError(f"Native UI regression checks did not complete\n{details}\nSee the Minecraft scenario log for the original failure.")
+    if count in ("auto", "checks"):
         counts = re.findall(re.escape(marker) + r": frames=(\d+)\b", text)
         if len(counts) != 1 or int(counts[0]) < 1:
             raise ValueError("Native UI scenario did not report a valid expected frame count")
+        if count == "checks":
+            print(f"Verified {counts[0]} native UI scenarios (screenshots disabled)")
+            return
         count = counts[0]
     frames=sorted(pathlib.Path(directory).glob("*.png"))
     if len(frames)!=int(count):

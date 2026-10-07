@@ -55,3 +55,18 @@ class SnapshotCounts(unittest.TestCase):
         self.log.write_text('RIVET_HUD_UI_OK')
         self.frame('hud-001.png')
         m.validate(self.frames, '1', self.log, 'RIVET_HUD_UI_OK')
+
+    def test_checks_need_completion_but_no_png_files(self):
+        self.log.write_text("RIVET_REORDER_UI_OK: frames=135, drag checks\n")
+        m.validate(self.frames, "checks", self.log, "RIVET_REORDER_UI_OK")
+        self.assertEqual(list(self.frames.iterdir()), [])
+        self.log.write_text("RIVET_REORDER_UI_FAILED: step=3\nRIVET_REORDER_UI_OK: frames=135\n")
+        with self.assertRaisesRegex(ValueError, "RIVET_REORDER_UI_FAILED: step=3"):
+            m.validate(self.frames, "checks", self.log, "RIVET_REORDER_UI_OK")
+
+    def test_checks_reject_missing_or_invalid_completion(self):
+        for text in ["", "RIVET_REORDER_UI_PLAN: frames=135", "RIVET_REORDER_UI_OK", "RIVET_REORDER_UI_OK: frames=0", "RIVET_REORDER_UI_OK: frames=1\nRIVET_REORDER_UI_OK: frames=1"]:
+            with self.subTest(text=text):
+                self.log.write_text(text)
+                with self.assertRaises(ValueError):
+                    m.validate(self.frames, "checks", self.log, "RIVET_REORDER_UI_OK")
