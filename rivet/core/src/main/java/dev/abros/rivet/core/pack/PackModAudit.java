@@ -57,12 +57,21 @@ final class PackModAudit {
   if(installed&&rivetVersion!=null&&!mods.containsKey("rivet"))mods.put("rivet",new Mod("rivet",rivetVersion,"","Rivet",false));
   for(var d:dependencies){
    Mod target=mods.get(d.id());boolean present=target!=null;
-   boolean matches=present&&inRange(target.version(),d.range());
+   boolean matches=present&&matches(target,d.range(),minecraft);
    if(d.type().equals("required")){
     if(!matches)throw new IOException(d.owner().path()+": требуется "+d.id()+" "+d.range()+(present?"; найдена "+target.version():"; мод отсутствует"));
     if(!target.embedded()&&!target.component().isEmpty()&&!target.component().equals(d.owner().component()))throw new IOException(d.owner().path()+": зависимость "+d.id()+" находится в другом необязательном компоненте. Сделайте её обязательной или объедините компоненты");
    }else if(d.type().equals("incompatible")&&matches)throw new IOException(d.owner().path()+": несовместим с "+d.id()+" "+target.version());
   }
+ }
+ /** Mirrors FancyModLoader's VersionSupportMatrix for the supported Minecraft branch. */
+ private static boolean matches(Mod target,String range,String minecraft)throws IOException{
+  if(inRange(target.version(),range))return true;
+  if(!minecraft.equals("1.21.1"))return false;
+  String alias=switch(target.id()){case "minecraft"->"1.21";case "neoforge"->"21.0.166";default->"";};
+  if(alias.isEmpty())return false;
+  try{return VersionRange.createFromVersionSpec(range).containsVersion(new DefaultArtifactVersion(alias));}
+  catch(Exception e){throw new IOException("Некорректный диапазон версий: "+range);}
  }
  private static boolean inRange(String version,String range)throws IOException{
   if(range.isBlank()||range.equals("*"))return true;
@@ -71,6 +80,8 @@ final class PackModAudit {
  }
  private void read(Input input,boolean root)throws IOException{
   try(var jar=new JarFile(input.file().toFile(),false)){
+   // NeoForge library containers expose their actual mods through JarJar, not outer TOML.
+   var manifest=jar.getManifest();if(manifest!=null&&"LIBRARY".equals(manifest.getMainAttributes().getValue("FMLModType")))return;
    JarEntry meta=jar.getJarEntry("META-INF/neoforge.mods.toml");if(meta==null)meta=jar.getJarEntry("META-INF/mods.toml");
    if(meta==null&&root&&!installed)throw new IOException("В JAR нет метаданных NeoForge: "+input.path());
    if(meta!=null){
@@ -84,7 +95,7 @@ final class PackModAudit {
      var mod=new Mod(id,version,input.component(),input.path(),!root);var old=mods.putIfAbsent(id,mod);if(old!=null)throw new IOException("Повторяющийся мод "+id+": "+old.path()+", "+input.path());
      Object ds=cfg.get("dependencies."+id);if(ds instanceof List<?> rows)for(var row:rows)if(row instanceof UnmodifiableConfig dep){
       String side=value(dep,"side","BOTH");if(side.equals("SERVER"))continue;if(!Set.of("CLIENT","BOTH").contains(side))throw new IOException("Некорректная сторона зависимости: "+input.path());
-      String type=value(dep,"type",Boolean.TRUE.equals(dep.get("mandatory"))?"required":"optional");if(!Set.of("required","optional","incompatible","discouraged").contains(type))throw new IOException("Неизвестный тип зависимости: "+input.path());dependencies.add(new Dependency(mod,value(dep,"modId",""),value(dep,"versionRange","*"),type));
+      String type=value(dep,"type",Boolean.FALSE.equals(dep.get("mandatory"))?"optional":"required").toLowerCase(Locale.ROOT);if(!Set.of("required","optional","incompatible","discouraged").contains(type))throw new IOException("Неизвестный тип зависимости: "+input.path());dependencies.add(new Dependency(mod,value(dep,"modId",""),value(dep,"versionRange","*"),type));
      }
     }
    }
@@ -96,13 +107,19 @@ final class PackModAudit {
    JarEntry nested=jar.getJarEntry("META-INF/jarjar/metadata.json");if(nested!=null){byte[] bytes=text(jar,nested).getBytes(java.nio.charset.StandardCharsets.UTF_8);
     if(MetadataIOHandler.fromStream(new ByteArrayInputStream(bytes)).isEmpty())throw new IOException("Некорректные метаданные JarJar: "+input.path());
     metadata.put(input,bytes);var description=Json.parse(new String(bytes,java.nio.charset.StandardCharsets.UTF_8));var list=description.getAsJsonArray("jars");if(list.size()>128)throw new IOException("Слишком много JarJar библиотек");
-    for(var item:list){String path=Json.str(item.getAsJsonObject(),"path");if(!path.startsWith("META-INF/jarjar/")||path.contains("..")||path.contains("\\")||!path.endsWith(".jar"))throw new IOException("Небезопасный путь JarJar");var child=jar.getJarEntry(path);if(child==null||child.getSize()<0||child.getSize()>128L*1024*1024)throw new IOException("Некорректный вложенный JAR");
+    for(var item:list){String path=Json.str(item.getAsJsonObject(),"path");if(!safeNestedPath(path))throw new IOException("Небезопасный путь JarJar: "+input.path()+" → "+Json.GSON.toJson(path));var child=jar.getJarEntry(path);if(child==null||child.isDirectory()||child.getSize()<0||child.getSize()>128L*1024*1024)throw new IOException("Некорректный вложенный JAR: "+input.path()+" → "+Json.GSON.toJson(path));
      var childInput=new Input(input.path()+"!"+path,extractEntry(jar,child),input.component());
      if(children.computeIfAbsent(input,key->new HashMap<>()).putIfAbsent(path,childInput)!=null)throw new IOException("Повторяющийся путь JarJar: "+input.path());
      extract(childInput,depth+1);
     }
    }
   }catch(RuntimeException e){throw new IOException("Не удалось проверить метаданные: "+input.path(),e);}
+ }
+ /** JarJar metadata may reference any relative entry inside the containing archive. */
+ private static boolean safeNestedPath(String path){
+  if(path.isEmpty()||path.length()>2048||path.startsWith("/")||path.contains("\\")||path.contains(":")||path.codePoints().anyMatch(Character::isISOControl)||!path.toLowerCase(Locale.ROOT).endsWith(".jar"))return false;
+  for(String part:path.split("/",-1))if(part.isEmpty()||part.equals(".")||part.equals(".."))return false;
+  return true;
  }
  /** Rivet's outer bundle is launcher metadata; the loader uses its embedded game module. */
  private Input gameModule(Input input)throws IOException{

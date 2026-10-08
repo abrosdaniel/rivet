@@ -407,3 +407,41 @@ All 312 core tests pass with the CRLF resource; regular build/verifyBundle then
 passes with restored LF resources and 322 Java tests. No remote CI result claimed.
 Ignore numbered cloud-sync duplicates when counting XML reports; current Gradle
 HTML summaries and canonical XML reports provide the actual results.
+
+## General NeoForge pack metadata compatibility (2026-10-08)
+User reported unsafe JarJar path and supplied the 52-provider-file Ruslaanchik
+pack; asked for universal handling as mods change. Downloaded exact provider
+versions to temporary audit cache, checked SHA-512, recursively inspected
+metadata without executing mod code. False path rejection: LambDynamicLights
+4.8.11 and Supplementaries 3.9.9 nested MixinSquared use META-INF/jars.
+Allow any relative archive entry, retain path traversal/absolute/colon/backslash/
+control-character rejection, size/depth/count limits, and owner/path diagnostics.
+Real-file audit also exposed EMI uppercase REQUIRED, Sodium LIBRARY container
+outer TOML duplication and FML's Minecraft 1.21.1 compatibility matrix. Match
+loader semantics generally: dependency types case insensitive, missing type
+required (legacy explicit mandatory=false optional), skip outer LIBRARY mod TOML,
+1.21.1 accepts loader aliases Minecraft 1.21 and NeoForge 21.0.166 only.
+No per-mod bypasses. Existing core uses JarSelector for bundled version selection.
+Standalone Better Advanced Tooltips build.5 conflicts with KubeJS embedded build.1
+in original pack; preserve duplicate validation. Test-only input list excluding
+standalone Better Advanced Tooltips passes all 51 actual provider mods and their
+optional component subsets. User's three local JARs were not supplied/tested;
+do not claim entire supplied pack or actual game runtime passed.
+Verification: build/verifyBundle and 327 Java tests pass (317 core plus 10
+helper/bootstrap); tests cover alternate nested locations, recursion, unsafe
+paths, case/default dependency enforcement, LIBRARY containers and matrix limits.
+No live server modification, commit, release or remote CI claimed.
+
+## Rivet 2.0.1 and Ruslaanchik release preparation (2026-10-08)
+Remote v2.0.0 already exists; patch 2.0.1 prepared for generic pack metadata fixes.
+Pack/auth/menu/helper protocols unchanged (2/3/3/1). Production build and
+verifyBundle pass; 327 Java and 23 tooling tests pass. Release descriptor schema,
+embedded production bundle and SHA-256 checksums verified. Local release files
+are in workspace outputs/releases/2.0.1; no commit, tag, push or publication made.
+Updated outputs/Ruslaanchik/pack.toml removes standalone Better Advanced Tooltips
+which conflicts with the KubeJS embedded copy. Provider versions preserved.
+All three original local JARs and macOS input config obtained from original
+sources and included beside pack.toml. Full 54-mod metadata/dependency/component
+audit passes. Actual PackPublisher.prepare passes with 55 entries, 9 components
+and 51 external download sources using genuine downloaded files/API metadata.
+No live server activation, full 54-mod game runtime or remote CI success claimed.
