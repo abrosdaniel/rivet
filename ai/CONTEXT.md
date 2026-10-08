@@ -445,3 +445,23 @@ sources and included beside pack.toml. Full 54-mod metadata/dependency/component
 audit passes. Actual PackPublisher.prepare passes with 55 entries, 9 components
 and 51 external download sources using genuine downloaded files/API metadata.
 No live server activation, full 54-mod game runtime or remote CI success claimed.
+
+## Required CI failure after 2.0.1 preparation (2026-10-08)
+User supplied three Actions logs (macOS, Windows, Linux) and explicitly demanded
+a persistent CI reliability rule. All three fail the same test:
+ServerSettingsTest.configurationErrorsPointToKeysWithoutExposingValues, line 71,
+expected true but got false (317 core tests, one failure). This is a test failure,
+not the Gradle deprecation warning or a dependency download error. Root cause
+not yet reproduced or fixed in this request, which only asks to record the rule.
+Previous local build success does not establish release readiness; required CI
+is currently failing and must be resolved before calling 2.0.1 ready.
+
+## Reproduced and fixed CI config diagnostics test (2026-10-08)
+Forced test execution reproduced the supplied failure. Config template now ends
+in display, whereas the test appended unknown keys at EOF and expected
+pack.downloads. Local generated resources still contained the older template,
+which hid the mismatch in the prior release check. Fix injects unknown/unsafe
+keys explicitly into pack.downloads, preserving key diagnostics and secret
+redaction assertions, and parameterizes LF/CRLF. Forced full build/verifyBundle
+passes after regenerating resources; tooling tests pass. Regenerated local 2.0.1
+release bundle. Exact remote commit CI remains unverified; no push/publication.

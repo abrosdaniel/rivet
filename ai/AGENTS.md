@@ -53,3 +53,23 @@ Do not record credentials, private machine paths or raw logs in ai/.
 Cached/offline local success does not establish CI readiness. Check network dependency resolution
 and report which checks actually ran. Never claim GitHub CI passed without observing that run.
 Third-party PostgreSQL, HikariCP and Bouncy Castle dependencies resolve exclusively from Maven Central.
+
+## CI reliability is a release requirement
+
+The user explicitly requires recurring CI regressions to stop. Treat a failure on
+any required CI job as a release blocker. Do not call a release ready based only
+on a local cached build, an UP-TO-DATE test task, or an earlier commit's checks.
+Before declaring readiness, run affected tests with forced execution, verify the
+workflow commands and platform assumptions, and inspect required CI results for
+the exact release commit. If remote checks have not run or cannot be inspected,
+state that CI readiness remains unconfirmed.
+When logs are supplied, identify the first actionable failure, reproduce it and
+fix the cause when authorized; do not disable tests or weaken assertions to get
+a green check. Keep diagnostics useful and retain failure reports in CI. Check
+OS-sensitive fixtures, line endings, locale, filesystem paths, permissions and
+network dependency resolution as applicable. Do not add expensive unrelated
+checks or repeat successful checks without a reason.
+
+When templates/resources change, force resource generation and test execution
+before packaging. Check generated resource content against tracked source; stale
+build resources must not hide failures that fresh CI checkouts will expose.

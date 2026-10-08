@@ -65,11 +65,13 @@ class ServerSettingsTest {
   assertThrows(IllegalArgumentException.class,()->ServerSettings.parse(t.replace("minTps = 18","minTps = 21")));assertThrows(IllegalArgumentException.class,()->ServerSettings.parse(t.replace("maxMspt = 50","maxMspt = 0")));assertThrows(IllegalArgumentException.class,()->ServerSettings.parse(t.replace("durationSeconds = 30","durationSeconds = 0")));assertThrows(IllegalArgumentException.class,()->ServerSettings.parse(t.replace("cooldownSeconds = 300","cooldownSeconds = 86401")));
   assertEquals(settings.taskLimits(),settings.liveFrom(changed).taskLimits());assertEquals(settings.sparkAlerts(),settings.liveFrom(changed).sparkAlerts());
  }
- @Test void configurationErrorsPointToKeysWithoutExposingValues()throws Exception{
-  String t=ServerSettings.template();
+ @org.junit.jupiter.params.ParameterizedTest
+ @org.junit.jupiter.params.provider.ValueSource(strings={"\n","\r\n"})
+ void configurationErrorsPointToKeysWithoutExposingValues(String newline)throws Exception{
+  String t=ServerSettings.template().replace("\r\n","\n").replace("\n",newline);
   var missing=assertThrows(IllegalArgumentException.class,()->ServerSettings.parse(t.replace("mode = \"false\"","")));assertTrue(missing.getMessage().contains("auth.mode"));
-  var typo=assertThrows(IllegalArgumentException.class,()->ServerSettings.parse(t+"\nunknown = 'secret-marker'\n"));assertTrue(typo.getMessage().contains("pack.downloads.unknown"));assertFalse(typo.getMessage().contains("secret-marker"));
-  var unsafe=assertThrows(IllegalArgumentException.class,()->ServerSettings.parse(t+"\n\"private secret-marker\" = true\n"));assertFalse(unsafe.getMessage().contains("secret-marker"));
+  var typo=assertThrows(IllegalArgumentException.class,()->ServerSettings.parse(t.replace("[pack.downloads]","[pack.downloads]"+newline+"unknown = 'secret-marker'")));assertTrue(typo.getMessage().contains("pack.downloads.unknown"));assertFalse(typo.getMessage().contains("secret-marker"));
+  var unsafe=assertThrows(IllegalArgumentException.class,()->ServerSettings.parse(t.replace("[pack.downloads]","[pack.downloads]"+newline+"\"private secret-marker\" = true")));assertFalse(unsafe.getMessage().contains("secret-marker"));
  }
  @Test void legacyIntegrationSwitchIsIgnored()throws Exception{assertNotNull(ServerSettings.parse(ServerSettings.template()+"\n[integrations]\nluckperms = false\n"));assertNotNull(ServerSettings.parse(ServerSettings.template()+"\n[integrations]\nluckperms = true\n"));}
  @Test void upgradeAddsEditableSettingsAndCommentsWithoutChangingOwnersValues()throws Exception{
