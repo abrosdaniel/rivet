@@ -22,8 +22,20 @@ public final class ServerPackFlowHarness {
   try{
    if(!started){if(!(mc.screen instanceof TitleScreen))return;started=true;deadline=System.nanoTime()+java.util.concurrent.TimeUnit.SECONDS.toNanos(120);
     // Keep geometry checks independent of the live connection and file transfer.
-    var manifest=new PackManifest("1.21.1","21.1.250",List.of(new PackManifest.Component("extra","Дополнительно","Описание",true)),List.of());
-    for(int scale:new int[]{1,2,3}){mc.options.guiScale().set(scale);mc.resizeDisplay();var screen=new ServerPackScreen(mc.screen,manifest,Set.of("extra"),s->{});mc.setScreen(screen);for(var child:screen.children())if(child instanceof net.minecraft.client.gui.components.AbstractWidget w&&(w.getX()<0||w.getY()<0||w.getX()+w.getWidth()>screen.width||w.getY()+w.getHeight()>screen.height))throw new IllegalStateException("Pack control outside viewport");screen.onClose();}
+    var manifest=new PackManifest("1.21.1","21.1.250",List.of(new PackManifest.Component("extra","Дополнительно","Описание",true)),List.of(new PackManifest.Entry("mods/required.jar","0".repeat(64),1,"","replace")));
+    for(int scale:new int[]{1,2,3}){mc.options.guiScale().set(scale);mc.resizeDisplay();var screen=new ServerPackScreen(mc.screen,manifest,Set.of("extra"),s->{if(!s.equals(Set.of("extra")))throw new IllegalStateException("Required file leaked into component choices");});mc.setScreen(screen);for(var child:screen.children())if(child instanceof net.minecraft.client.gui.components.AbstractWidget w&&(w.getX()<0||w.getY()<0||w.getX()+w.getWidth()>screen.width||w.getY()+w.getHeight()>screen.height))throw new IllegalStateException("Pack control outside viewport");
+     var choices=screen.children().stream().filter(w->w instanceof UiChoiceRow).map(w->(UiChoiceRow)w).toList();
+     if(choices.size()!=2||!choices.get(0).active||choices.get(1).active)throw new IllegalStateException("Optional/required choices incorrect");
+     choices.get(0).onPress();
+     var selection=ServerPackScreen.class.getDeclaredField("selected");selection.setAccessible(true);
+     if(!((Set<?>)selection.get(screen)).isEmpty())throw new IllegalStateException("Optional component was not unchecked");
+     choices.get(1).onPress();
+     if(!((Set<?>)selection.get(screen)).isEmpty())throw new IllegalStateException("Required row changed selection");
+     var optional=(UiChoiceRow)screen.children().stream().filter(w->w instanceof UiChoiceRow c&&c.active).findFirst().orElseThrow();
+     optional.onPress();
+     press(screen,"Проверить изменения");
+     screen.onClose();}
+    if(phase.equals("components")){System.out.println("RIVET_PACK_COMPONENTS_OK uiScales=1,2,3");done=true;mc.stop();return;}
     mc.options.guiScale().set(Integer.parseInt(System.getenv().getOrDefault("RIVET_PACK_FLOW_SCALE","3")));mc.resizeDisplay();
     var parent=new TitleScreen();mc.setScreen(parent);var address=ServerAddress.parseString(System.getenv().getOrDefault("RIVET_PACK_FLOW_ADDRESS","127.0.0.1:25579"));var data=new ServerData("Pack check",System.getenv().getOrDefault("RIVET_PACK_FLOW_ADDRESS","127.0.0.1:25579"),ServerData.Type.OTHER);if(phase.equals("disabled")&&new PackTrust(mc.gameDirectory.toPath()).fingerprint(address.getHost()+":"+address.getPort()).isEmpty())throw new IllegalStateException("Disabled test requires saved trust");if(phase.equals("configure")){
      var listScreen=new JoinMultiplayerScreen(parent);mc.setScreen(listScreen);var list=(ServerSelectionList)listScreen.children().stream().filter(w->w instanceof ServerSelectionList).findFirst().orElseThrow();

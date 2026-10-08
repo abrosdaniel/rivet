@@ -13,11 +13,11 @@ final class UiChoiceRow extends Button {
   if(Minecraft.getInstance().font.width(label)>width-32)setTooltip(Tooltip.create(Component.literal(label)));
  }
  @Override protected void renderWidget(GuiGraphics g,int mx,int my,float delta){
-  int accent=UiPalette.color(this.accent);int x=getX(),y=getY(),w=getWidth();boolean hover=active&&isHoveredOrFocused();
+  int accent=active?UiPalette.color(this.accent):UiKit.muted();int x=getX(),y=getY(),w=getWidth();boolean hover=active&&isHoveredOrFocused();
   g.fill(x,y,x+w,y+getHeight(),UiTheme.mix(UiKit.surface(),accent,checked?0.22f:hover?0.12f:0));
   if(progress>=0)g.fill(x,y,x+(int)(w*progress),y+getHeight(),UiTheme.mix(UiKit.surface(),accent,0.35f));
   UiKit.checkbox(g,x+UiKit.INSET,y+5,checked,accent);
-  var font=Minecraft.getInstance().font;Ui.text(g,font,UiKit.fit(font,getMessage().getString(),w-32),x+26,y+6,UiKit.text(),false);
+  var font=Minecraft.getInstance().font;Ui.text(g,font,UiKit.fit(font,getMessage().getString(),w-32),x+26,y+6,active?UiKit.text():UiKit.muted(),false);
   if(isFocused())g.renderOutline(x,y,w,getHeight(),accent);
  }
 }

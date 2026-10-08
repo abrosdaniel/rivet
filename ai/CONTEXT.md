@@ -465,3 +465,30 @@ keys explicitly into pack.downloads, preserving key diagnostics and secret
 redaction assertions, and parameterizes LF/CRLF. Forced full build/verifyBundle
 passes after regenerating resources; tooling tests pass. Regenerated local 2.0.1
 release bundle. Exact remote commit CI remains unverified; no push/publication.
+
+## Server pack checkbox list (2026-10-08)
+User requested component selection matching the updater checkbox UI, including
+required files checked and disabled. ServerPackScreen uses shared UiChoiceRow
+at 24px stride; optional rows represent manifest components, required rows are
+manifest files with empty component ID (file basename, full path/reason tooltip).
+Required rows are always checked, inactive and never enter the selected component
+set; no manifest or wire protocol change. Shared disabled choices use muted colour.
+ServerPackFlowHarness components mode checks optional toggling, locked required
+rows, submitted IDs and geometry at GUI scales 1/2/3 without a live server.
+Native checkbox scenario passed GUI 1/2/3. Forced production build and
+verifyBundle passed (25 tasks executed); refreshed workspace release JAR 2.0.1.
+Remote CI and publication not performed.
+
+## Rivet 2.0.2 release preparation (2026-10-08)
+Remote v2.0.1 points to 7ec75f9; its Build and test run 37707280278 completed
+successfully. New checkbox UI is a patch; version set to 2.0.2, player guide and
+release notes updated. Native components checks already passed GUI 1/2/3.
+Forced build/verifyBundle and 328 Java + 23 tooling tests passed. Inspection
+found 669 numbered cloud-sync class copies in local generated output; clean
+build removed them. Final bundled JAR has no numbered copies or harness classes.
+Release descriptor schema, SHA-256 checksums, embedded version and unchanged
+pack/auth/menu/helper protocols verified. Workspace outputs/releases/2.0.2 has
+JAR, core.json, SHA256SUMS.txt and release notes. New release changes are uncommitted;
+no push, tag or publication. CI for the new release commit still pending.
+When packaging from a cloud-synced checkout, use clean generated outputs and
+inspect final archive entries for sync duplicates, not just passing tests.
