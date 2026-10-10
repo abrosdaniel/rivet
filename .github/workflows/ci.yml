@@ -45,6 +45,11 @@ jobs:
         with:
           distribution: temurin
           java-version: '21'
+          cache: gradle
+      - name: Prepare Gradle distribution
+        timeout-minutes: 10
+        shell: bash
+        run: bash rivet/tooling/prepare_gradle.sh
       - run: ./gradlew build --no-daemon
         shell: bash
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
@@ -88,6 +93,11 @@ jobs:
         with:
           distribution: temurin
           java-version: '21'
+          cache: gradle
+      - name: Prepare Gradle distribution
+        timeout-minutes: 10
+        shell: bash
+        run: bash rivet/tooling/prepare_gradle.sh
       - run: ./gradlew :core:postgresTest --no-daemon
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
         if: always()
@@ -122,6 +132,11 @@ jobs:
         with:
           distribution: temurin
           java-version: '21'
+          cache: gradle
+      - name: Prepare Gradle distribution
+        timeout-minutes: 10
+        shell: bash
+        run: bash rivet/tooling/prepare_gradle.sh
       - run: sudo apt-get update && sudo apt-get install -y xvfb libgl1-mesa-dri libglx-mesa0 libopenal1
       - name: Prepare fresh Minecraft test client
         timeout-minutes: 10
@@ -245,6 +260,11 @@ jobs:
         with:
           distribution: temurin
           java-version: '21'
+          cache: gradle
+      - name: Prepare Gradle distribution
+        timeout-minutes: 10
+        shell: bash
+        run: bash rivet/tooling/prepare_gradle.sh
       - name: Build packaged server and isolated fixtures
         run: ./gradlew :bootstrap:jar :mod:compatibilityTestJar -PrivetPackaged --no-daemon --console=plain
       - name: Check feature startup and shutdown
