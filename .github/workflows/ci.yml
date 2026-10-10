@@ -152,15 +152,23 @@ jobs:
           set -o pipefail
           timeout --signal=TERM --kill-after=20s 5m xvfb-run -a -s '-screen 0 1280x1024x24' ./gradlew :mod:runClient -PrivetUiHarness -I ui-client.init.gradle --no-daemon --console=plain 2>&1 | tee visual-hud.log
       - run: python3 rivet/tooling/verify_ui_snapshots.py visual/hud/screenshots checks visual-hud.log RIVET_HUD_UI_OK
-      - name: Check task flows and navigation
-        timeout-minutes: 6
+      - name: Check task flows and navigation in Russian and English
+        timeout-minutes: 12
         env:
           RIVET_NATIVE_UI: ${{ github.workspace }}/visual/tasks
           LIBGL_ALWAYS_SOFTWARE: '1'
         run: |
           set -o pipefail
-          timeout --signal=TERM --kill-after=20s 5m xvfb-run -a -s '-screen 0 1280x1024x24' ./gradlew :mod:runClient -PrivetUiHarness -I ui-client.init.gradle --no-daemon --console=plain 2>&1 | tee visual-tasks.log
-      - run: python3 rivet/tooling/verify_ui_snapshots.py visual/tasks/screenshots checks visual-tasks.log RIVET_NATIVE_OK
+          for language in ru_ru en_us; do
+            python3 - "$language" <<'PYLANG'
+          import pathlib, sys
+          path = pathlib.Path("rivet/mod/run/options.txt")
+          lines = [line for line in path.read_text().splitlines() if not line.startswith("lang:")]
+          path.write_text("\n".join(lines + ["lang:" + sys.argv[1]]) + "\n")
+          PYLANG
+            timeout --signal=TERM --kill-after=20s 5m xvfb-run -a -s '-screen 0 1280x1024x24' ./gradlew :mod:runClient -PrivetUiHarness -I ui-client.init.gradle --no-daemon --console=plain 2>&1 | tee "visual-tasks-$language.log"
+            python3 rivet/tooling/verify_ui_snapshots.py visual/tasks/screenshots checks "visual-tasks-$language.log" RIVET_NATIVE_OK
+          done
       - name: Check adaptive layouts and live resizing
         timeout-minutes: 6
         env:
