@@ -1,4 +1,5 @@
 {
+  "rivet.core.pack_component_counts": "files: %s; components: %s (required: %s, optional: %s)",
   "rivet.ui.appearance_custom": "Custom",
   "rivet.map.compass.north": "N",
   "rivet.map.compass.east": "E",

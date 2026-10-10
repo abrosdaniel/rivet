@@ -1,4 +1,5 @@
 {
+  "rivet.core.pack_component_counts": "файлов: %s; компонентов: %s (обязательных: %s, необязательных: %s)",
   "rivet.ui.appearance_custom": "Свои настройки",
   "rivet.map.compass.north": "С",
   "rivet.map.compass.east": "В",

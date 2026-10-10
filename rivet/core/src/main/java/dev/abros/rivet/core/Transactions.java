@@ -22,6 +22,20 @@ public final class Transactions {
             return prepareLocked(plan,manifest,nextState);
         }catch(OverlappingFileLockException busy){throw new BusyException();}
     }
+    /** Commits metadata only. The preparation guard excludes new file transactions;
+     * pending.json excludes an already prepared helper until its state write finishes. */
+    public void commitState(Planner.Plan plan,JsonObject expected,JsonObject next)throws IOException{
+        if(!plan.changes().isEmpty()||!plan.conflicts().isEmpty())throw new IOException("Metadata commit cannot change files");
+        Path guard=data.resolve("prepare.lock");checkInternal(guard);
+        try(FileChannel channel=FileChannel.open(guard,StandardOpenOption.CREATE,StandardOpenOption.WRITE);FileLock lock=channel.tryLock()){
+            if(lock==null)throw new BusyException();
+            if(Files.exists(data.resolve("pending.json")))throw new BusyException();
+            Path state=data.resolve("state.json");checkInternal(state);
+            JsonObject current=Files.exists(state)?Json.read(state):new JsonObject();
+            if(!current.equals(expected))throw new IOException(Messages.text("rivet.core.state_changed_review_the_changes_again_a2da111b"));
+            Json.write(state,next);
+        }catch(OverlappingFileLockException busy){throw new BusyException();}
+    }
     private Path prepareLocked(Planner.Plan plan,byte[] lock,JsonObject nextState)throws IOException{
         if(!plan.conflicts().isEmpty())throw new IOException(String.join("\n",plan.conflicts()));
         if(Files.exists(data.resolve("pending.json")))throw new IOException("An existing update must finish or recover first");Path p=directory(plan.id());Files.createDirectories(p);

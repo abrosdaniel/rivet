@@ -1,4 +1,5 @@
 {
+  "rivet.core.pack_component_counts": "files: %s; components: %s (required: %s, optional: %s)",
   "key.categories.rivet": "Rivet",
   "rivet.core.a_dependency_task_was_deleted_6887826f": "A dependency task was deleted",
   "rivet.core.a_journeymap_dat_file_is_required_2899fe41": "A JourneyMap DAT file is required",
