@@ -27,6 +27,12 @@ class ScrollLayoutTest {
   assertEquals(0,layout.thumb(0,100,0).height());assertEquals(0,layout.thumb(10,3,0).height());
   assertThrows(IllegalArgumentException.class,()->layout.thumb(10,100,Double.NaN));
  }
+ @Test void nonScrollingFormUsesBothOuterEdges(){
+  var owner=new NativeLayout.Box(10,20,301,140);var form=ScrollLayout.fit(owner,false);
+  assertEquals(owner,form.content());assertEquals(0,form.track().width());
+  assertEquals(owner.right(),form.track().x());
+  assertEquals(ScrollLayout.fit(owner),ScrollLayout.fit(owner,true));
+ }
  @Test void callersCannotConstructAnEscapedTrack(){
   assertThrows(IllegalArgumentException.class,()->new ScrollLayout(new NativeLayout.Box(0,0,100,100),new NativeLayout.Box(0,0,90,100),new NativeLayout.Box(101,0,6,100)));
  }

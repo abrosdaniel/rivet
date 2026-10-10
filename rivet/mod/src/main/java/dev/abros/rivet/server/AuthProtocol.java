@@ -9,11 +9,11 @@ import net.neoforged.neoforge.network.handling.IPayloadContext;
 import java.util.function.BiConsumer;
 
 public final class AuthProtocol {
-    public static java.util.function.Consumer<IPayloadContext> upgrade=c->c.disconnect(net.minecraft.network.chat.Component.literal("Auth unavailable"));
+    public static java.util.function.Consumer<IPayloadContext> upgrade=c->c.disconnect(net.minecraft.network.chat.Component.literal(dev.abros.rivet.core.Messages.text("rivet.core.auth_unavailable_42d16463")));
     public static java.util.function.Consumer<IPayloadContext> ready=c->{};
     public static BiConsumer<String,IPayloadContext> hello=(p,c)->{};
     public static BiConsumer<byte[],IPayloadContext> client=(p,c)->{};
-    public static BiConsumer<byte[],IPayloadContext> server=(p,c)->c.disconnect(net.minecraft.network.chat.Component.literal("Auth unavailable"));
+    public static BiConsumer<byte[],IPayloadContext> server=(p,c)->c.disconnect(net.minecraft.network.chat.Component.literal(dev.abros.rivet.core.Messages.text("rivet.core.auth_unavailable_42d16463")));
     public record Hello(String fingerprint) implements CustomPacketPayload {
         public static final Type<Hello> TYPE=new Type<>(ResourceLocation.fromNamespaceAndPath("rivet","auth_hello"));
         public static final StreamCodec<FriendlyByteBuf,Hello> CODEC=StreamCodec.of((b,p)->b.writeUtf(p.fingerprint,64),b->new Hello(b.readUtf(64)));

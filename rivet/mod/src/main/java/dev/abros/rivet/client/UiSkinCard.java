@@ -9,9 +9,9 @@ import net.minecraft.network.chat.Component;
 final class UiSkinCard extends Button {
  private final JsonObject entry;private final boolean selected,applied,grid;
  UiSkinCard(int x,int y,int w,int h,JsonObject entry,boolean selected,boolean applied,boolean grid,Runnable action){
-  super(x,y,w,h,Component.literal(entry==null?"Обычный скин":Json.str(entry,"name")),b->action.run(),DEFAULT_NARRATION);
+  super(x,y,w,h,Component.literal(entry==null?Client.text("ui.default_skin_b097c1e1"):Json.str(entry,"name")),b->action.run(),DEFAULT_NARRATION);
   this.entry=entry;this.selected=selected;this.applied=applied;this.grid=grid;
-  setTooltip(Tooltip.create(Component.literal(getMessage().getString()+(applied?" · активен":""))));
+  setTooltip(Tooltip.create(Component.literal(getMessage().getString()+(applied?Client.text("ui.active_2886c103"):""))));
  }
  static PlayerSkin appearance(JsonObject entry){var skin=SkinClient.ordinarySkin();if(entry!=null){var texture=SkinClient.texture(Json.str(entry,"hash"));if(texture!=null)skin=new PlayerSkin(texture,null,null,null,entry.get("slim").getAsBoolean()?PlayerSkin.Model.SLIM:PlayerSkin.Model.WIDE,false);}return skin;}
  @Override protected void renderWidget(GuiGraphics g,int mx,int my,float d){

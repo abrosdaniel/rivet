@@ -6,7 +6,7 @@ final class CommunityDocuments {
  static final List<String> FIELDS=List.of("members","applications","invitations","participants","responses","votes","supporters","reminded");
  static void put(PgDatabase db,JsonObject value)throws Exception{
   String id=Json.str(value,"id");var body=value.deepCopy();FIELDS.forEach(body::remove);
-  if(body.toString().length()>200000)throw new IllegalArgumentException("Запись достигла предела размера");
+  if(body.toString().length()>200000)throw new IllegalArgumentException(dev.abros.rivet.core.Messages.text("rivet.core.entry_size_limit_reached_58f57923"));
   try(var q=db.connection().prepareStatement("INSERT INTO documents(id,section,body) VALUES(?,?,?::jsonb) ON CONFLICT(id) DO UPDATE SET body=excluded.body")){q.setString(1,id);q.setString(2,Json.str(value,"section"));q.setString(3,body.toString());q.executeUpdate();}
   for(String kind:FIELDS){var rows=value.has(kind)?value.getAsJsonObject(kind):new JsonObject();
    try(var q=db.connection().prepareStatement("DELETE FROM community_relations WHERE document=? AND kind=? AND NOT(actor=ANY(?))")){q.setString(1,id);q.setString(2,kind);q.setArray(3,db.connection().createArrayOf("text",rows.keySet().toArray()));q.executeUpdate();}

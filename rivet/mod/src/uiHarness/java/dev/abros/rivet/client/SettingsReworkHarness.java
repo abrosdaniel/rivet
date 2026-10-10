@@ -1,0 +1,35 @@
+package dev.abros.rivet.client;
+import net.minecraft.client.Minecraft;
+import net.minecraft.client.gui.screens.*;
+import net.minecraft.client.gui.components.*;
+import net.neoforged.api.distmarker.Dist;
+import net.neoforged.bus.api.SubscribeEvent;
+import net.neoforged.fml.common.EventBusSubscriber;
+import java.util.*;
+/** Opt-in native settings navigation, ownership/reset checks and responsive visual flows. */
+@EventBusSubscriber(modid="rivet",value=Dist.CLIENT)
+public final class SettingsReworkHarness {
+ private static final List<VisualMatrixHarness.Frame> FRAMES=VisualMatrixHarness.samples(14,0,2);
+ private static final int[] SECTIONS={8,0,1,2,3,4};
+ private static int frame=-1,checks;private static long next;private static boolean done;
+ private static void check(boolean ok,String why){if(!ok)throw new IllegalStateException(why);checks++;}
+ private static void press(String label){var mc=Minecraft.getInstance();var w=(AbstractWidget)mc.screen.children().stream().filter(c->c instanceof AbstractWidget a&&a.getMessage().getString().equals(label)).findFirst().orElseThrow(()->new IllegalStateException("Missing action: "+label));if(w instanceof Button b)b.onPress();else w.mouseClicked(w.getX()+w.getWidth()/2d,w.getY()+w.getHeight()/2d,0);}
+ private static void reset(Screen screen)throws Exception{Minecraft.getInstance().setScreen(screen);var method=screen.getClass().getDeclaredMethod("resetSection");method.setAccessible(true);method.invoke(screen);}
+ private static void verify()throws Exception{
+  var mc=Minecraft.getInstance();mc.options.guiScale().set(2);mc.resizeDisplay();var home=new CommunityScreen(null,"home","");mc.setScreen(home);
+  check(MenuSidebar.sections().getLast().equals("settings"),"Settings must be last for every role");
+  var settings=home.children().stream().filter(c->c instanceof Button b&&b.getMessage().getString().equals("Настройки")).map(c->(Button)c).toList();check(settings.size()==1,"Profile still has duplicate settings");check(settings.getFirst() instanceof SidebarButton,"Settings is not in main navigation");check(settings.getFirst().getY()==UiWorkspace.fit(home.width,home.height).sidebar().bottom()-20,"Settings not pinned at bottom");settings.getFirst().onPress();check(mc.screen instanceof GeneralSettingsScreen,"Menu did not open general settings");var general=mc.screen;press("Оформление");press("Поиск…");((EditBox)mc.screen.children().stream().filter(c->c instanceof EditBox).findFirst().orElseThrow()).setValue("Часовой пояс");var query=SettingsSearchScreen.class.getDeclaredMethod("search");query.setAccessible(true);query.invoke(mc.screen);press("Общие · Часовой пояс");check(mc.screen instanceof GeneralSettingsScreen,"Search used old category");mc.screen.onClose();check(mc.screen==home,"Search stacked settings dialogs");
+  mc.setScreen(general);press("Виджеты главной…");check(mc.screen instanceof HomeWidgetsScreen,"Home widgets missing from general settings");mc.screen.onClose();check(mc.screen==general,"Home widget editor lost parent");check(mc.screen.children().stream().noneMatch(c->c instanceof AbstractWidget w&&w.getMessage().getString().contains("Minecraft")),"Unwanted Minecraft shortcut remains");press("Клавиши…");check(mc.screen instanceof net.minecraft.client.gui.screens.options.controls.KeyBindsScreen,"Key bindings missing");mc.screen.onClose();check(mc.screen==general,"Key bindings lost parent");
+  for(var e:SettingsCatalog.entries()){if(!List.of(8,0,1,2,3,4).contains(e.section()))continue;var s=UiSettingsShell.open(home,e.section());mc.setScreen(s);((SettingsTarget)s).revealSetting(e.id());UiGeometryHarness.verify(s);checks++;}
+  check(SettingsCatalog.section(0).stream().noneMatch(e->Set.of("guiScale","timezone").contains(e.id())),"Appearance owns general/native settings");check(SettingsCatalog.section(1).stream().noneMatch(e->Set.of("holograms","key").contains(e.id())),"Widget owns common settings");check(SettingsCatalog.section(4).stream().noneMatch(e->Set.of("scale","spacing","opacity","background").contains(e.id())),"Chat duplicates vanilla controls");
+  var h=HudSettings.INSTANCE;h.scale=1.37f;h.anchorX=1;h.anchorY=2;h.offsetX=23;h.offsetY=-19;h.holograms=false;reset(new HudSettingsScreen(home));check(h.scale==1.37f&&h.anchorX==1&&h.anchorY==2&&h.offsetX==23&&h.offsetY==-19&&!h.holograms,"Widget reset touched HUD layout or holograms");AccessibilityScreen.serverTime(true);int gui=mc.options.guiScale().get();reset(new AccessibilityScreen(home));check(AccessibilityScreen.serverTime()&&mc.options.guiScale().get()==gui,"Appearance reset touched general/native setting");double opacity=mc.options.chatOpacity().get(),scale=mc.options.chatScale().get(),spacing=mc.options.chatLineSpacing().get(),background=mc.options.textBackgroundOpacity().get();reset(new SocialSettingsScreen(home,1));check(mc.options.chatOpacity().get()==opacity&&mc.options.chatScale().get()==scale&&mc.options.chatLineSpacing().get()==spacing&&mc.options.textBackgroundOpacity().get()==background,"Chat reset overwrote vanilla preferences");
+  mc.getWindow().setWindowed(640,480);mc.options.guiScale().set(3);mc.resizeDisplay();home=new CommunityScreen(null,"home","");mc.setScreen(home);press("Главная ▾");var popup=(ChoicePopup)mc.screen;popup.revealRow(100);popup.rebuildWidgets();press("Настройки");check(mc.screen instanceof GeneralSettingsScreen,"Compact menu hides settings");general=mc.screen;press("Общие ▾");popup=(ChoicePopup)mc.screen;popup.revealRow(100);popup.rebuildWidgets();press("Редактор HUD…");check(mc.screen instanceof HudInteractionScreen,"Compact settings hide HUD editor");mc.screen.onClose();check(mc.screen==general,"Compact editor lost parent");mc.getWindow().setWindowed(1280,1024);mc.options.guiScale().set(2);mc.resizeDisplay();
+ }
+ @SubscribeEvent public static void render(net.neoforged.neoforge.client.event.ScreenEvent.Render.Post event){if(System.getenv("RIVET_SETTINGS_REWORK")==null||done)return;var mc=Minecraft.getInstance();try{
+  if(frame<0){if(!(mc.screen instanceof TitleScreen))return;CommunityUiHarness.open("normal");verify();frame=0;}
+  if(System.currentTimeMillis()<next)return;next=System.currentTimeMillis()+220;
+  if(frame>0){UiGeometryHarness.verify(mc.screen);String out=System.getenv("RIVET_SETTINGS_REWORK_SCREENSHOTS");if(out!=null){var dir=new java.io.File(out);dir.mkdirs();UiCaptureHarness.grab(dir,"settings-"+frame+".png",mc.getMainRenderTarget(),m->{});}checks++;}
+  if(frame==FRAMES.size()){System.out.println("RIVET_SETTINGS_REWORK_OK checks="+checks+" frames="+frame+" navigation search reset compact");done=true;mc.stop();return;}
+  var f=FRAMES.get(frame++);f.apply();var home=new CommunityScreen(null,"home","");mc.setScreen(home);if(f.scene()==1)press("⋯");else if(f.scene()>=2){var screen=(ScrollScreen)UiSettingsShell.open(home,SECTIONS[(f.scene()-2)/2]);mc.setScreen(screen);if(f.scene()%2==1){screen.revealRow(100);screen.rebuildWidgets();}}UiGeometryHarness.verify(mc.screen);
+ }catch(Throwable ex){System.out.println("RIVET_SETTINGS_REWORK_FAILED frame="+frame);ex.printStackTrace();done=true;mc.stop();}}
+}

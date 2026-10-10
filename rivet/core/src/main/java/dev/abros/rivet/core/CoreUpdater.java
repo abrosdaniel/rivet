@@ -54,7 +54,7 @@ public final class CoreUpdater {
             }
         }catch(InterruptedException interrupted){Thread.currentThread().interrupt();throw interrupted;}
         finally{for(var job:jobs)if(!job.isDone())job.cancel(true);}
-        if(found.isEmpty()&&failure!=null)throw new java.io.IOException("Не удалось загрузить доступные версии Rivet. Повторите позже.",failure);
+        if(found.isEmpty()&&failure!=null)throw new java.io.IOException(dev.abros.rivet.core.Messages.text("rivet.core.could_not_load_available_rivet_versions_8ab41b79"),failure);
         return found.stream().sorted((a,b)->Versions.compare(b.version(),a.version())).limit(limit).toList();
     }
     private Optional<Update> descriptor(String version,String minecraft,String neoForge)throws Exception{
@@ -80,10 +80,10 @@ public final class CoreUpdater {
         return actual.length==3&&required.length==3&&actual[0].equals(required[0])&&actual[1].equals(required[1])&&Versions.compare(installed,minimum)>=0;
     }
     public String stage(Path game,Path loadedJar,Update update,Cache cache,JsonObject currentState)throws Exception{
-        Path root=game.toRealPath(),jar=loadedJar.toRealPath();if(!jar.startsWith(root.resolve("mods"))||!Files.isRegularFile(jar))throw new IllegalArgumentException("Core update requires an installed JAR in this game directory");
+        Path root=game.toRealPath(),jar=loadedJar.toRealPath();if(!jar.startsWith(root.resolve("mods"))||!Files.isRegularFile(jar))throw new IllegalArgumentException(dev.abros.rivet.core.Messages.text("rivet.message.error_4069e968e817"));
         String relative=root.relativize(jar).toString().replace('\\','/');SafePaths.validate(relative);
         String destination=update.artifact().path();
-        if(!relative.equals(destination)&&Files.exists(SafePaths.resolve(root,destination)))throw new IllegalArgumentException("Файл выбранной версии уже находится в mods. Уберите дубликат Rivet перед обновлением.");
+        if(!relative.equals(destination)&&Files.exists(SafePaths.resolve(root,destination)))throw new IllegalArgumentException(dev.abros.rivet.core.Messages.text("rivet.core.the_selected_version_is_already_in_ae7767c6"));
         cache.obtain(update.artifact(),new AtomicBoolean());
         var changes=new ArrayList<Planner.Change>();
         if(relative.equals(destination))changes.add(new Planner.Change(relative,Hashes.sha256(jar),update.artifact().sha256()));

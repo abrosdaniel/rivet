@@ -7,7 +7,7 @@ import java.util.*;
 /** Optional read-only API inspection. Unknown fields remain unknown, never guessed from TCP. */
 final class VoiceDiagnosticsScreen extends ScrollScreen {
  private final Screen parent;private List<String> lines=List.of();private long checked;
- VoiceDiagnosticsScreen(Screen parent){super(Component.literal("Голосовой чат"));this.parent=parent;}
+ VoiceDiagnosticsScreen(Screen parent){super(Client.tr("ui.voice_chat_7cfe43fa"));this.parent=parent;}
  private int panelTop(){return UiDialog.top(height,240);}
  private int panelBottom(){return height-panelTop();}
  @Override public void renderBackground(GuiGraphics g,int x,int y,float d){UiDialog.draw(g,width,Math.min(320,width-24),panelTop(),panelBottom());}

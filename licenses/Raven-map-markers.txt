@@ -1,0 +1,9 @@
+Raven Fantasy Icons — Free collection
+Clockwork Raven
+https://clockworkraven.itch.io/raven-fantasy-icons
+
+Author permits modification and use in projects, including commercial projects.
+The assets may not be sold or distributed as a separate asset product without permission.
+Only selected 16x16 sprites are included as part of Rivet.
+Source filenames are recorded in map-art-sources.json.
+Other marker sprites are original Rivet artwork.

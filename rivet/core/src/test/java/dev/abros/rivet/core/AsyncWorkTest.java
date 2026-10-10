@@ -17,4 +17,32 @@ class AsyncWorkTest {
  @Test void boundedSessionRejectsOverloadWithoutDroppingAcceptedWork(){
   var workers=new ArrayList<Runnable>();var serial=new SerialExecutor(workers::add,2);var done=new AtomicInteger();serial.execute(done::incrementAndGet);serial.execute(done::incrementAndGet);assertThrows(RejectedExecutionException.class,()->serial.execute(done::incrementAndGet));workers.getFirst().run();assertEquals(2,done.get());serial.execute(done::incrementAndGet);workers.getLast().run();assertEquals(3,done.get());
  }
+ @Test void closeDiscardsFullQueueAndCleansOnceBeforeWorkerStarts(){
+  var workers=new ArrayList<Runnable>();var serial=new SerialExecutor(workers::add,2);var ran=new AtomicInteger();var cleaned=new AtomicInteger();
+  serial.execute(ran::incrementAndGet);serial.execute(ran::incrementAndGet);
+  serial.close(cleaned::incrementAndGet);serial.close(()->fail("duplicate cleanup"));
+  assertEquals(1,cleaned.get());assertThrows(RejectedExecutionException.class,()->serial.execute(ran::incrementAndGet));
+  workers.getFirst().run();assertEquals(0,ran.get());assertEquals(1,cleaned.get());
+ }
+ @Test void closeWaitsForActiveTaskAndDropsLateCallback()throws Exception{
+  var pool=Executors.newSingleThreadExecutor();var entered=new CountDownLatch(1);var release=new CountDownLatch(1);var cleaned=new CountDownLatch(1);var order=new CopyOnWriteArrayList<String>();
+  try{
+   var serial=new SerialExecutor(pool,1);
+   serial.execute(()->{entered.countDown();try{assertTrue(release.await(3,TimeUnit.SECONDS));}catch(InterruptedException e){throw new RuntimeException(e);}order.add("active");});
+   assertTrue(entered.await(2,TimeUnit.SECONDS));serial.execute(()->order.add("pending"));
+   serial.close(()->{order.add("cleanup");cleaned.countDown();});assertEquals(1,cleaned.getCount());
+   assertThrows(RejectedExecutionException.class,()->serial.execute(()->order.add("late")));
+   release.countDown();assertTrue(cleaned.await(2,TimeUnit.SECONDS));assertEquals(List.of("active","cleanup"),order);
+  }finally{release.countDown();pool.shutdownNow();assertTrue(pool.awaitTermination(3,TimeUnit.SECONDS));}
+ }
+ @Test void closedQueueCleansEvenWhenUnderlyingPoolRejects(){
+  var pool=Executors.newSingleThreadExecutor();pool.shutdown();var serial=new SerialExecutor(pool,1);var cleaned=new AtomicInteger();
+  assertThrows(RejectedExecutionException.class,()->serial.execute(()->fail("rejected work")));
+  serial.close(cleaned::incrementAndGet);assertEquals(1,cleaned.get());
+ }
+ @Test void taskCanCloseItsOwnQueueAndStillRunCleanupAfterFailure(){
+  var workers=new ArrayList<Runnable>();var serial=new SerialExecutor(workers::add,2);var order=new ArrayList<String>();
+  serial.execute(()->{serial.close(()->order.add("cleanup"));order.add("active");throw new IllegalStateException("test");});
+  serial.execute(()->order.add("pending"));workers.getFirst().run();assertEquals(List.of("active","cleanup"),order);
+ }
 }

@@ -11,6 +11,22 @@ class ServerPackTest {
  @org.junit.jupiter.api.BeforeEach void canonicalRoot()throws Exception{root=root.toRealPath();}
  PackPublisher publisher()throws Exception{return new PackPublisher(root.resolve("source"),root.resolve("published"));}
  void source(String path,String contents)throws Exception{var file=root.resolve("source").resolve(path);Files.createDirectories(file.getParent());Files.writeString(file,contents);}
+ @Test void cancelledEmptyPreparationDoesNotCreatePublication()throws Exception{
+  var p=publisher();Thread.currentThread().interrupt();
+  try{assertThrows(java.io.InterruptedIOException.class,()->p.prepare("1.21.1","21.1.250"));assertTrue(Thread.currentThread().isInterrupted());}
+  finally{Thread.interrupted();}
+  try(var files=Files.list(root.resolve("published/publications"))){assertEquals(0,files.count());}
+ }
+ @Test void cancelledActivationPreservesCurrentAndPendingPublications()throws Exception{
+  var p=publisher();source("config/example.toml","one");var first=p.prepare("1.21.1","21.1.250");p.activate(first,false);
+  source("config/example.toml","two");var next=p.prepare("1.21.1","21.1.250");
+  for(boolean restart:List.of(false,true)){
+   Thread.currentThread().interrupt();
+   try{assertThrows(java.io.InterruptedIOException.class,()->p.activate(next,restart));assertTrue(Thread.currentThread().isInterrupted());}
+   finally{Thread.interrupted();}
+   assertEquals(first.hash(),p.current().hash());assertFalse(Files.exists(root.resolve("published/pending.json")));
+  }
+ }
  @Test void publicationsStayImmutableAndPendingActivationDoesNotOverrideImmediatePublish()throws Exception{
   var p=publisher();source("config/example.toml","one");var first=p.prepare("1.21.1","21.1.250");assertNull(p.current());p.activate(first,false);source("config/example.toml","two");var next=p.prepare("1.21.1","21.1.250");assertEquals(first.hash(),p.current().hash());assertEquals("one",Files.readString(p.object(first.files().getFirst().hash())));p.activate(next,true);p.activate(first,false);p.startup();assertEquals(first.hash(),p.current().hash());
  }

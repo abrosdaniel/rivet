@@ -13,4 +13,22 @@ import static org.junit.jupiter.api.Assertions.*;
  @Test void disabledStoreCannotMutate()throws Exception{var s=new SkinStore(TestDatabase.database(temp),new SkinSettings(false,1,2,"false"));assertThrows(IllegalArgumentException.class,()->s.upload(UUID.randomUUID(),"A",false,SkinImageTest.png(64,64)));assertThrows(IllegalArgumentException.class,()->s.change(UUID.randomUUID(),"select","",false));}
  @Test void repeatedDeleteUsesReceiptInsteadOfDeletingAgain()throws Exception{var s=new SkinStore(TestDatabase.database(temp),new SkinSettings(true,1,2,"false"));var owner=UUID.randomUUID();s.upload(owner,"A",false,SkinImageTest.png(64,64));String id=Json.str(s.appearance(owner),"active");var request=new com.google.gson.JsonObject();request.addProperty("id",id);request.addProperty("operationId",UUID.randomUUID().toString());request.addProperty("issuedAt",System.currentTimeMillis());s.mutate(owner,"delete",request,null);var replay=s.mutate(owner,"delete",request,null);assertTrue(replay.get("replayed").getAsBoolean());assertTrue(s.library(owner).getAsJsonArray("entries").isEmpty());}
  @Test void orderingPersistsWithoutChangingActiveSkinAndRejectsOtherOwners()throws Exception{var db=TestDatabase.database(temp);var store=new SkinStore(db,new SkinSettings(true,1,4,"false"));var owner=UUID.randomUUID();store.upload(owner,"Z",false,SkinImageTest.png(64,64));String first=Json.str(store.appearance(owner),"active");store.upload(owner,"A",false,SkinImageTest.png(64,32));String second=Json.str(store.appearance(owner),"active");assertEquals(first,Json.str(store.library(owner).getAsJsonArray("entries").get(0).getAsJsonObject(),"id"));var active=store.appearance(owner);store.move(owner,second,-1);var reopened=new SkinStore(db,new SkinSettings(true,1,4,"false"));assertEquals(second,Json.str(reopened.library(owner).getAsJsonArray("entries").get(0).getAsJsonObject(),"id"));assertEquals(active,reopened.appearance(owner));store.rename(owner,first,"AAA");assertEquals(second,Json.str(store.library(owner).getAsJsonArray("entries").get(0).getAsJsonObject(),"id"));assertThrows(IllegalArgumentException.class,()->store.move(UUID.randomUUID(),first,1));store.move(owner,second,-1);store.move(owner,second,1);assertEquals(first,Json.str(store.library(owner).getAsJsonArray("entries").get(0).getAsJsonObject(),"id"));}
+ @Test void queuedModelChangesPersistInSubmissionOrderWhileAnotherOwnerProceeds()throws Exception{
+  var store=new SkinStore(TestDatabase.database(temp),new SkinSettings(true,1,2,"false"));var owner=UUID.randomUUID();var other=UUID.randomUUID();
+  store.upload(owner,"A",false,SkinImageTest.png(64,64));store.upload(other,"B",false,SkinImageTest.png(64,64));
+  String id=Json.str(store.appearance(owner),"active"),otherId=Json.str(store.appearance(other),"active");
+  var pool=java.util.concurrent.Executors.newFixedThreadPool(2);var work=new KeyedSerialExecutor<UUID>(pool,4);
+  var entered=new java.util.concurrent.CountDownLatch(1);var release=new java.util.concurrent.CountDownLatch(1);
+  var first=new java.util.concurrent.CompletableFuture<Void>();var second=new java.util.concurrent.CompletableFuture<Void>();var independent=new java.util.concurrent.CompletableFuture<Void>();
+  try{
+   work.execute(owner,()->{entered.countDown();try{release.await();store.change(owner,"model",id,true);first.complete(null);}catch(Exception e){first.completeExceptionally(e);}});
+   assertTrue(entered.await(2,java.util.concurrent.TimeUnit.SECONDS));
+   work.execute(owner,()->{try{store.change(owner,"model",id,false);second.complete(null);}catch(Exception e){second.completeExceptionally(e);}});
+   work.execute(other,()->{try{store.rename(other,otherId,"Independent");independent.complete(null);}catch(Exception e){independent.completeExceptionally(e);}});
+   independent.get(3,java.util.concurrent.TimeUnit.SECONDS);assertFalse(second.isDone());
+   assertEquals("Independent",Json.str(store.library(other).getAsJsonArray("entries").get(0).getAsJsonObject(),"name"));
+   release.countDown();first.get(3,java.util.concurrent.TimeUnit.SECONDS);second.get(3,java.util.concurrent.TimeUnit.SECONDS);
+   assertFalse(store.appearance(owner).get("slim").getAsBoolean());assertEquals(id,Json.str(store.appearance(owner),"active"));
+  }finally{release.countDown();work.close();pool.shutdownNow();assertTrue(pool.awaitTermination(3,java.util.concurrent.TimeUnit.SECONDS));}
+ }
 }

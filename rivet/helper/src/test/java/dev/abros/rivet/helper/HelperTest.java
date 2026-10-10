@@ -10,6 +10,30 @@ import java.io.*;
 import java.util.concurrent.TimeUnit;
 class HelperTest {
     @TempDir Path game;
+    @Test void standaloneContainsOnlyUpdaterRuntimeAndHasNoMissingClasses()throws Exception{
+        Path jar=Path.of(System.getProperty("rivet.helperJar"));
+        assertTrue(Files.size(jar)<512*1024,"Updater runtime unexpectedly exceeds 512 KiB");
+        try(var zip=new java.util.zip.ZipFile(jar.toFile())){
+            var entries=zip.stream().map(java.util.zip.ZipEntry::getName).toList();
+            assertTrue(entries.stream().noneMatch(n->n.startsWith("dev/abros/rivet/core/map/")||n.startsWith("dev/abros/rivet/core/Community")||n.startsWith("org/slf4j/")));
+        }
+        var output=new StringWriter();var writer=new PrintWriter(output);
+        int result=java.util.spi.ToolProvider.findFirst("jdeps").orElseThrow().run(writer,writer,"--missing-deps",jar.toString());
+        writer.flush();assertEquals(0,result,output.toString());assertFalse(output.toString().contains("not found"),output.toString());
+    }
+
+    @Test void standaloneRecoveryCancelsReadyTransactionWithoutChangingPlayerFiles()throws Exception{
+        var plan=new Planner.Plan(UUID.randomUUID().toString(),"test",List.of(),Map.of(),Set.of(),List.of(),0);
+        new Transactions(game).prepare(plan,new byte[0],new JsonObject());
+        Files.writeString(game.resolve("player-owned.txt"),"preserve");
+        String java=Path.of(System.getProperty("java.home"),"bin","java").toString();
+        Process helper=new ProcessBuilder(java,"-jar",System.getProperty("rivet.helperJar"),"recover",game.toString(),plan.id())
+                .redirectErrorStream(true).redirectOutput(game.resolve("helper.log").toFile()).start();
+        try{assertTrue(helper.waitFor(30,TimeUnit.SECONDS),this::diagnostics);assertEquals(0,helper.exitValue(),this::diagnostics);}
+        finally{helper.destroyForcibly();}
+        assertFalse(Files.exists(game.resolve("rivet/pending.json")));
+        assertEquals("preserve",Files.readString(game.resolve("player-owned.txt")));
+    }
     @Test void helperWaitsForActualParentBeforeApplying()throws Exception{
         String hash=Hashes.sha256("new".getBytes());Path object=game.resolve("rivet/cache/objects/"+hash.substring(0,2)+"/"+hash);Files.createDirectories(object.getParent());Files.writeString(object,"new");var plan=new Planner.Plan(UUID.randomUUID().toString(),"test",List.of(new Planner.Change("mods/test.jar",null,hash)),Map.of(),Set.of(),List.of(),0);new Transactions(game).prepare(plan,new byte[0],new JsonObject());
         String java=Path.of(System.getProperty("java.home"),"bin","java").toString();String parentClasses=Path.of(Parent.class.getProtectionDomain().getCodeSource().getLocation().toURI()).toString();Process parent=new ProcessBuilder(java,"-cp",parentClasses,Parent.class.getName()).start();Process helper=null;

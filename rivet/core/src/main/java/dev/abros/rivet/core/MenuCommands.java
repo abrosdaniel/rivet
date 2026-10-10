@@ -8,7 +8,7 @@ public final class MenuCommands {
     public enum Effect { READ, WRITE, SIGNAL }
     public record Definition(String action, String operation, Effect effect, String administrativePermission) {}
     private static final Set<String> COMMUNITY_READS = Set.of("hud", "list", "detail", "workList", "workGet", "workMembers", "workArchivePreview",
-        "globalSearch", "toolsPrivacy", "toolsPlaces", "toolsFollowing", "toolsMapSettings", "toolsMapPeers",
+        "globalSearch", "toolsPrivacy", "toolsPlaces", "toolsFollowing", "toolsMapSettings", "toolsMapPeers","mapActivities","groupMap","mapPositionSettings","mapPositionPeers",
         "plusProfile", "plusIgnores", "plusItemRead");
     private static final Set<String> READS = Set.of("players", "reports", "myReports", "myReport", "history", "menuData",
         "playerAdministration", "adminDashboard", "rolePreview", "diagnostics", "exportCommunity");

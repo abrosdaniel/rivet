@@ -30,7 +30,7 @@ final class UpdateMetadataCache {
     }
    }catch(IOException|RuntimeException invalid){cached=null;fetched=0;retry=0;}
    if(cached!=null&&now-fetched<FRESH)return cached;
-   if(retry>now&&retry-now<=RETRY){if(cached!=null)return cached;throw new Remote.Unavailable("Проверка обновлений временно недоступна. Повторите через несколько минут.");}
+   if(retry>now&&retry-now<=RETRY){if(cached!=null)return cached;throw new Remote.Unavailable(dev.abros.rivet.core.Messages.text("rivet.core.update_checks_are_temporarily_unavailable_try_ddd66fd2"));}
    try{
     byte[] bytes=remote.bytes(url,limit);
     com.google.gson.JsonParser.parseString(new String(bytes,StandardCharsets.UTF_8));

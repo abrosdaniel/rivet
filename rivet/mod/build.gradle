@@ -8,6 +8,7 @@ neoForge {
 dependencies { implementation project(':core') }
 tasks.named('processResources') {
     inputs.property 'version', project.version
+    from(rootProject.file('licenses')) { into 'META-INF/licenses' }
     filesMatching('META-INF/neoforge.mods.toml') { expand version: project.version }
     dependsOn ':helper:standaloneJar'
     from(project(':helper').tasks.named('standaloneJar')) { into 'rivet'; rename { 'helper.jar' } }
@@ -156,7 +157,7 @@ tasks.register('checkModuleComposition') {
             'AuthClient': 'ClientModules.java', 'SkinClient': 'ClientModules.java',
             'SocialClient': 'ClientModules.java', 'ClientChat': 'ClientModules.java',
             'RivetTab': 'ClientModules.java', 'PlayerNameplates': 'ClientModules.java',
-            'ClientNavigation': 'ClientModules.java', 'RivetHud': 'ClientModules.java',
+            'ClientMap': 'ClientModules.java', 'RivetHud': 'ClientModules.java',
             'AuthServer': 'ServerModules.java', 'ServerSkins': 'ServerModules.java',
             'ServerFeatures': 'ServerModules.java', 'ServerSocial': 'ServerModules.java',
             'ServerChat': 'ServerModules.java', 'ServerNavigation': 'ServerModules.java',
@@ -176,3 +177,10 @@ tasks.register('checkModuleComposition') {
     }
 }
 tasks.named('check') { dependsOn 'checkModuleComposition' }
+
+// Optional public voice API: provided by Simple Voice Chat, never shipped inside Rivet.
+repositories { maven { url = 'https://maven.maxhenkel.de/repository/public'; content { includeGroup 'de.maxhenkel.voicechat' } } }
+dependencies {
+    compileOnly 'de.maxhenkel.voicechat:voicechat-api:2.5.0'
+    testImplementation 'de.maxhenkel.voicechat:voicechat-api:2.5.0'
+}

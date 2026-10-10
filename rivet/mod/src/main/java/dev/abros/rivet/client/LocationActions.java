@@ -6,12 +6,14 @@ import net.minecraft.network.chat.Component;
 import java.util.List;
 final class LocationActions {
  static void render(CommunityScreen screen,JsonObject record){
-  if(!record.has("location"))return;var place=CommunityLocation.read(record.getAsJsonObject("location"));screen.text("Место: "+place.name());screen.text(place.coordinates());
+  if(!record.has("location"))return;var place=CommunityLocation.read(record.getAsJsonObject("location"));screen.text(Client.text("ui.location_41fb2029")+place.name());screen.text(place.coordinates());
   var actions=new java.util.ArrayList<CommunityScreen.Row>();
-  actions.add(new CommunityScreen.Row("Идти сюда",()->{DirectionCue.start(place);Minecraft.getInstance().setScreen(null);}));
-  actions.add(new CommunityScreen.Row("Координаты",()->Minecraft.getInstance().keyboardHandler.setClipboard(place.coordinates())));
-  if(ClientCompatibilityRegistry.worldMapAvailable())actions.add(new CommunityScreen.Row("На карте",()->{try{ClientCompatibilityRegistry.openWorldMap(screen.surface(),place);}catch(Exception|LinkageError ex){Minecraft.getInstance().setScreen(new TextScreen(screen.surface(),Component.literal("Карта Xaero"),ex instanceof IllegalStateException||ex instanceof IllegalArgumentException?ex.getMessage():"Эта версия Xaero World Map не поддерживает открытие точки. Координаты можно скопировать из карточки."));}}));
-  if(ClientCompatibilityRegistry.xaeroEditorAvailable())actions.add(new CommunityScreen.Row("Метка в Xaero…",()->Minecraft.getInstance().setScreen(new ChoicePopup(screen.surface(),"Как добавить место?",List.of("Идти сюда","На этот сеанс","Сохранить место"),type->{try{ClientCompatibilityRegistry.editMap(screen.surface(),place,type);}catch(Exception|LinkageError ex){Minecraft.getInstance().setScreen(new TextScreen(screen.surface(),Component.literal("Место в Xaero"),"Не удалось открыть редактор Xaero. "+(ex instanceof IllegalStateException||ex instanceof IllegalArgumentException?ex.getMessage():"Проверьте совместимость версии мода.")+"\nКоординаты можно скопировать из карточки."));}}))));
+  actions.add(new CommunityScreen.Row(Client.text("map.navigate"),()->{DirectionCue.start(place);Minecraft.getInstance().setScreen(null);}));
+  actions.add(new CommunityScreen.Row(Client.text("ui.coordinates_bd036452"),()->Minecraft.getInstance().keyboardHandler.setClipboard(place.coordinates())));
+  if(WorldMapClient.allowed()){
+   actions.add(new CommunityScreen.Row(Client.text("ui.on_the_map_ba867271"),()->ClientMap.openLocation(screen.surface(),place,false)));
+   actions.add(new CommunityScreen.Row(Client.text("ui.save_waypoint_ba8ec24a"),()->ClientMap.openLocation(screen.surface(),place,true)));
+  }
   screen.actionRow(actions);
  }
 }

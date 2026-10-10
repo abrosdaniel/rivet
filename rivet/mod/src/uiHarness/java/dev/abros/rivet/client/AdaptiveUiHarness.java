@@ -26,7 +26,7 @@ public final class AdaptiveUiHarness {
     case 24->mc.setScreen(new SettingsSearchScreen(null));
     case 25->mc.setScreen(new PersonalProfileScreen(null));
     case 26->mc.setScreen(new PlayerActionsScreen(null,player(),new com.google.gson.JsonArray()));
-    case 27->{var parent=new CommunityScreen(null,"board","");var preset=new com.google.gson.JsonObject();preset.addProperty("title","Черновик объявления");preset.addProperty("description","Описание объявления");mc.setScreen(new CommunityForm(parent,"Новое объявление",java.util.List.of(new CommunityScreen.Field("title","Название",100),new CommunityScreen.Field("description","Описание",1500)),preset,j->{}));}
+    case 27->{var parent=new CommunityScreen(null,"board","");var preset=new com.google.gson.JsonObject();preset.addProperty("title","Черновик объявления");preset.addProperty("description","Описание объявления");mc.setScreen(new CommunityForm(parent,"Новое объявление","create",java.util.List.of(new CommunityScreen.Field("title","Название",100),new CommunityScreen.Field("description","Описание",1500)),preset,j->{}));}
     case 28->{mc.setScreen(new PlayerActionsScreen(null,player(),new com.google.gson.JsonArray()));press("Действия");}
     case 29->{mc.setScreen(new ServerMenuScreen(null,"admin"));if(mc.screen.children().stream().noneMatch(c->c instanceof Button b&&b.getMessage().getString().contains("Диагностика")))press("Обзор");press("Диагностика");}
     case 30->{mc.setScreen(new UiKitShowcaseScreen(null));((ScrollScreen)mc.screen).revealRow(8);mc.screen.resize(mc,mc.screen.width,mc.screen.height);}
@@ -48,7 +48,7 @@ public final class AdaptiveUiHarness {
  private static com.google.gson.JsonObject player(){var p=new com.google.gson.JsonObject();p.addProperty("uuid","00000000-0000-0000-0000-000000000001");p.addProperty("name","ABR0Sxd");p.addProperty("prefix","&c[Root]");p.addProperty("suffix","&9@abrosdaniel");p.addProperty("online",true);return p;}
  private static void press(String text){for(var c:Minecraft.getInstance().screen.children())if(c instanceof Button b&&b.getMessage().getString().contains(text)){b.onPress();return;}throw new IllegalStateException("Missing action: "+text);}
  private static void verify(){var screen=Minecraft.getInstance().screen;UiGeometryHarness.verify(screen);
-  if(MenuSidebar.sections().contains("profile")||MenuSidebar.sections().contains("settings"))throw new IllegalStateException("Unapproved root navigation entries returned");
+  if(MenuSidebar.sections().contains("profile")||!MenuSidebar.sections().getLast().equals("settings")||java.util.Collections.frequency(MenuSidebar.sections(),"settings")!=1)throw new IllegalStateException("Settings must appear once at the bottom; profile remains modal");
   if(screen instanceof PersonalProfileScreen||screen instanceof PlayerActionsScreen||screen instanceof CommunityForm||screen instanceof TaskEditScreen||UiSettingsShell.owns(screen)){
    if(screen.children().stream().anyMatch(c->c instanceof SidebarButton button&&MenuSidebar.sections().stream().map(CommunityScreen::name).anyMatch(n->n.equals(button.getMessage().getString()))))throw new IllegalStateException("Modal was turned into a page");
   }

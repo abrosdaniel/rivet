@@ -34,6 +34,10 @@ tasks.register('verifyBundle') {
             }
             assert !innerEntries.keySet().any { it.startsWith('org/sqlite/') || it.startsWith('org/bouncycastle/') }
             assert innerEntries.containsKey('dev/abros/rivet/core/auth/AuthTls.class')
+            assert innerEntries.containsKey('dev/abros/rivet/compat/voice/SimpleVoicePlugin.class')
+            assert !innerEntries.keySet().any { it.startsWith('de/maxhenkel/voicechat/') }
+            assert innerEntries.containsKey('assets/rivet/lang/ru_ru.json')
+            assert innerEntries.containsKey('assets/rivet/lang/en_us.json')
             assert !innerEntries.keySet().any { it.contains('Harness') || it.contains('UiKitPreview') }
             assert innerEntries.containsKey('rivet.mixins.json')
             assert innerEntries.containsKey('dev/abros/rivet/mixin/LoginIdentityMixin.class')

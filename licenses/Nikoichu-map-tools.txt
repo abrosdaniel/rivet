@@ -1,0 +1,7 @@
+1-bit Pixel Icons v1.2 by Nikoichu
+https://nikoichu.itch.io/pixel-icons
+License: CC0 1.0 Universal
+https://creativecommons.org/publicdomain/zero/1.0/
+
+Selected original 16x16 sprites, with the adaptations listed in map-tool-sources.json.
+Original archive: 1-bit_Pixel_Icons.zip (1476 icons).

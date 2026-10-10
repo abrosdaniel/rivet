@@ -21,26 +21,26 @@ public final class CompatibilityClient {
  private CompatibilityClient(){}
  public static void install(){net.neoforged.neoforge.common.NeoForge.EVENT_BUS.addListener((net.neoforged.neoforge.client.event.ScreenEvent.Init.Post event)->{
   var screen=event.getScreen();if(!active()||!screen.getClass().getName().equals(AccessDeniedBindings.BASE+"screen.AccessControlScreen"))return;
-  try{var field=screen.getClass().getDeclaredField("networkId");field.setAccessible(true);var network=(UUID)field.get(screen);int x=screen.width/2-96,y=screen.height/2-59;UiActions.row(new dev.abros.rivet.core.NativeLayout.Box(x+58,y+123,134,20),event::addListener,UiActions.action("Проверить доступ",()->preview(network,screen),true));}
+  try{var field=screen.getClass().getDeclaredField("networkId");field.setAccessible(true);var network=(UUID)field.get(screen);int x=screen.width/2-96,y=screen.height/2-59;UiActions.row(new dev.abros.rivet.core.NativeLayout.Box(x+58,y+123,134,20),event::addListener,UiActions.action(Client.text("ui.check_access_3d7ac9fd"),()->preview(network,screen),true));}
   catch(ReflectiveOperationException error){com.mojang.logging.LogUtils.getLogger().warn("Rivet Access Denied screen contract changed",error);}
  });}
  private static void preview(UUID network,net.minecraft.client.gui.screens.Screen parent){
   var j=new JsonObject();j.addProperty("op","preview");j.addProperty("network",network.toString());request(AccessDeniedBindings.ID,j).whenComplete((reply,error)->{
-   var mc=Minecraft.getInstance();if(mc.screen!=parent)return;if(error!=null){mc.setScreen(new TextScreen(parent,Component.literal("Проверка доступа"),error.getMessage(),true));return;}
+   var mc=Minecraft.getInstance();if(mc.screen!=parent)return;if(error!=null){mc.setScreen(new TextScreen(parent,Client.tr("ui.checking_access_d1ef1b6e"),error.getMessage(),true));return;}
    var text=new StringBuilder(Json.str(reply,"text"));for(var item:reply.getAsJsonArray("replacements")){var row=item.getAsJsonObject();text.append("\n").append(Json.str(row,"name")).append(": ").append(Json.str(row,"from")).append(" → ").append(Json.str(row,"to"));}
-   text.append("\n\nНеподтверждённые записи не изменяются. Если игрок всё ещё не имеет доступа, удалите старую запись и добавьте его по серверному нику.");
-   if(!reply.has("token")){mc.setScreen(new TextScreen(parent,Component.literal("Проверка доступа"),text.toString(),true));return;}
-   mc.setScreen(new UiConfirmDialog(yes->{mc.setScreen(parent);if(yes){var apply=new JsonObject();apply.addProperty("op","apply");apply.addProperty("network",network.toString());apply.addProperty("token",Json.str(reply,"token"));request(AccessDeniedBindings.ID,apply).whenComplete((result,failure)->message(failure==null?Json.str(result,"text"):failure.getMessage()));}},Component.literal("Исправить доступ?"),Component.literal(text.toString())));
+   text.append(Client.text("ui.unverified_entries_will_not_be_changed_7b45415c"));
+   if(!reply.has("token")){mc.setScreen(new TextScreen(parent,Client.tr("ui.checking_access_d1ef1b6e"),text.toString(),true));return;}
+   mc.setScreen(new UiConfirmDialog(yes->{mc.setScreen(parent);if(yes){var apply=new JsonObject();apply.addProperty("op","apply");apply.addProperty("network",network.toString());apply.addProperty("token",Json.str(reply,"token"));request(AccessDeniedBindings.ID,apply).whenComplete((result,failure)->message(failure==null?Json.str(result,"text"):failure.getMessage()));}},Client.tr("ui.repair_access_21a54e07"),Component.literal(text.toString())));
   });
  }
  public static boolean active(){return Minecraft.getInstance().getConnection()!=null&&Protocol.supportedFeatures.contains("compatibility-adapters")&&AccessDeniedBindings.supported();}
  public static void tick(){
-  var current=Minecraft.getInstance().getConnection();if(current!=connection){connection=current;ClientCompatibilityRegistry.reset();var previous=List.copyOf(pending.values());pending.clear();profiles.clear();loading.clear();retryAfter.clear();previous.forEach(p->p.future().completeExceptionally(new IllegalStateException("Соединение изменилось")));}
-  long now=System.currentTimeMillis();var expired=new ArrayList<String>();pending.forEach((id,p)->{if(p.deadline()<now)expired.add(id);});for(var id:expired){var p=pending.remove(id);p.future().completeExceptionally(new IllegalArgumentException("Сервер не ответил. Повторите действие"));}
+  var current=Minecraft.getInstance().getConnection();if(current!=connection){connection=current;ClientCompatibilityRegistry.reset();var previous=List.copyOf(pending.values());pending.clear();profiles.clear();loading.clear();retryAfter.clear();previous.forEach(p->p.future().completeExceptionally(new IllegalStateException(Client.text("ui.connection_changed_d14be38b"))));}
+  long now=System.currentTimeMillis();var expired=new ArrayList<String>();pending.forEach((id,p)->{if(p.deadline()<now)expired.add(id);});for(var id:expired){var p=pending.remove(id);p.future().completeExceptionally(new IllegalArgumentException(Client.text("ui.the_server_did_not_respond_try_f7bb0a9c")));}
  }
  public static CompletableFuture<JsonObject> request(String adapter,JsonObject j){
   var mc=Minecraft.getInstance();if(!mc.isSameThread()){var future=new CompletableFuture<JsonObject>();var copy=j.deepCopy();mc.execute(()->request(adapter,copy).whenComplete((reply,error)->{if(error!=null)future.completeExceptionally(error);else future.complete(reply);}));return future;}
-  tick();var result=new CompletableFuture<JsonObject>();if(Minecraft.getInstance().getConnection()==null||!Protocol.supportedFeatures.contains("compatibility-adapters")||pending.size()>=24){result.completeExceptionally(new IllegalArgumentException("Адаптер сейчас недоступен"));return result;}
+  tick();var result=new CompletableFuture<JsonObject>();if(Minecraft.getInstance().getConnection()==null||!Protocol.supportedFeatures.contains("compatibility-adapters")||pending.size()>=24){result.completeExceptionally(new IllegalArgumentException(Client.text("ui.adapter_currently_unavailable_3bcd4e5f")));return result;}
   String id=UUID.randomUUID().toString();j.addProperty("action","compatibility");j.addProperty("adapter",adapter);j.addProperty("adapterApi",1);j.addProperty("request",id);pending.put(id,new Pending(result,System.currentTimeMillis()+10000));PacketDistributor.sendToServer(new Protocol.FeatureRequest(Json.GSON.toJson(j)));return result;
  }
  static boolean receive(JsonObject j){if(!Json.opt(j,"kind","").equals("compatibility"))return false;if(!Minecraft.getInstance().isSameThread()){var copy=j.deepCopy();Minecraft.getInstance().execute(()->receive(copy));return true;}var p=pending.remove(Json.opt(j,"request",""));if(p!=null){if(j.has("error"))p.future().completeExceptionally(new IllegalArgumentException(Json.str(j,"error")));else p.future().complete(j);}return true;}

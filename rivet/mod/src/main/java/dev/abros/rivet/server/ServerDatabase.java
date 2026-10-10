@@ -35,12 +35,12 @@ final class ServerDatabase {
             } catch (Exception failure) {
                 // Do not print raw driver exceptions or configuration values: they may contain secrets.
                 com.mojang.logging.LogUtils.getLogger().error(
-                    "Rivet: PostgreSQL не настроена или недоступна. Запуск сервера ОСТАНОВЛЕН. " +
-                    "Проверьте config/rivet-server.toml [database], поле password, переменную RIVET_DB_PASSWORD (если задана) " +
-                    "доступность хоста и порта, TLS и права пользователя на схему rivet. Инструкция: SERVER_GUIDE.md, раздел PostgreSQL.");
+                    dev.abros.rivet.core.Messages.text("rivet.core.rivet_postgresql_is_not_configured_or_a4ee2fbe") +
+                    dev.abros.rivet.core.Messages.text("rivet.core.check_config_rivet_server_toml_database_dfbc48fa") +
+                    dev.abros.rivet.core.Messages.text("rivet.core.host_and_port_availability_tls_and_f6c677b7"));
             }
         }
-        if(database==null)throw new IllegalStateException("Rivet: запуск сервера остановлен — PostgreSQL не настроена или недоступна. Проверьте config/rivet-server.toml [database], пароль, сеть, TLS и права на схему rivet. См. SERVER_GUIDE.md, раздел PostgreSQL.");
+        if(database==null)throw new IllegalStateException(dev.abros.rivet.core.Messages.text("rivet.core.rivet_server_startup_stopped_postgresql_is_0a9fd3a1"));
         return database;
     }
 }

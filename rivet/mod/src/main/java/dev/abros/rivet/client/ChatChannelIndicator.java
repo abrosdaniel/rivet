@@ -11,9 +11,9 @@ final class ChatChannelIndicator {
   var state=ServerMenuClient.state;
   var parsed=ChatChannels.parse(input,ChatHints.enabled("chatLocalEnabled"));
   return switch(parsed.channel()){
-   case LOCAL -> name("chatLocalName","Рядом")+" · радиус "+(state.has("chatLocalRadius")?state.get("chatLocalRadius").getAsInt():100)+" блоков";
-   case GLOBAL -> name("chatGlobalName","Общий чат");
-   case GROUP -> !ChatHints.enabled("chatGroupEnabled")?"Чат объединений выключен":parsed.group().isBlank()?"Объединение · выберите название":parsed.group();
+   case LOCAL -> name("chatLocalName",Client.text("ui.nearby_fa01903f"))+Client.text("ui.radius_1c9c5e55")+(state.has("chatLocalRadius")?state.get("chatLocalRadius").getAsInt():100)+Client.text("ui.blocks_daf64a5f");
+   case GLOBAL -> name("chatGlobalName",Client.text("ui.global_chat_4b272a96"));
+   case GROUP -> !ChatHints.enabled("chatGroupEnabled")?Client.text("ui.group_chat_disabled_c16b05dc"):parsed.group().isBlank()?Client.text("ui.group_select_a_name_3bc1d38d"):parsed.group();
   };
  }
  private static String name(String key,String fallback){String name=Json.opt(ServerMenuClient.state,key,"");return name.isBlank()?fallback:name;}

@@ -11,7 +11,7 @@ public final class CommunityPolicy {
   if(status.equals("deleted")){var result=new JsonArray();if((owner||actor.admin())&&item.get("deletedAt").getAsLong()+30L*86400000>now)result.add("restore");return result;}
   if(owner||actor.admin())actions.add("delete");
   if(status.equals("hidden")){var result=new JsonArray();actions.forEach(result::add);return result;}
-  if(owner||actor.admin()||section.equals("groups")&&manager)actions.add("location");
+  if(!section.equals("groups")&&(owner||actor.admin()))actions.add("location");
   if((owner||actor.admin())&&(!section.equals("polls")||item.getAsJsonObject("votes").isEmpty()))actions.add("edit");
   if(section.equals("board")&&item.getAsJsonObject("responses").has(actor.id()))actions.add("withdrawResponse");
   if(section.equals("groups")){
@@ -27,5 +27,5 @@ public final class CommunityPolicy {
   }
   if(actor.admin())actions.add("hide");var out=new JsonArray();actions.forEach(out::add);return out;
  }
- public static void check(JsonObject item,CommunityStore.Actor actor,String operation,long now){if(!actions(item,actor,now).contains(new JsonPrimitive(operation)))throw new CommunityFailure(CommunityFailure.Code.FORBIDDEN,"Действие больше недоступно. Обновите запись.");}
+ public static void check(JsonObject item,CommunityStore.Actor actor,String operation,long now){if(!actions(item,actor,now).contains(new JsonPrimitive(operation)))throw new CommunityFailure(CommunityFailure.Code.FORBIDDEN,dev.abros.rivet.core.Messages.text("rivet.core.this_action_is_no_longer_available_da9d0ffd"));}
 }

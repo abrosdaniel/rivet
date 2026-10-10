@@ -23,7 +23,7 @@ Rivet — мод для Minecraft с NeoForge. Он устанавливает �
 - Каналы чата, оформление TAB и имён игроков, навигация по координатам.
 - Серверные инструменты модерации, авторизации и диагностики.
 
-Интеграции с LuckPerms, Plasmo Voice, Xaero’s, Create: Access Denied и spark
+Интеграции с LuckPerms, Plasmo Voice, Simple Voice Chat, Waystones, Create: Access Denied и spark
 подключаются автоматически при наличии совместимого мода.
 Сборку публикует сервер Rivet; игрок получает её при подключении.
 Серверные функции требуют установки Rivet на сервере.

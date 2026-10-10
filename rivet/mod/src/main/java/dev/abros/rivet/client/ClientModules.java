@@ -16,7 +16,7 @@ final class ClientModules {
   RivetTab.install();
   PlayerNameplates.install();
   ClientChat.install();
-  ClientNavigation.install();
+  ClientMap.install(bus);
   RivetHud.install(bus);
   NeoForge.EVENT_BUS.addListener((net.neoforged.neoforge.client.event.ClientTickEvent.Post e)->{
    var current=Minecraft.getInstance().getConnection();

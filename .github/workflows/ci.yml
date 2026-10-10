@@ -53,6 +53,8 @@ jobs:
           name: rivet-${{ matrix.os }}
           path: |
             rivet/mod/build/libs/*.jar
+            rivet/mod/build/reports/tests/
+            rivet/mod/build/test-results/
             rivet/core/build/reports/tests/
             rivet/helper/build/reports/tests/
             rivet/helper/build/test-results/

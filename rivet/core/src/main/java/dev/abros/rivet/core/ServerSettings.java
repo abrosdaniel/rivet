@@ -138,9 +138,9 @@ public final class ServerSettings {
         // Preserve old boolean semantics while the file is upgraded to explicit modes.
         if(values.get("display.nameplates") instanceof Boolean old)values.put("display.nameplates",old?"rivet":"base");
         // Obsolete punishment defaults are ignored, so existing production configs still load.
-        values.remove("project.repository");values.remove("project.requirePack");
+        values.remove("map.sharing");values.remove("map.shareTiles");values.remove("project.repository");values.remove("project.requirePack");
         values.remove("chat.allowItems");values.remove("integrations.luckperms");values.remove("display.chatMode");values.remove("votes.actions.banMinutes");values.remove("votes.actions.muteMinutes");
-        for(var e:defaults.entrySet())if(!values.containsKey(e.getKey())&&List.of("statistics.","skins.","votes.","community.","menu.","updates.","retention.","chat.","display.","tasks.","spark.","groups.","storage.","board.","events.","polls.","ideas.","reports.","server.","pack.").stream().anyMatch(e.getKey()::startsWith))values.put(e.getKey(),e.getValue());
+        for(var e:defaults.entrySet())if(!values.containsKey(e.getKey())&&List.of("statistics.","skins.","votes.","community.","menu.","updates.","retention.","chat.","display.","tasks.","spark.","groups.","storage.","board.","events.","polls.","ideas.","reports.","server.","pack.","map.").stream().anyMatch(e.getKey()::startsWith))values.put(e.getKey(),e.getValue());
         var missing=new TreeSet<>(defaults.keySet());missing.removeAll(values.keySet());
         if(!missing.isEmpty())throw invalid("отсутствуют обязательные параметры: "+String.join(", ",missing)+"; сверяйтесь с SERVER_GUIDE.md");
         var unknown=new TreeSet<>(values.keySet());unknown.removeAll(defaults.keySet());
@@ -161,7 +161,7 @@ public final class ServerSettings {
     private void range(String key,int min,int max){long n=((Number)values.get(key)).longValue();if(n<min||n>max)throw invalid(key+": допустимо "+min+"–"+max);}
     public FeatureModules modules(){return FeatureModules.from(this);}
     private void validate(){
-        modules();
+        modules();range("map.nearbyRadius",1,4096);
         range("pack.network.port",1,65535);range("pack.network.publicPort",1,65535);
         range("pack.downloads.totalMiB",0,1000000);range("pack.downloads.clientMiB",0,1000000);range("pack.downloads.concurrent",0,Integer.MAX_VALUE);
         String packDirectory=text("pack.directory");
@@ -179,6 +179,8 @@ public final class ServerSettings {
         for(String key:List.of("chat.localName","chat.globalName"))if(text(key).codePointCount(0,text(key).length())>40||text(key).codePoints().anyMatch(Character::isISOControl))throw invalid(key+": до 40 символов, без переводов строк");
         for(String key:List.of("chat.localColor","chat.globalColor","chat.groupColor"))if(!text(key).matches("#[0-9a-fA-F]{6}"))throw invalid(key+": ожидается цвет #RRGGBB в кавычках");
         ChatFormat.parse(text("chat.format"),false);ChatFormat.parse(text("chat.channelFormat"),true);
+        if(number("chat.history")<0||number("chat.history")>1000)throw invalid("chat.history: 0–1000");
+        if(number("chat.historyDays")<1||number("chat.historyDays")>365)throw invalid("chat.historyDays: 1–365");
         if(number("chat.localRadius")<1||number("chat.localRadius")>1000)throw invalid("chat.localRadius: 1–1000");
         try{votes();community();menu();new DatabaseSettings(text("database.host"),number("database.port"),text("database.database"),text("database.username"),"validation",text("database.sslMode"),text("database.sslCert"),number("database.pool"));}
         catch(Exception failure){throw invalid("проверьте диапазоны votes, списки community, ссылки menu и параметры database; значения скрыты");}

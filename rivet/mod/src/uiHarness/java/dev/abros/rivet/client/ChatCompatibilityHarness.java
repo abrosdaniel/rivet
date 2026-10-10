@@ -33,6 +33,20 @@ public final class ChatCompatibilityHarness {
  }
  private static boolean nativeMessage(Component message,String probe,String key){return message.getString().contains(probe)&&message.getContents() instanceof net.minecraft.network.chat.contents.TranslatableContents translated&&translated.getKey().equals(key);}
  private static void verify(){
+  var mc=Minecraft.getInstance();var access=(dev.abros.rivet.mixin.ChatHistoryAccessor)mc.gui.getChat();
+  int oldLimit=SocialSettings.INSTANCE.history;SocialSettings.INSTANCE.history=1000;
+  mc.gui.getChat().clearMessages(false);
+  for(int n=0;n<1100;n++)mc.gui.getChat().addMessage(Component.literal("History "+n));
+  check(access.rivet$messages().size()==1000,"Extended chat limit not applied");
+  check(access.rivet$messages().getLast().content().getString().equals("History 100"),"Wrong oldest retained message");
+  SocialSettings.INSTANCE.history=100;ClientChat.applyHistoryLimit();
+  check(access.rivet$messages().size()==100&&access.rivet$messages().getLast().content().getString().equals("History 1000"),"Lower limit did not trim oldest messages immediately");
+  mc.gui.getChat().clearMessages(false);mc.gui.getChat().addMessage(Component.literal("Live message"));ClientChat.reset();
+  var packet=new com.google.gson.JsonObject();packet.addProperty("kind","chatHistory");packet.addProperty("id",1);packet.addProperty("at",0);packet.add("message",com.google.gson.JsonParser.parseString(Component.Serializer.toJson(Component.literal("Historical message"),mc.level.registryAccess())));
+  ClientChat.receive(packet);ClientChat.receive(packet);
+  check(access.rivet$messages().size()==2&&access.rivet$messages().getFirst().content().getString().equals("Live message")&&access.rivet$messages().getLast().signature()==null,"Replay duplicated, reordered live chat or forged signature");
+  SocialSettings.INSTANCE.history=oldLimit;ClientChat.reset();
+
   var normal=player(ChatType.CHAT);var before=normal.getMessage();ClientChat.chat(normal);check(!normal.getMessage().equals(before),"Public chat not formatted");
   for(var type:java.util.List.of(ChatType.MSG_COMMAND_INCOMING,ChatType.MSG_COMMAND_OUTGOING,ChatType.TEAM_MSG_COMMAND_INCOMING,ChatType.TEAM_MSG_COMMAND_OUTGOING,ChatType.EMOTE_COMMAND,ChatType.SAY_COMMAND)){
    var event=player(type);var original=event.getMessage();ClientChat.chat(event);check(event.getMessage().equals(original)&&!event.isCanceled(),"Command type modified: "+type);

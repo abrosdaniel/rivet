@@ -12,6 +12,8 @@ public final class Rivet {
     public Rivet(IEventBus bus,ModContainer container){
         VERSION=container.getModInfo().getVersion().toString();
         bus.addListener(Protocol::register);
+        bus.addListener(dev.abros.rivet.network.WaystonesWire::register);
+        net.neoforged.neoforge.common.NeoForge.EVENT_BUS.addListener((net.neoforged.neoforge.event.server.ServerStoppedEvent e)->dev.abros.rivet.server.ServerWaystones.reset());
         bus.addListener(dev.abros.rivet.network.SkinWire::register);
         bus.addListener(dev.abros.rivet.server.AuthProtocol::register);
         if(FMLEnvironment.dist==Dist.CLIENT)dev.abros.rivet.client.Client.install(bus);

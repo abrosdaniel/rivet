@@ -17,7 +17,7 @@ final class NotificationPopup extends ScrollScreen implements CommunityScreen.Re
     private boolean started,preferencesLoaded;
     private JsonObject target;private JsonObject preferences=new JsonObject();
 
-    NotificationPopup(Screen parent) { super(Component.literal("Уведомления")); this.parent = parent; }
+    NotificationPopup(Screen parent) { super(Client.tr("ui.notifications_ee3c35f3")); this.parent = parent; }
     void refreshVote(){rebuildWidgets();}
     private boolean activeVote(){return Json.opt(ServerMenuClient.moderationVote,"status","").equals("open")&&ServerMenuClient.moderationVote.has("endsAt")&&ServerMenuClient.moderationVote.get("endsAt").getAsLong()>System.currentTimeMillis();}
     void invalidate() { controller.invalidate(); }
@@ -29,17 +29,17 @@ final class NotificationPopup extends ScrollScreen implements CommunityScreen.Re
     @Override protected void init() {
         ModalLayer.prepare(parent,this);
         int x = left(), w = panelWidth(), y = top();
-        var categories=List.of("","groups","events","polls","board","ideas","help");var labels=List.of("Все уведомления","Объединения","События","Голосования","Объявления","Предложения","Обращения");addRenderableWidget(UiActions.button(Component.literal(labels.get(categories.indexOf(category))+" ▾"),UiActions.Tone.NORMAL,"",b->minecraft.setScreen(new ChoicePopup(this,"Категория",labels,index->{if(controller.busy())return;category=categories.get(index);controller.reset();entries=controller.entries();resetScroll();send("list","");rebuildWidgets();},b).current(categories.indexOf(category)))).bounds(x+10,y+34,w-28,20).build());
-        if(activeVote())addRenderableWidget(UiActions.button(Component.literal(font.plainSubstrByWidth("Голосование о наказании: "+Json.opt(ServerMenuClient.moderationVote,"name",""),w-40)),UiActions.Tone.NORMAL,"",b->minecraft.setScreen(new ModerationVoteScreen(this,null))).bounds(x+10,y+60,w-28,24).build());
+        var categories=List.of("","groups","events","polls","board","ideas","help");var labels=List.of(Client.text("ui.all_notifications_605d7789"),Client.text("ui.groups_903e08f2"),Client.text("map.layer.events"),Client.text("ui.polls_8bd653c3"),Client.text("server.notices"),Client.text("ui.suggestions_cc07b307"),Client.text("ui.support_617371c8"));addRenderableWidget(UiActions.button(Component.literal(labels.get(categories.indexOf(category))+" ▾"),UiActions.Tone.NORMAL,"",b->minecraft.setScreen(new ChoicePopup(this,Client.text("map.category"),labels,index->{if(controller.busy())return;category=categories.get(index);controller.reset();entries=controller.entries();resetScroll();send("list","");rebuildWidgets();},b).current(categories.indexOf(category)))).bounds(x+10,y+34,w-30,20).build());
+        if(activeVote())addRenderableWidget(UiActions.button(Component.literal(font.plainSubstrByWidth(Client.text("ui.punishment_vote_23267740")+Json.opt(ServerMenuClient.moderationVote,"name",""),w-40)),UiActions.Tone.NORMAL,"",b->minecraft.setScreen(new ModerationVoteScreen(this,null))).bounds(x+10,y+60,w-30,24).build());
         scrollArea(entries.size(),new dev.abros.rivet.core.NativeLayout.Box(x,y + (activeVote()?96:64),Math.max(0,w-10),Math.max(0,(bottom() - (controller.failed()?86:64))-(y + (activeVote()?96:64)))),40);
         for (int i = firstRow; i < Math.min(entries.size(), firstRow + visibleRows); i++) {
             var notice = entries.get(i).getAsJsonObject();
-            addRenderableWidget(new NotificationRow(x+10,y+(activeVote()?96:64)+(i-firstRow)*40,w-28,notice,()->{if(controller.busy())return;target=notice;controller.refresh();send("read",Json.str(notice,"id"));}));
+            addRenderableWidget(new NotificationRow(x+10,y+(activeVote()?96:64)+(i-firstRow)*40,w-30,notice,()->{if(controller.busy())return;target=notice;controller.refresh();send("read",Json.str(notice,"id"));}));
         }
         var footer=UiActions.row(new dev.abros.rivet.core.NativeLayout.Box(x+10,bottom()-52,w-20,20),this::addRenderableWidget,
-            UiActions.action("Прочитать всё",()->{if(controller.busy())return;target=null;controller.refresh();send("read","");},!controller.busy()&&java.util.stream.StreamSupport.stream(entries.spliterator(),false).anyMatch(e->!e.getAsJsonObject().get("read").getAsBoolean())),
-            UiActions.action("Настройки",()->minecraft.setScreen(new CommunityPreferences(this,preferences)),preferencesLoaded));
-        footer.get(1).setTooltip(net.minecraft.client.gui.components.Tooltip.create(Component.literal(preferencesLoaded?"Какие события присылать и как о них сообщать":"Настройки загружаются с сервера")));
+            UiActions.action(Client.text("ui.mark_all_as_read_9ebe990e"),()->{if(controller.busy())return;target=null;controller.refresh();send("read","");},!controller.busy()&&java.util.stream.StreamSupport.stream(entries.spliterator(),false).anyMatch(e->!e.getAsJsonObject().get("read").getAsBoolean())),
+            UiActions.action(Client.text("map.tool.settings"),()->minecraft.setScreen(new CommunityPreferences(this,preferences)),preferencesLoaded));
+        footer.get(1).setTooltip(net.minecraft.client.gui.components.Tooltip.create(Component.literal(preferencesLoaded?Client.text("ui.which_events_to_send_and_how_4c311e7a"):Client.text("ui.loading_settings_from_the_server_8c05c354"))));
         if(controller.failed()){var retry=UiActions.command(UiActions.Command.RETRY,new dev.abros.rivet.core.NativeLayout.Box(x+10,bottom()-76,w-20,20),this::addRenderableWidget,()->{if(controller.busy())return;controller.retry();rebuildWidgets();});retry.active=!controller.busy();}
         UiActions.close(new dev.abros.rivet.core.NativeLayout.Box(x+10,bottom()-28,w-20,20),this::addRenderableWidget,this::onClose);
 
@@ -69,7 +69,7 @@ final class NotificationPopup extends ScrollScreen implements CommunityScreen.Re
             else onClose();
             return;
         }
-        status = entries.isEmpty() ? (activeVote()?"":"Уведомлений пока нет") : "";
+        status = entries.isEmpty() ? (activeVote()?"":Client.text("ui.no_notifications_yet_f392d922")) : "";
         if(result.changed()||hadPreferences!=preferencesLoaded||wasFailed)rebuildWidgets();
     }
 
@@ -96,7 +96,7 @@ final class NotificationPopup extends ScrollScreen implements CommunityScreen.Re
         UiDialog.render(parent,this,g,d,()->{
             super.render(g,x,y,d);
             UiHeading.dialog(g,font,title,left()+12,top(),panelWidth()-24);
-            if(!status.isEmpty()||controller.busy())Ui.text(g,font,font.plainSubstrByWidth(controller.busy()?"Обновление…":status,panelWidth()-24),left()+12,top()+25,AccessibilityScreen.foreground(UiPalette.color(0xBAC7D2)));
+            if(!status.isEmpty()||controller.busy())Ui.text(g,font,font.plainSubstrByWidth(controller.busy()?Client.text("ui.updating_5c450e67"):status,panelWidth()-24),left()+12,top()+25,AccessibilityScreen.foreground(UiPalette.color(0xBAC7D2)));
         });
     }
     @Override public void onClose() { controller.leave();ServerMenuClient.cancelReads(this);if(parent instanceof CommunityScreen screen)screen.invalidate();else if(parent instanceof FeatureListScreen screen)screen.invalidate();minecraft.setScreen(parent); }

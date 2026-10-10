@@ -9,7 +9,7 @@ public final class ServerIdentityDirectory {
  private final MinecraftServer server;
  public ServerIdentityDirectory(MinecraftServer server){this.server=server;}
  public Optional<GameProfile> byName(String name){
-  if(!AuthStore.validName(name))throw new IllegalArgumentException("Неверный ник игрока");
+  if(!AuthStore.validName(name))throw new IllegalArgumentException(dev.abros.rivet.core.Messages.text("rivet.core.invalid_player_name_31a7f70c"));
   var saved=AuthServer.knownIdentity(name);if(saved.isPresent())return saved.map(p->new GameProfile(p.uuid(),p.name()));
   var online=server.getPlayerList().getPlayerByName(name);if(online!=null)return Optional.of(online.getGameProfile());
   // With Auth enabled only registered identities are authoritative.

@@ -18,7 +18,7 @@ public final class AuthSecrets {
     }
     public static String password(char[] password,int minimumLength) {
         if(minimumLength<6||minimumLength>128)throw new IllegalArgumentException("Invalid minimum password length");
-        if(password.length<minimumLength||password.length>128)throw new IllegalArgumentException("Пароль должен содержать "+minimumLength+"–128 символов");
+        if(password.length<minimumLength||password.length>128)throw new IllegalArgumentException(dev.abros.rivet.core.Messages.text("rivet.core.password_must_contain_f339bfa7")+minimumLength+dev.abros.rivet.core.Messages.text("rivet.ui.128_characters_6bc827fb"));
         byte[] salt=random(16);return Base64.getEncoder().encodeToString(salt)+":"+Base64.getEncoder().encodeToString(derive(password,salt));
     }
     public static boolean verify(char[] password,String encoded) {

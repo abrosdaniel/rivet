@@ -45,23 +45,24 @@ public final class ServerIntegration {
         if(server!=null&&event.getListener() instanceof net.minecraft.server.network.ServerConfigurationPacketListenerImpl listener&&!ServerFeatures.mayJoin(listener.getOwner(),server)){event.getListener().disconnect(ServerFeatures.maintenanceMessage());return;}
         String current=requiredHash();
         boolean available=event.getListener().hasChannel(Protocol.Hello.TYPE)&&event.getListener().hasChannel(Protocol.ClientState.TYPE);
-        if(!available){if(!current.isEmpty()||AuthServer.enabled())event.getListener().disconnect(Component.literal("Для этого сервера требуется Rivet "+ConnectionCompatibility.branch(dev.abros.rivet.Rivet.VERSION)));return;}
+        if(!available){if(!current.isEmpty()||AuthServer.enabled())event.getListener().disconnect(Component.literal(dev.abros.rivet.core.Messages.text("rivet.core.this_server_requires_rivet_747619ac")+ConnectionCompatibility.branch(dev.abros.rivet.Rivet.VERSION)));return;}
         var pending=new Pending(UUID.randomUUID().toString(),current);var listener=event.getListener();
         event.register(new ICustomConfigurationTask(){
             public ConfigurationTask.Type type(){return TYPE;}
             public void run(Consumer<CustomPacketPayload> sender){
                 NONCES.put(listener,pending);JsonObject hello=new JsonObject();hello.addProperty("coreVersion",dev.abros.rivet.Rivet.VERSION);hello.add("protocols",WireProtocols.current());hello.add("features",ConnectionCompatibility.features());hello.addProperty("protocolVersion",WireProtocols.version("pack"));hello.addProperty("nonce",pending.nonce());hello.addProperty("requiredHash",current);sender.accept(new Protocol.Hello(Json.GSON.toJson(hello)));
-                CompletableFuture.delayedExecutor(ServerDatabase.settings().number("connection.handshakeTimeout"),TimeUnit.SECONDS).execute(()->{if(server!=null)server.execute(()->{if(NONCES.remove(listener,pending))listener.disconnect(Component.literal("Rivet: handshake timeout"));});});
+                CompletableFuture.delayedExecutor(ServerDatabase.settings().number("connection.handshakeTimeout"),TimeUnit.SECONDS).execute(()->{if(server!=null)server.execute(dev.abros.rivet.core.Messages.capture(()->{if(NONCES.remove(listener,pending))listener.disconnect(Component.translatable("rivet.message.error_128401eb179e"));}));});
             }
         });
     }
-    private static void reply(JsonObject state,net.neoforged.neoforge.network.handling.IPayloadContext context){
-        var pending=NONCES.remove(context.listener());if(pending==null||!pending.nonce().equals(Json.opt(state,"nonce",""))){context.disconnect(Component.literal("Rivet: unexpected reply"));return;}
+    private static void reply(JsonObject state,net.neoforged.neoforge.network.handling.IPayloadContext context){try(var locale=dev.abros.rivet.core.Messages.locale(Json.opt(state,"language","ru_ru"))){replyLocalized(state,context);}}
+    private static void replyLocalized(JsonObject state,net.neoforged.neoforge.network.handling.IPayloadContext context){
+        var pending=NONCES.remove(context.listener());if(pending==null||!pending.nonce().equals(Json.opt(state,"nonce",""))){context.disconnect(Component.translatable("rivet.message.error_cb61f4d3da31"));return;}
         String compatibility=ConnectionCompatibility.failure(dev.abros.rivet.Rivet.VERSION,Json.opt(state,"coreVersion",""),state.getAsJsonObject("protocols"));
         if(!compatibility.isEmpty()){com.mojang.logging.LogUtils.getLogger().warn("Rivet: rejected incompatible client {}, server {}",Json.opt(state,"coreVersion",""),dev.abros.rivet.Rivet.VERSION);context.disconnect(Component.literal(compatibility));return;}
         var features=ConnectionCompatibility.common(state.get("features"));
-        if(AuthServer.enabled()&&!features.contains("auth")||!pending.hash().isEmpty()&&!features.contains("pack")){context.disconnect(Component.literal("В клиенте Rivet отсутствуют необходимые серверу функции"));return;}
-        String failure=pending.hash().isEmpty()||pending.hash().equals(Json.opt(state,"packHash",""))?"":"Обновите файлы сборки перед подключением к серверу";if(!failure.isEmpty()){context.disconnect(Component.literal(failure));return;}
+        if(AuthServer.enabled()&&!features.contains("auth")||!pending.hash().isEmpty()&&!features.contains("pack")){context.disconnect(Component.translatable("rivet.core.this_rivet_client_is_missing_features_99a89de6"));return;}
+        String failure=pending.hash().isEmpty()||pending.hash().equals(Json.opt(state,"packHash",""))?"":dev.abros.rivet.core.Messages.text("rivet.core.update_modpack_files_before_connecting_to_a9c9cc24");if(!failure.isEmpty()){context.disconnect(Component.literal(failure));return;}
         if(context.listener() instanceof net.minecraft.server.network.ServerConfigurationPacketListenerImpl listener)ServerFeatures.record(listener.getOwner().getId(),state);
         FEATURES.put(context.connection(),features);
         context.finishCurrentTask(TYPE);

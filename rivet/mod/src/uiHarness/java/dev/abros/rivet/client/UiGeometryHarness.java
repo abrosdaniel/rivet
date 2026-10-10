@@ -12,6 +12,12 @@ final class UiGeometryHarness {
 
 
   verifyListAlignment(screen);
+  if(screen instanceof MapLayersScreen || screen instanceof MapTerritoriesScreen || screen instanceof MapCategoriesScreen || screen instanceof MemberPickerScreen || screen instanceof TaskMemberPicker || screen instanceof ItemPickerScreen || screen instanceof FollowingScreen || screen instanceof ScheduledAnnouncementsScreen || screen instanceof RolePreviewScreen){
+   var list=((ScrollScreen)screen).scrollLayout();
+   if(list!=null){int edge=Integer.MIN_VALUE;for(var child:screen.children())if(child instanceof net.minecraft.client.gui.components.AbstractWidget widget&&widget.visible&&widget.getX()>=list.content().x()&&widget.getY()<list.viewport().y()&&widget.getY()+widget.getHeight()<=list.viewport().y())edge=Math.max(edge,widget.getX()+widget.getWidth());
+    if(edge!=Integer.MIN_VALUE&&edge!=list.content().right())throw new IllegalStateException(screen.getClass().getSimpleName()+": form header and rows have different trailing edges");
+   }
+  }
   for(var child:screen.children())if(child instanceof Button button){
    var command=UiActions.commandOf(button);String label=button.getMessage().getString();
    if((label.equals("Обновить")||label.equals("Повторить"))&&command==null)throw new IllegalStateException(screen.getClass().getSimpleName()+": local refresh/retry button");

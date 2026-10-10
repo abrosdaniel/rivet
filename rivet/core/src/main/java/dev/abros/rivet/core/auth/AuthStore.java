@@ -36,29 +36,29 @@ public final class AuthStore implements AutoCloseable {
     private interface Work<T>{T run()throws Exception;}
     private <T>T atomic(Work<T> work)throws Exception{return work.run();}
     private void audit(String actor,String action,String target,long now)throws Exception{update("INSERT INTO auth_audit(at,actor,action,target) VALUES(?,?,?,?)",now,actor,action,target);update("DELETE FROM auth_audit WHERE id NOT IN (SELECT id FROM auth_audit ORDER BY id DESC LIMIT 10000)");}
-    private static void identity(Account a,String uuid){if(a!=null&&!a.uuid.equals(uuid))throw new IllegalArgumentException("UUID аккаунта изменился. Обратитесь к владельцу сервера");}
+    private static void identity(Account a,String uuid){if(a!=null&&!a.uuid.equals(uuid))throw new IllegalArgumentException(dev.abros.rivet.core.Messages.text("rivet.core.account_uuid_changed_contact_the_server_1b39819b"));}
     public void reserve(String name,String uuid)throws Exception{run(name,()->{name(name);var a=account(name);if(a==null)update("INSERT INTO auth_accounts(name,uuid,type) VALUES(?,?,'reserved')",name,uuid);return null;});}
     public Account register(String name,String uuid,char[] password,long now)throws Exception{return run(name,()->{
-        name(name);if(account(name)!=null)throw new IllegalArgumentException("Для этого имени уже настроен вход. Обратитесь к администратору");
+        name(name);if(account(name)!=null)throw new IllegalArgumentException(dev.abros.rivet.core.Messages.text("rivet.core.sign_in_is_already_configured_for_e7f9eaf1"));
         String hash=AuthSecrets.password(password,minimumPasswordLength);return atomic(()->{update("INSERT INTO auth_accounts(name,uuid,type,password) VALUES(?,?,'local',?)",name,uuid,hash);audit(name,"register",name,now);return account(name);});
     });}
     /** Official proof authenticates only an already linked local account. */
     public Account official(String name,String uuid,String official,long now)throws Exception{return run(name,()->{
         checkRate(name,now);var a=account(name);identity(a,uuid);
         if(a==null||a.blocked||!a.type.equals("local")||a.official==null||!a.official.equals(official))
-            throw new RejectedCredential(name,now,"Minecraft-аккаунт не привязан к этому серверному аккаунту. Войдите по паролю");
+            throw new RejectedCredential(name,now,dev.abros.rivet.core.Messages.text("rivet.core.this_minecraft_account_is_not_linked_595d8d6d"));
         update("DELETE FROM auth_failures WHERE lower(name)=lower(?)",name);audit(name,"official-login",name,now);return a;
     });}
     public Account linkOfficial(String name,String uuid,String official,char[] password,long now)throws Exception{return run(name,()->{
         var a=login(name,uuid,password,now);String id=UUID.fromString(official).toString();
         database.lock("official:"+id);
-        if(a.official!=null)throw new IllegalArgumentException("Сначала отвяжите текущий Minecraft-аккаунт");
-        try(var q=connection().prepareStatement("SELECT 1 FROM auth_accounts WHERE official=?")){q.setString(1,id);try(var rs=q.executeQuery()){if(rs.next())throw new IllegalArgumentException("Minecraft-аккаунт уже привязан к другому аккаунту сервера");}}
+        if(a.official!=null)throw new IllegalArgumentException(dev.abros.rivet.core.Messages.text("rivet.core.unlink_your_current_minecraft_account_first_a6c155d2"));
+        try(var q=connection().prepareStatement("SELECT 1 FROM auth_accounts WHERE official=?")){q.setString(1,id);try(var rs=q.executeQuery()){if(rs.next())throw new IllegalArgumentException(dev.abros.rivet.core.Messages.text("rivet.core.this_minecraft_account_is_already_linked_266af040"));}}
         update("UPDATE auth_accounts SET official=?,generation=generation+1 WHERE lower(name)=lower(?)",id,a.name);
         revokeCredentials(a.name);audit(a.name,"official-linked",id,now);return account(a.name);
     });}
     public Account unlinkOfficial(String name,String uuid,char[] password,long now)throws Exception{return run(name,()->{
-        var a=login(name,uuid,password,now);if(a.official==null)throw new IllegalArgumentException("Minecraft-аккаунт не привязан");
+        var a=login(name,uuid,password,now);if(a.official==null)throw new IllegalArgumentException(dev.abros.rivet.core.Messages.text("rivet.core.minecraft_account_not_linked_2af15e4a"));
         update("UPDATE auth_accounts SET official=NULL,generation=generation+1 WHERE lower(name)=lower(?)",a.name);
         revokeCredentials(a.name);audit(a.name,"official-unlinked",a.name,now);return account(a.name);
     });}
@@ -67,7 +67,7 @@ public final class AuthStore implements AutoCloseable {
         var result=new java.util.ArrayList<Profile>();try(var q=connection().createStatement();var rs=q.executeQuery("SELECT name,uuid,official FROM auth_accounts")){while(rs.next())result.add(new Profile(rs.getString(1),UUID.fromString(rs.getString(2)),rs.getString(3)==null?null:UUID.fromString(rs.getString(3))));}return java.util.List.copyOf(result);
     });}
     public void checkRate(String name,long now)throws Exception{run(name,()->{
-        try(var s=connection().prepareStatement("SELECT next FROM auth_failures WHERE lower(name)=lower(?)")){s.setString(1,name);try(var r=s.executeQuery()){if(r.next()&&now<r.getLong(1))throw new IllegalArgumentException("Слишком много попыток. Подождите перед повторным входом");}}
+        try(var s=connection().prepareStatement("SELECT next FROM auth_failures WHERE lower(name)=lower(?)")){s.setString(1,name);try(var r=s.executeQuery()){if(r.next()&&now<r.getLong(1))throw new IllegalArgumentException(dev.abros.rivet.core.Messages.text("rivet.core.too_many_attempts_wait_before_signing_a555719e"));}}
     return null;});}
     public void failure(String name,long now)throws Exception{database.transaction(()->{database.lock("auth:"+name.toLowerCase(Locale.ROOT));
         update("DELETE FROM auth_failures WHERE next<?",now-86400000);
@@ -77,17 +77,17 @@ public final class AuthStore implements AutoCloseable {
     public Account login(String name,String uuid,char[] pass,long now)throws Exception{return run(name,()->{
         checkRate(name,now);var a=account(name);String hash=password(name);
         boolean valid=AuthSecrets.verify(pass,hash==null?dummy:hash);
-        if(!valid||a==null||a.blocked||!a.type.equals("local")){throw new RejectedCredential(name,now,"Не удалось войти. Проверьте данные входа");}
+        if(!valid||a==null||a.blocked||!a.type.equals("local")){throw new RejectedCredential(name,now,dev.abros.rivet.core.Messages.text("rivet.core.could_not_sign_in_check_your_e6c00cb7"));}
         identity(a,uuid);update("DELETE FROM auth_failures WHERE lower(name)=lower(?)",name);return a;
     });}
     public String invite(String actor,String name,long now)throws Exception{return run(name,()->{
-        var a=account(name);if(a==null||a.blocked)throw new IllegalArgumentException("Приглашение доступно только для локального незаблокированного аккаунта");
+        var a=account(name);if(a==null||a.blocked)throw new IllegalArgumentException(dev.abros.rivet.core.Messages.text("rivet.core.invitations_are_only_available_for_local_5ef7eb06"));
         String token=AuthSecrets.token();return atomic(()->{update("INSERT INTO auth_resets VALUES(?,?,?) ON CONFLICT(name) DO UPDATE SET hash=excluded.hash,expires=excluded.expires",a.name,AuthSecrets.digest(token),now+900000);audit(actor,"reset-invitation",a.name,now);return token;});
     });}
     public void reset(String name,String uuid,String token,char[] pass,long now)throws Exception{run(name,()->{
         checkRate(name,now);var a=account(name);identity(a,uuid);boolean match=false;
         if(token.length()<=128)try(var s=connection().prepareStatement("SELECT hash,expires FROM auth_resets WHERE lower(name)=lower(?)")){s.setString(1,a==null?name:a.name);try(var r=s.executeQuery()){match=r.next()&&r.getLong(2)>now&&MessageEqual(r.getString(1),AuthSecrets.digest(token));}}
-        if(!match||a==null||a.blocked){throw new RejectedCredential(name,now,"Приглашение недействительно или истекло");}
+        if(!match||a==null||a.blocked){throw new RejectedCredential(name,now,dev.abros.rivet.core.Messages.text("rivet.core.invitation_invalid_or_expired_65b74806"));}
         String hash=AuthSecrets.password(pass,minimumPasswordLength);atomic(()->{update("UPDATE auth_accounts SET password=?,type='local',official=NULL,generation=generation+1 WHERE lower(name)=lower(?)",hash,a.name);revokeCredentials(a.name);update("DELETE FROM auth_failures WHERE lower(name)=lower(?)",a.name);audit(a.name,"password-reset",a.name,now);return null;});
     return null;});}
     private static boolean MessageEqual(String a,String b){return java.security.MessageDigest.isEqual(a.getBytes(java.nio.charset.StandardCharsets.US_ASCII),b.getBytes(java.nio.charset.StandardCharsets.US_ASCII));}
@@ -97,18 +97,18 @@ public final class AuthStore implements AutoCloseable {
     return null;});}
     public Device remember(String name,String label,long now)throws Exception{return run(name,()->{
         var a=account(name);if(a==null||a.blocked||!a.type.equals("local"))throw new IllegalArgumentException("Unavailable");
-        if(label.isBlank()||label.length()>48)throw new IllegalArgumentException("Название устройства: 1–48 символов");
+        if(label.isBlank()||label.length()>48)throw new IllegalArgumentException(dev.abros.rivet.core.Messages.text("rivet.core.device_name_1_48_characters_62ad8b06"));
         String id=UUID.randomUUID().toString(),token=AuthSecrets.token();return atomic(()->{update("DELETE FROM auth_devices WHERE expires<=?",now);update("INSERT INTO auth_devices VALUES(?,?,?,?,?,?,?)",id,a.name,AuthSecrets.digest(token),label,now,now,now+30L*86400000);update("DELETE FROM auth_devices WHERE lower(name)=lower(?) AND id NOT IN (SELECT id FROM auth_devices WHERE lower(name)=lower(?) ORDER BY created DESC LIMIT 10)",a.name,a.name);audit(a.name,"device-added",id,now);return new Device(id,token);});
     });}
     public Account deviceLogin(String name,String uuid,String token,long now)throws Exception{return run(name,()->{
         checkRate(name,now);var a=account(name);identity(a,uuid);
-        if(token.length()>128||a==null||a.blocked||!a.type.equals("local")||update("UPDATE auth_devices SET used=? WHERE lower(name)=lower(?) AND hash=? AND expires>?",now,a.name,AuthSecrets.digest(token),now)==0){throw new RejectedCredential(name,now,"Устройство больше не авторизовано. Введите пароль");}return a;
+        if(token.length()>128||a==null||a.blocked||!a.type.equals("local")||update("UPDATE auth_devices SET used=? WHERE lower(name)=lower(?) AND hash=? AND expires>?",now,a.name,AuthSecrets.digest(token),now)==0){throw new RejectedCredential(name,now,dev.abros.rivet.core.Messages.text("rivet.core.device_is_no_longer_authorized_enter_f3ec6f0f"));}return a;
     });}
     public JsonArray devices(String name,long now)throws Exception{return run(name,()->{var out=new JsonArray();try(var s=connection().prepareStatement("SELECT id,label,created,used,expires FROM auth_devices WHERE lower(name)=lower(?) AND expires>? ORDER BY used DESC")){bind(s,name,now);try(var r=s.executeQuery()){while(r.next()){var j=new JsonObject();j.addProperty("id",r.getString(1));j.addProperty("label",r.getString(2));j.addProperty("created",r.getLong(3));j.addProperty("used",r.getLong(4));j.addProperty("expires",r.getLong(5));out.add(j);}}}return out;});}
-    public void revoke(String name,String device,long now)throws Exception{run(name,()->{atomic(()->{if(device.equals("all")){update("DELETE FROM auth_devices WHERE lower(name)=lower(?)",name);update("UPDATE auth_accounts SET generation=generation+1 WHERE lower(name)=lower(?)",name);}else if(update("DELETE FROM auth_devices WHERE lower(name)=lower(?) AND id=?",name,device)!=1)throw new IllegalArgumentException("Устройство не найдено");audit(name,"device-revoked",device,now);return null;});return null;});}
+    public void revoke(String name,String device,long now)throws Exception{run(name,()->{atomic(()->{if(device.equals("all")){update("DELETE FROM auth_devices WHERE lower(name)=lower(?)",name);update("UPDATE auth_accounts SET generation=generation+1 WHERE lower(name)=lower(?)",name);}else if(update("DELETE FROM auth_devices WHERE lower(name)=lower(?) AND id=?",name,device)!=1)throw new IllegalArgumentException(dev.abros.rivet.core.Messages.text("rivet.core.device_not_found_d5aa2c85"));audit(name,"device-revoked",device,now);return null;});return null;});}
     public boolean hasDevice(String name,String device,long now)throws Exception{return run(name,()->{try(var s=connection().prepareStatement("SELECT 1 FROM auth_devices WHERE lower(name)=lower(?) AND id=? AND expires>?")){bind(s,name,device,now);try(var r=s.executeQuery()){return r.next();}}});}
     public String deviceId(String name,String token)throws Exception{return run(name,()->{try(var s=connection().prepareStatement("SELECT id FROM auth_devices WHERE lower(name)=lower(?) AND hash=?")){bind(s,name,AuthSecrets.digest(token));try(var r=s.executeQuery()){return r.next()?r.getString(1):"";}}});}
-    public void block(String actor,String name,boolean blocked,long now)throws Exception{run(name,()->{var a=account(name);if(a==null)throw new IllegalArgumentException("Аккаунт не найден");atomic(()->{update("UPDATE auth_accounts SET blocked=?,generation=generation+1 WHERE lower(name)=lower(?)",blocked,a.name);revokeCredentials(a.name);audit(actor,blocked?"blocked":"unblocked",a.name,now);return null;});return null;});}
+    public void block(String actor,String name,boolean blocked,long now)throws Exception{run(name,()->{var a=account(name);if(a==null)throw new IllegalArgumentException(dev.abros.rivet.core.Messages.text("rivet.core.account_not_found_45c12c65"));atomic(()->{update("UPDATE auth_accounts SET blocked=?,generation=generation+1 WHERE lower(name)=lower(?)",blocked,a.name);revokeCredentials(a.name);audit(actor,blocked?"blocked":"unblocked",a.name,now);return null;});return null;});}
     public record SessionKey(String name,long generation,String device){}
     public Set<SessionKey> validSessions(Collection<SessionKey> sessions,long now)throws Exception{return database.transaction(()->{
         var accounts=new HashMap<String,Long>();var devices=new HashMap<String,String>();

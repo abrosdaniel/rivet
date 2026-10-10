@@ -57,13 +57,13 @@ public final class CommunityWorkspace {
         packet.addProperty("id", id); packet.addProperty("page", page); packet.addProperty("cursor", page == 0 ? "" : cursors.getOrDefault(page, ""));
         packet.addProperty("query", filters.query()); packet.addProperty("member", filters.member()); packet.addProperty("sort", filters.sort());
         packet.addProperty("trash", filters.trash()); packet.addProperty("archive", filters.archive()); packet.addProperty("mine", filters.mine()); packet.addProperty("participating", filters.participating());
-        busy = true; failed = false; sent = clock.getAsLong(); status = reading() ? "Загрузка…" : "Сохраняем изменения…";
+        busy = true; failed = false; sent = clock.getAsLong(); status = reading() ? Messages.text("rivet.server.loading") : Messages.text("rivet.core.saving_changes_fd0cdfb7");
         dispatch(session.begin(packet, !reading(), sent));
     }
     private void dispatch(JsonObject packet) { request = Json.str(packet, "request"); sender.accept(packet); }
     public void retry() { if (!uncertain || busy) return; busy = true; failed = false; sent = clock.getAsLong(); dispatch(session.retry(sent)); }
     public boolean tick(Filters filters) {
-        if (session.timeout(clock.getAsLong())) { busy = false; uncertain = true; nextAt = 0; status = "Нет ответа. Нажмите «Повторить»."; return true; }
+        if (session.timeout(clock.getAsLong())) { busy = false; uncertain = true; nextAt = 0; status = Messages.text("rivet.core.no_response_click_retry_c724443a"); return true; }
         if (!busy && !uncertain && nextAt > 0 && clock.getAsLong() >= nextAt) { nextAt = 0; page++; send(id.isEmpty() ? "list" : "detail", new JsonObject(), filters); }
         else if (dirtyDue()) load(filters);
         return false;
@@ -74,7 +74,7 @@ public final class CommunityWorkspace {
         if (response.has("error")) {
             var error = MenuData.failure(response); status = error.message(); failed = true; nextAt = 0;
             boolean conflict = error.code().equals("CONFLICT") && reading();
-            if (conflict) { cursors.clear(); invalidate(); status = "Запись обновилась. Загружаем актуальные данные…"; }
+            if (conflict) { cursors.clear(); invalidate(); status = Messages.text("rivet.core.entry_updated_loading_current_data_019380cb"); }
             return new Outcome(true, true, true, conflict);
         }
         var merged = response.deepCopy();

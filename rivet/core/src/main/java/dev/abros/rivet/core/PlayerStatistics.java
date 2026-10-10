@@ -50,7 +50,7 @@ public final class PlayerStatistics {
     public long recordedMillis(UUID player)throws Exception{return db.communityTransaction(()->{try(var q=db.connection().prepareStatement("SELECT coalesce((body->>'totalMillis')::bigint,0) FROM records WHERE namespace='player-statistics' AND id=?")){q.setString(1,player.toString());try(var row=q.executeQuery()){return row.next()?row.getLong(1):0L;}}});}
     /** One bounded query for a page; disabled fields never leave the server. */
     public Map<UUID,JsonObject> read(Collection<UUID> ids,Map<UUID,Long> liveMillis)throws Exception{
-        if(ids.size()>100)throw new IllegalArgumentException("Statistics page is too large");
+        if(ids.size()>100)throw new IllegalArgumentException(dev.abros.rivet.core.Messages.text("rivet.message.error_26cfbf8a6235"));
         return db.communityTransaction(()->{
             Map<UUID,JsonObject> result=new HashMap<>();
             try(var q=db.connection().prepareStatement("SELECT id,body FROM records WHERE namespace='player-statistics' AND id=ANY(?)")){
@@ -79,16 +79,16 @@ public final class PlayerStatistics {
     }
     public JsonObject snapshot(UUID id)throws Exception{return db.communityTransaction(()->load(id));}
     private JsonObject load(UUID id)throws Exception{
-        try(var q=db.connection().prepareStatement("SELECT body FROM records WHERE namespace='player-statistics' AND id=?")){q.setString(1,id.toString());try(var rows=q.executeQuery()){if(!rows.next())throw new IllegalArgumentException("Статистика игрока не найдена");return Json.parse(rows.getString(1));}}
+        try(var q=db.connection().prepareStatement("SELECT body FROM records WHERE namespace='player-statistics' AND id=?")){q.setString(1,id.toString());try(var rows=q.executeQuery()){if(!rows.next())throw new IllegalArgumentException(dev.abros.rivet.core.Messages.text("rivet.core.player_statistics_not_found_09549d3f"));return Json.parse(rows.getString(1));}}
     }
     /** Same lock as checkpoints; correction and audit commit atomically. Checkpoint baselines are preserved. */
     public String correct(UUID id,String field,String operation,long value,String actor)throws Exception{return correct(id,field,operation,value,actor,null);}
     public String correct(UUID id,String field,String operation,long value,String actor,Checkpoint current)throws Exception{
-        if(!Set.of("totalMillis","deaths","firstJoin").contains(field)||!Set.of("set","add","subtract").contains(operation)||value<0)throw new IllegalArgumentException("Некорректное изменение статистики");
-        if(field.equals("firstJoin")&&(!operation.equals("set")||value>System.currentTimeMillis()))throw new IllegalArgumentException("Дата не может быть в будущем");
+        if(!Set.of("totalMillis","deaths","firstJoin").contains(field)||!Set.of("set","add","subtract").contains(operation)||value<0)throw new IllegalArgumentException(dev.abros.rivet.core.Messages.text("rivet.core.invalid_statistics_change_baa6d1ea"));
+        if(field.equals("firstJoin")&&(!operation.equals("set")||value>System.currentTimeMillis()))throw new IllegalArgumentException(dev.abros.rivet.core.Messages.text("rivet.core.the_date_cannot_be_in_the_ed022ddd"));
         return db.communityTransaction(()->{db.lock("player-statistics:"+id);load(id);if(current!=null){if(!current.player().equals(id))throw new IllegalArgumentException("Checkpoint player mismatch");checkpoint(current);}var data=load(id);long before=number(data,field,0),after;
-            try{after=switch(operation){case "add"->Math.addExact(before,value);case "subtract"->Math.subtractExact(before,value);default->value;};}catch(ArithmeticException ex){throw new IllegalArgumentException("Слишком большое значение");}
-            if(after<0)throw new IllegalArgumentException("Итоговое значение не может быть отрицательным");
+            try{after=switch(operation){case "add"->Math.addExact(before,value);case "subtract"->Math.subtractExact(before,value);default->value;};}catch(ArithmeticException ex){throw new IllegalArgumentException(dev.abros.rivet.core.Messages.text("rivet.core.value_is_too_large_440cf5e0"));}
+            if(after<0)throw new IllegalArgumentException(dev.abros.rivet.core.Messages.text("rivet.core.final_value_cannot_be_negative_d52e4ef2"));
             data.addProperty(field,after);
             try(var q=db.connection().prepareStatement("UPDATE records SET body=?::jsonb WHERE namespace='player-statistics' AND id=?")){q.setString(1,Json.GSON.toJson(data));q.setString(2,id.toString());q.executeUpdate();}
             String detail=id+" "+field+": "+before+" → "+after;

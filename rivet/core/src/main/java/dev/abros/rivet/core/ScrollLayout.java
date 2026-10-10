@@ -16,6 +16,10 @@ public record ScrollLayout(NativeLayout.Box viewport, NativeLayout.Box content, 
   return new NativeLayout.Box(track.x(),top,track.width(),size);
  }
 
+ public static ScrollLayout fit(NativeLayout.Box viewport,boolean reserveScrollbar) {
+  if(!reserveScrollbar)return new ScrollLayout(viewport,viewport,new NativeLayout.Box(viewport.right(),viewport.y(),0,viewport.height()));
+  return fit(viewport);
+ }
  public static ScrollLayout fit(NativeLayout.Box viewport) {
   int trackWidth=Math.min(TRACK_WIDTH,viewport.width());
   int gap=Math.min(GAP,viewport.width()-trackWidth);

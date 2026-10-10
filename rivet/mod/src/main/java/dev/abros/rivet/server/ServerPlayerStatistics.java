@@ -41,7 +41,7 @@ final class ServerPlayerStatistics {
     private static long elapsed(Session s){return Math.max(0,TimeUnit.NANOSECONDS.toMillis(System.nanoTime()-s.nano));}
     static Map<UUID,Long> live(){Map<UUID,Long> result=new HashMap<>();sessions.forEach((id,s)->result.put(id,elapsed(s)));return Map.copyOf(result);}
     static PlayerStatistics store(){return store;}
-    static void task(Runnable task){if(writer==null||store==null)throw new IllegalArgumentException("Статистика недоступна");writer.execute(task);}
+    static void task(Runnable task){if(writer==null||store==null)throw new IllegalArgumentException(dev.abros.rivet.core.Messages.text("rivet.core.statistics_unavailable_075c45d1"));writer.execute(dev.abros.rivet.core.Messages.capture(task));}
     static PlayerStatistics.Checkpoint capture(UUID player){var s=sessions.get(player);return s==null?null:new PlayerStatistics.Checkpoint(player,s.id,s.started,Math.max(s.started,System.currentTimeMillis()),elapsed(s),s.deaths,true);}
 
     private static void save(UUID player,Session session,boolean online){
@@ -58,7 +58,7 @@ final class ServerPlayerStatistics {
     private static void end(UUID player){var session=sessions.remove(player);if(session!=null)save(player,session,false);}
     static void stop(){
         for(UUID player:List.copyOf(sessions.keySet()))end(player);
-        if(writer!=null){writer.shutdown();try{if(!writer.awaitTermination(15,TimeUnit.SECONDS)){writer.shutdownNow();com.mojang.logging.LogUtils.getLogger().warn("Rivet: statistics shutdown timed out; last checkpoint is retained");}}catch(InterruptedException interrupted){writer.shutdownNow();Thread.currentThread().interrupt();}}
+        if(!WorkerShutdown.stop(java.time.Duration.ofSeconds(15),java.time.Duration.ofSeconds(5),writer))com.mojang.logging.LogUtils.getLogger().warn("Rivet: statistics shutdown timed out; last checkpoint is retained");
         store=null;writer=null;sessions.clear();
     }
 }

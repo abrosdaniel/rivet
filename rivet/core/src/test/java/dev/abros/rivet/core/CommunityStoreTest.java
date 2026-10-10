@@ -182,12 +182,12 @@ class CommunityStoreTest {
  }
 
  @Test void privateLocationsAreNotSentToOutsidersAndSurviveTrash()throws Exception{
-  var group=create("groups");var place=new CommunityLocation("Private base","minecraft:overworld",123,64,456,true).json();var change=input("groups","location",id(group));change.add("location",place);db.request(owner,change);
-  assertEquals(place,detail("groups",id(group),owner).get("location"));assertFalse(detail("groups",id(group),alice).has("location"));assertFalse(db.request(alice,input("groups","list","")).toString().contains("Private base"));
-  assertThrows(CommunityFailure.class,()->db.request(alice,change));var apply=input("groups","apply",id(group));apply.addProperty("text","Join");db.request(alice,apply);var accept=input("groups","application",id(group));accept.addProperty("target",alice.id());accept.addProperty("accept",true);db.request(owner,accept);assertEquals(place,detail("groups",id(group),alice).get("location"));
+  var group=create("groups");var place=new CommunityLocation("Private base","minecraft:overworld",123,64,456,true).json();var change=input("groups","location",id(group));change.add("location",place);assertThrows(IllegalArgumentException.class,()->db.request(owner,change));
+  assertFalse(detail("groups",id(group),owner).has("location"));assertFalse(detail("groups",id(group),alice).has("location"));assertFalse(db.request(alice,input("groups","list","")).toString().contains("Private base"));
+  assertThrows(CommunityFailure.class,()->db.request(alice,change));var apply=input("groups","apply",id(group));apply.addProperty("text","Join");db.request(alice,apply);var accept=input("groups","application",id(group));accept.addProperty("target",alice.id());accept.addProperty("accept",true);db.request(owner,accept);assertFalse(detail("groups",id(group),alice).has("location"));
   var board=input("board","create","");board.addProperty("title","Meet");board.addProperty("description","Private meeting");board.addProperty("days",3);board.addProperty("group",id(group));board.add("location",place);var post=db.request(owner,board).getAsJsonObject("detail");assertEquals(place,detail("board",id(post),alice).get("location"));assertFalse(detail("board",id(post),bob).has("location"));
-  db.request(owner,input("groups","delete",id(group)));assertFalse(detail("board",id(post),alice).has("location"));db.request(owner,input("groups","restore",id(group)));assertEquals(place,detail("groups",id(group),alice).get("location"));assertFalse(detail("board",id(post),alice).has("location"));
-  change.add("location",JsonNull.INSTANCE);db.request(owner,change);assertFalse(detail("groups",id(group),owner).has("location"));
+  db.request(owner,input("groups","delete",id(group)));assertFalse(detail("board",id(post),alice).has("location"));db.request(owner,input("groups","restore",id(group)));assertFalse(detail("groups",id(group),alice).has("location"));assertFalse(detail("board",id(post),alice).has("location"));
+  change.add("location",JsonNull.INSTANCE);assertThrows(IllegalArgumentException.class,()->db.request(owner,change));assertFalse(detail("groups",id(group),owner).has("location"));
  }
  @Test void locationUpdateHonorsRevisionAndCannotInjectPrivateUngroupedLocation()throws Exception{
   var post=create("ideas");var q=command(input("ideas","location",id(post)));q.add("revision",post.get("revision"));q.add("location",new CommunityLocation("Build here","minecraft:overworld",1,65,2,false).json());db.request(owner,q);
@@ -203,9 +203,9 @@ class CommunityStoreTest {
  }
 
  @Test void editClearsLocationThroughSerializedCommandAndRetry()throws Exception{
-  var group=create("groups");var set=input("groups","location",id(group));set.add("location",new CommunityLocation("Base","minecraft:overworld",1,64,2,false).json());db.request(owner,set);var current=detail("groups",id(group),owner);
-  var edit=command(input("groups","edit",id(group)));edit.add("revision",current.get("revision"));edit.addProperty("title","Renamed group");edit.addProperty("description","Description");edit.addProperty("type",Json.str(current,"type"));edit.add("location",JsonNull.INSTANCE);edit.addProperty("clearLocation",true);
-  var wire=Json.parse(Json.GSON.toJson(edit));assertFalse(wire.has("location"));var changed=db.request(owner,wire).getAsJsonObject("detail");assertFalse(changed.has("location"));assertEquals("Renamed group",Json.str(changed,"title"));db.request(owner,wire);assertFalse(detail("groups",id(group),owner).has("location"));
+  var group=create("board");var set=input("board","location",id(group));set.add("location",new CommunityLocation("Base","minecraft:overworld",1,64,2,false).json());db.request(owner,set);var current=detail("board",id(group),owner);
+  var edit=command(input("board","edit",id(group)));edit.add("revision",current.get("revision"));edit.addProperty("title","Renamed group");edit.addProperty("description","Description");edit.add("location",JsonNull.INSTANCE);edit.addProperty("clearLocation",true);
+  var wire=Json.parse(Json.GSON.toJson(edit));assertFalse(wire.has("location"));var changed=db.request(owner,wire).getAsJsonObject("detail");assertFalse(changed.has("location"));assertEquals("Renamed group",Json.str(changed,"title"));db.request(owner,wire);assertFalse(detail("board",id(group),owner).has("location"));
  }
  @Test void chatAudienceUsesCurrentMembershipAndRejectsNonMembers()throws Exception{var group=create("groups");String groupId=id(group);assertTrue(db.chatMembers(groupId,owner.id()).contains(owner.id()));assertEquals(groupId,Json.str(db.playerGroups(owner.id()).getFirst(),"id"));assertTrue(db.playerGroups(alice.id()).isEmpty());assertThrows(CommunityFailure.class,()->db.chatMembers(groupId,alice.id()));assertThrows(CommunityFailure.class,()->db.chatMembers(id(create("board")),owner.id()));}
 }

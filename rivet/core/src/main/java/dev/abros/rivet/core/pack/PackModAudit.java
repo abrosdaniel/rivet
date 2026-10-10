@@ -52,16 +52,16 @@ final class PackModAudit {
   var selected=JarSelector.detectAndSelect(inputs,
    (input,path)->Optional.ofNullable(metadata.get(input)).map(bytes->(InputStream)new ByteArrayInputStream(bytes)),
    (input,path)->Optional.ofNullable(children.getOrDefault(input,Map.of()).get(path.toString().replace('\\','/'))),
-   Input::path,failures->new IOException("Несовместимые версии JarJar: "+failures));
+   Input::path,failures->new IOException(dev.abros.rivet.core.Messages.text("rivet.core.incompatible_jarjar_versions_1dbc311e")+failures));
   for(var input:selected)read(input,false);
-  if(installed&&rivetVersion!=null&&!mods.containsKey("rivet"))mods.put("rivet",new Mod("rivet",rivetVersion,"","Rivet",false));
+  if(installed&&rivetVersion!=null&&!mods.containsKey("rivet"))mods.put("rivet",new Mod("rivet",rivetVersion,"",dev.abros.rivet.core.Messages.text("key.categories.rivet"),false));
   for(var d:dependencies){
    Mod target=mods.get(d.id());boolean present=target!=null;
    boolean matches=present&&matches(target,d.range(),minecraft);
    if(d.type().equals("required")){
-    if(!matches)throw new IOException(d.owner().path()+": требуется "+d.id()+" "+d.range()+(present?"; найдена "+target.version():"; мод отсутствует"));
-    if(!target.embedded()&&!target.component().isEmpty()&&!target.component().equals(d.owner().component()))throw new IOException(d.owner().path()+": зависимость "+d.id()+" находится в другом необязательном компоненте. Сделайте её обязательной или объедините компоненты");
-   }else if(d.type().equals("incompatible")&&matches)throw new IOException(d.owner().path()+": несовместим с "+d.id()+" "+target.version());
+    if(!matches)throw new IOException(d.owner().path()+dev.abros.rivet.core.Messages.text("rivet.core.requires_ec4daf9d")+d.id()+" "+d.range()+(present?dev.abros.rivet.core.Messages.text("rivet.core.found_950207b5")+target.version():dev.abros.rivet.core.Messages.text("rivet.core.mod_missing_a3f77526")));
+    if(!target.embedded()&&!target.component().isEmpty()&&!target.component().equals(d.owner().component()))throw new IOException(d.owner().path()+dev.abros.rivet.core.Messages.text("rivet.core.dependency_17ae1988")+d.id()+dev.abros.rivet.core.Messages.text("rivet.core.is_in_another_optional_component_make_67256f36"));
+   }else if(d.type().equals("incompatible")&&matches)throw new IOException(d.owner().path()+dev.abros.rivet.core.Messages.text("rivet.core.incompatible_with_3dc62610")+d.id()+" "+target.version());
   }
  }
  /** Mirrors FancyModLoader's VersionSupportMatrix for the supported Minecraft branch. */
@@ -71,49 +71,49 @@ final class PackModAudit {
   String alias=switch(target.id()){case "minecraft"->"1.21";case "neoforge"->"21.0.166";default->"";};
   if(alias.isEmpty())return false;
   try{return VersionRange.createFromVersionSpec(range).containsVersion(new DefaultArtifactVersion(alias));}
-  catch(Exception e){throw new IOException("Некорректный диапазон версий: "+range);}
+  catch(Exception e){throw new IOException(dev.abros.rivet.core.Messages.text("rivet.core.invalid_version_range_5a79f2ae")+range);}
  }
  private static boolean inRange(String version,String range)throws IOException{
   if(range.isBlank()||range.equals("*"))return true;
   try{var r=VersionRange.createFromVersionSpec(range);return r.hasRestrictions()?r.containsVersion(new DefaultArtifactVersion(version)):new DefaultArtifactVersion(version).compareTo(r.getRecommendedVersion())>=0;}
-  catch(Exception e){throw new IOException("Некорректный диапазон версий: "+range);}
+  catch(Exception e){throw new IOException(dev.abros.rivet.core.Messages.text("rivet.core.invalid_version_range_5a79f2ae")+range);}
  }
  private void read(Input input,boolean root)throws IOException{
   try(var jar=new JarFile(input.file().toFile(),false)){
    // NeoForge library containers expose their actual mods through JarJar, not outer TOML.
    var manifest=jar.getManifest();if(manifest!=null&&"LIBRARY".equals(manifest.getMainAttributes().getValue("FMLModType")))return;
    JarEntry meta=jar.getJarEntry("META-INF/neoforge.mods.toml");if(meta==null)meta=jar.getJarEntry("META-INF/mods.toml");
-   if(meta==null&&root&&!installed)throw new IOException("В JAR нет метаданных NeoForge: "+input.path());
+   if(meta==null&&root&&!installed)throw new IOException(dev.abros.rivet.core.Messages.text("rivet.core.no_neoforge_metadata_in_jar_bb4558e9")+input.path());
    if(meta!=null){
-    var cfg=new TomlParser().parse(text(jar,meta));Object entries=cfg.get("mods");if(!(entries instanceof List<?> list)||list.isEmpty())throw new IOException("Нет списка mods: "+input.path());
+    var cfg=new TomlParser().parse(text(jar,meta));Object entries=cfg.get("mods");if(!(entries instanceof List<?> list)||list.isEmpty())throw new IOException(dev.abros.rivet.core.Messages.text("rivet.core.missing_mods_list_3fa78dbe")+input.path());
     String jarVersion=jar.getManifest()==null?null:jar.getManifest().getMainAttributes().getValue("Implementation-Version");
-    for(var entry:list){if(!(entry instanceof UnmodifiableConfig c))throw new IOException("Некорректные метаданные: "+input.path());String id=value(c,"modId",""),version=value(c,"version","");
-     if(!id.matches("[a-z][a-z0-9_]{1,63}")||version.isBlank())throw new IOException("Некорректные id/version: "+input.path());
+    for(var entry:list){if(!(entry instanceof UnmodifiableConfig c))throw new IOException(dev.abros.rivet.core.Messages.text("rivet.core.invalid_metadata_ea00af31")+input.path());String id=value(c,"modId",""),version=value(c,"version","");
+     if(!id.matches("[a-z][a-z0-9_]{1,63}")||version.isBlank())throw new IOException(dev.abros.rivet.core.Messages.text("rivet.core.invalid_id_version_281cb794")+input.path());
      if(version.equals("${file.jarVersion}"))version=jarVersion==null?"":jarVersion;
-     if(version.isBlank()||version.contains("${"))throw new IOException("Не удалось определить версию "+id+": "+input.path());
-     if(id.equals("rivet")&&!installed)throw new IOException("Rivet устанавливает игрок; не включайте его в сборку");
-     var mod=new Mod(id,version,input.component(),input.path(),!root);var old=mods.putIfAbsent(id,mod);if(old!=null)throw new IOException("Повторяющийся мод "+id+": "+old.path()+", "+input.path());
+     if(version.isBlank()||version.contains("${"))throw new IOException(dev.abros.rivet.core.Messages.text("rivet.core.could_not_determine_version_da464051")+id+": "+input.path());
+     if(id.equals("rivet")&&!installed)throw new IOException(dev.abros.rivet.core.Messages.text("rivet.core.players_install_rivet_themselves_do_not_252384a5"));
+     var mod=new Mod(id,version,input.component(),input.path(),!root);var old=mods.putIfAbsent(id,mod);if(old!=null)throw new IOException(dev.abros.rivet.core.Messages.text("rivet.core.duplicate_mod_55bd6b39")+id+": "+old.path()+", "+input.path());
      Object ds=cfg.get("dependencies."+id);if(ds instanceof List<?> rows)for(var row:rows)if(row instanceof UnmodifiableConfig dep){
-      String side=value(dep,"side","BOTH");if(side.equals("SERVER"))continue;if(!Set.of("CLIENT","BOTH").contains(side))throw new IOException("Некорректная сторона зависимости: "+input.path());
-      String type=value(dep,"type",Boolean.FALSE.equals(dep.get("mandatory"))?"optional":"required").toLowerCase(Locale.ROOT);if(!Set.of("required","optional","incompatible","discouraged").contains(type))throw new IOException("Неизвестный тип зависимости: "+input.path());dependencies.add(new Dependency(mod,value(dep,"modId",""),value(dep,"versionRange","*"),type));
+      String side=value(dep,"side","BOTH");if(side.equals("SERVER"))continue;if(!Set.of("CLIENT","BOTH").contains(side))throw new IOException(dev.abros.rivet.core.Messages.text("rivet.core.invalid_dependency_side_28a88aec")+input.path());
+      String type=value(dep,"type",Boolean.FALSE.equals(dep.get("mandatory"))?"optional":"required").toLowerCase(Locale.ROOT);if(!Set.of("required","optional","incompatible","discouraged").contains(type))throw new IOException(dev.abros.rivet.core.Messages.text("rivet.core.unknown_dependency_type_3acaf60c")+input.path());dependencies.add(new Dependency(mod,value(dep,"modId",""),value(dep,"versionRange","*"),type));
      }
     }
    }
-  }catch(RuntimeException e){throw new IOException("Не удалось проверить метаданные: "+input.path(),e);}
+  }catch(RuntimeException e){throw new IOException(dev.abros.rivet.core.Messages.text("rivet.core.could_not_verify_metadata_bf099598")+input.path(),e);}
  }
  private void extract(Input input,int depth)throws IOException{
-  if(depth>8||++jars>2048)throw new IOException("Слишком много вложенных JAR");
+  if(depth>8||++jars>2048)throw new IOException(dev.abros.rivet.core.Messages.text("rivet.core.too_many_nested_jars_025b1225"));
   try(var jar=new JarFile(input.file().toFile(),false)){
    JarEntry nested=jar.getJarEntry("META-INF/jarjar/metadata.json");if(nested!=null){byte[] bytes=text(jar,nested).getBytes(java.nio.charset.StandardCharsets.UTF_8);
-    if(MetadataIOHandler.fromStream(new ByteArrayInputStream(bytes)).isEmpty())throw new IOException("Некорректные метаданные JarJar: "+input.path());
-    metadata.put(input,bytes);var description=Json.parse(new String(bytes,java.nio.charset.StandardCharsets.UTF_8));var list=description.getAsJsonArray("jars");if(list.size()>128)throw new IOException("Слишком много JarJar библиотек");
-    for(var item:list){String path=Json.str(item.getAsJsonObject(),"path");if(!safeNestedPath(path))throw new IOException("Небезопасный путь JarJar: "+input.path()+" → "+Json.GSON.toJson(path));var child=jar.getJarEntry(path);if(child==null||child.isDirectory()||child.getSize()<0||child.getSize()>128L*1024*1024)throw new IOException("Некорректный вложенный JAR: "+input.path()+" → "+Json.GSON.toJson(path));
+    if(MetadataIOHandler.fromStream(new ByteArrayInputStream(bytes)).isEmpty())throw new IOException(dev.abros.rivet.core.Messages.text("rivet.core.invalid_jarjar_metadata_89819fca")+input.path());
+    metadata.put(input,bytes);var description=Json.parse(new String(bytes,java.nio.charset.StandardCharsets.UTF_8));var list=description.getAsJsonArray("jars");if(list.size()>128)throw new IOException(dev.abros.rivet.core.Messages.text("rivet.core.too_many_jarjar_libraries_ee838af5"));
+    for(var item:list){String path=Json.str(item.getAsJsonObject(),"path");if(!safeNestedPath(path))throw new IOException(dev.abros.rivet.core.Messages.text("rivet.core.unsafe_jarjar_path_46bfb773")+input.path()+" → "+Json.GSON.toJson(path));var child=jar.getJarEntry(path);if(child==null||child.isDirectory()||child.getSize()<0||child.getSize()>128L*1024*1024)throw new IOException(dev.abros.rivet.core.Messages.text("rivet.core.invalid_nested_jar_261b908b")+input.path()+" → "+Json.GSON.toJson(path));
      var childInput=new Input(input.path()+"!"+path,extractEntry(jar,child),input.component());
-     if(children.computeIfAbsent(input,key->new HashMap<>()).putIfAbsent(path,childInput)!=null)throw new IOException("Повторяющийся путь JarJar: "+input.path());
+     if(children.computeIfAbsent(input,key->new HashMap<>()).putIfAbsent(path,childInput)!=null)throw new IOException(dev.abros.rivet.core.Messages.text("rivet.core.duplicate_jarjar_path_3e8894b5")+input.path());
      extract(childInput,depth+1);
     }
    }
-  }catch(RuntimeException e){throw new IOException("Не удалось проверить метаданные: "+input.path(),e);}
+  }catch(RuntimeException e){throw new IOException(dev.abros.rivet.core.Messages.text("rivet.core.could_not_verify_metadata_bf099598")+input.path(),e);}
  }
  /** JarJar metadata may reference any relative entry inside the containing archive. */
  private static boolean safeNestedPath(String path){
@@ -126,21 +126,21 @@ final class PackModAudit {
   try(var jar=new JarFile(input.file().toFile(),false)){
    var manifest=jar.getManifest();
    if(manifest!=null&&"dev.abros.rivet.bootstrap".equals(manifest.getMainAttributes().getValue("Automatic-Module-Name"))){
-    var entry=jar.getJarEntry("rivet/game.jar");if(entry==null)throw new IOException("Не найден игровой модуль Rivet: "+input.path());
+    var entry=jar.getJarEntry("rivet/game.jar");if(entry==null)throw new IOException(dev.abros.rivet.core.Messages.text("rivet.core.rivet_game_module_not_found_8801385d")+input.path());
     return new Input(input.path()+"!rivet/game.jar",extractEntry(jar,entry),input.component());
    }
    return input;
   }
  }
  private Path extractEntry(JarFile jar,JarEntry child)throws IOException{
-  if(child.getSize()<0||child.getSize()>128L*1024*1024)throw new IOException("Некорректный вложенный JAR");
+  if(child.getSize()<0||child.getSize()>128L*1024*1024)throw new IOException(dev.abros.rivet.core.Messages.text("rivet.core.invalid_nested_jar_0b5cb6f8"));
   Path temp=Files.createTempFile("rivet-mod-audit-",".jar");extracted.add(temp);
   try(var in=jar.getInputStream(child);var out=Files.newOutputStream(temp)){
-   long n=0;byte[] buffer=new byte[65536];for(int count;(count=in.read(buffer))!=-1;){n+=count;nestedBytes+=count;if(n>child.getSize()||nestedBytes>512L*1024*1024)throw new IOException("Вложенные JAR превышают допустимый размер");out.write(buffer,0,count);}
-   if(n!=child.getSize())throw new IOException("Повреждён вложенный JAR");
+   long n=0;byte[] buffer=new byte[65536];for(int count;(count=in.read(buffer))!=-1;){n+=count;nestedBytes+=count;if(n>child.getSize()||nestedBytes>512L*1024*1024)throw new IOException(dev.abros.rivet.core.Messages.text("rivet.core.nested_jars_exceed_the_size_limit_a713d43e"));out.write(buffer,0,count);}
+   if(n!=child.getSize())throw new IOException(dev.abros.rivet.core.Messages.text("rivet.core.corrupt_nested_jar_86217778"));
   }
   return temp;
  }
- private static String value(UnmodifiableConfig c,String key,String fallback)throws IOException{Object v=c.get(key);if(v==null)return fallback;if(v instanceof String s)return s;throw new IOException("Ожидается строка метаданных: "+key);}
- private static String text(JarFile jar,JarEntry e)throws IOException{try(var in=jar.getInputStream(e)){byte[] b=in.readNBytes(1024*1024+1);if(b.length>1024*1024)throw new IOException("Метаданные JAR превышают 1 МиБ");return new String(b,java.nio.charset.StandardCharsets.UTF_8);}}
+ private static String value(UnmodifiableConfig c,String key,String fallback)throws IOException{Object v=c.get(key);if(v==null)return fallback;if(v instanceof String s)return s;throw new IOException(dev.abros.rivet.core.Messages.text("rivet.core.expected_metadata_string_7071173d")+key);}
+ private static String text(JarFile jar,JarEntry e)throws IOException{try(var in=jar.getInputStream(e)){byte[] b=in.readNBytes(1024*1024+1);if(b.length>1024*1024)throw new IOException(dev.abros.rivet.core.Messages.text("rivet.core.jar_metadata_exceeds_1_mib_ed63470d"));return new String(b,java.nio.charset.StandardCharsets.UTF_8);}}
 }

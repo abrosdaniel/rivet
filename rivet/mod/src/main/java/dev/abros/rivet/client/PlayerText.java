@@ -10,7 +10,7 @@ final class PlayerText {
   String prefix=Json.opt(player,"prefix","").strip(),suffix=Json.opt(player,"suffix","").strip();
   var result=Component.empty();
   if(!prefix.isEmpty())result.append(text(prefix)).append(" ");
-  result.append(Component.literal(Json.opt(player,"name","Игрок")));
+  result.append(Component.literal(Json.opt(player,"name",Client.text("map.tool.player"))));
   if(!suffix.isEmpty())result.append(" ").append(text(suffix));
   return result;
  }

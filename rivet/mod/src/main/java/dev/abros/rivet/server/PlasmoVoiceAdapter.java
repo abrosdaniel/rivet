@@ -7,16 +7,17 @@ public final class PlasmoVoiceAdapter implements dev.abros.rivet.server.compat.C
  public com.google.gson.JsonObject diagnostics(){var row=LIFECYCLE.diagnostics();row.addProperty("id",id());row.add("capabilities",dev.abros.rivet.core.Json.GSON.toJsonTree(java.util.List.of("voice-mute")));return row;}
  public dev.abros.rivet.core.OptionalIntegration lifecycle(){return LIFECYCLE;}
  public String id(){return "plasmovoice";}public String status(){return LIFECYCLE.status();}public void clear(){LIFECYCLE.reset();}
- public com.google.gson.JsonObject execute(net.minecraft.server.level.ServerPlayer actor,com.google.gson.JsonObject request,dev.abros.rivet.server.compat.ServerIdentityDirectory identities){throw new IllegalArgumentException("Plasmo Voice: используйте защищённые операции модерации Rivet");}
+ public com.google.gson.JsonObject execute(net.minecraft.server.level.ServerPlayer actor,com.google.gson.JsonObject request,dev.abros.rivet.server.compat.ServerIdentityDirectory identities){throw new IllegalArgumentException(dev.abros.rivet.core.Messages.text("rivet.core.plasmo_voice_use_rivet_s_protected_6b7c9e44"));}
  static boolean available(){return LIFECYCLE.available();}
  static void mute(UUID target,int minutes,String reason)throws Exception{LIFECYCLE.required(()->{applyMute(target,minutes,reason);return true;});}
 
  private static Object manager()throws ReflectiveOperationException{Object instance=Class.forName("su.plo.voice.server.ModVoiceServer").getField("INSTANCE").get(null);if(instance==null)throw new IllegalStateException("Plasmo Voice unavailable");return Class.forName("su.plo.voice.api.server.PlasmoVoiceServer").getMethod("getMuteManager").invoke(instance);}
+ static void checkMute(UUID target)throws Exception{var m=manager();if(((Optional<?>)Class.forName("su.plo.voice.api.server.mute.MuteManager").getMethod("getMute",UUID.class).invoke(m,target)).isPresent())throw new IllegalArgumentException(dev.abros.rivet.core.Messages.text("rivet.core.already_muted_existing_punishment_preserved_809c6c08"));}
  @SuppressWarnings({"unchecked","rawtypes"}) static void applyMute(UUID target,int minutes,String reason)throws Exception{
   var m=manager();Class<?> api=Class.forName("su.plo.voice.api.server.mute.MuteManager"),unit=Class.forName("su.plo.voice.api.server.mute.MuteDurationUnit");
-  if(((Optional<?>)api.getMethod("getMute",UUID.class).invoke(m,target)).isPresent())throw new IllegalArgumentException("голос уже отключён; существующее наказание сохранено");
+  if(((Optional<?>)api.getMethod("getMute",UUID.class).invoke(m,target)).isPresent())throw new IllegalArgumentException(dev.abros.rivet.core.Messages.text("rivet.core.already_muted_existing_punishment_preserved_809c6c08"));
   Object minute=Enum.valueOf((Class)unit,"MINUTE");Object result;
   try{try{result=api.getMethod("mute",UUID.class,UUID.class,long.class,unit,String.class,boolean.class).invoke(m,target,null,(long)minutes,minute,reason,false);}catch(NoSuchMethodException older){result=api.getMethod("mute",UUID.class,UUID.class,long.class,unit,String.class).invoke(m,target,null,(long)minutes,minute,reason);}}catch(java.lang.reflect.InvocationTargetException rejected){if(rejected.getCause() instanceof IllegalArgumentException expected)throw expected;throw rejected;}
-  if(!(result instanceof Optional<?> applied)||applied.isEmpty())throw new IllegalArgumentException("Plasmo Voice не подтвердил mute");
+  if(!(result instanceof Optional<?> applied)||applied.isEmpty())throw new IllegalArgumentException(dev.abros.rivet.core.Messages.text("rivet.core.plasmo_voice_did_not_confirm_the_601e324c"));
  }
 }

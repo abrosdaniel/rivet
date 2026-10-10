@@ -24,6 +24,7 @@ final class UiNavigation {
  }
  static void clear(){pages.clear();history.clear();MenuSidebar.clear();outside=null;UiKeyboard.clear();}
  static void open(Screen from,String key){boolean wasForward=forward;forward=true;try{var mc=Minecraft.getInstance();
+  if(key.equals("settings")){mc.setScreen(new GeneralSettingsScreen(from));return;}
   if(from instanceof TaskEditScreen editor&&!editor.leavePage(key))return;
   if(key.equals("notifications")){if(from instanceof CommunityScreen menu&&!menu.leavePage())return;if(from instanceof TaskScreen tasks){if(tasks.pendingMutation())return;tasks.cancelRead();}mc.setScreen(new NotificationPopup(from));return;}
   if(key.equals("tasks")&&!TaskScreen.available())return;

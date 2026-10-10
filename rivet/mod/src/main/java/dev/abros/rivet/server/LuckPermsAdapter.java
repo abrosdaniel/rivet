@@ -12,7 +12,7 @@ public final class LuckPermsAdapter implements dev.abros.rivet.server.compat.Com
     public String id(){return "luckperms";}
     public String status(){return LIFECYCLE.status();}
     public void clear(){LIFECYCLE.reset();}
-    public JsonObject execute(net.minecraft.server.level.ServerPlayer actor,JsonObject request,dev.abros.rivet.server.compat.ServerIdentityDirectory identities){throw new IllegalArgumentException("LuckPerms: используйте операции прав и профиля Rivet");}
+    public JsonObject execute(net.minecraft.server.level.ServerPlayer actor,JsonObject request,dev.abros.rivet.server.compat.ServerIdentityDirectory identities){throw new IllegalArgumentException(dev.abros.rivet.core.Messages.text("rivet.core.luckperms_use_rivet_permission_and_profile_16a8a657"));}
     private static JsonObject denied(){var result=new JsonObject();var caps=new JsonObject();for(String right:ServerCommands.RIGHTS)caps.addProperty(right,false);for(String right:new String[]{"rivet.admin","rivet.events","rivet.auth.reset","rivet.vote.protected"})caps.addProperty(right,false);result.add("capabilities",caps);return result;}
     public static JsonObject profile(UUID id){return LIFECYCLE.call(()->loadProfile(id,null),LuckPermsAdapter::denied);}
     public static com.google.gson.JsonArray roles(){return LIFECYCLE.call(LuckPermsAdapter::loadRoles,com.google.gson.JsonArray::new);}

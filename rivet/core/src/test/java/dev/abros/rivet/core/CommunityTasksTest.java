@@ -11,6 +11,21 @@ import static org.junit.jupiter.api.Assertions.*;
  JsonObject input(String op){var j=new JsonObject();j.addProperty("section","home");j.addProperty("op",op);return j;}
  JsonObject create()throws Exception{var q=input("workSave");q.addProperty("title","Build");q.addProperty("description","Work");q.addProperty("operationId",UUID.randomUUID().toString());q.addProperty("issuedAt",System.currentTimeMillis());var first=store.request(owner,q);assertEquals(first.get("task"),store.request(owner,q).get("task"));return first.getAsJsonObject("task");}
  JsonObject command(JsonObject t,String op){var q=input(op);q.addProperty("task",Json.str(t,"id"));q.add("revision",t.get("revision"));return q;}
+ @Test void searchProjectionPreservesLiteralMatchingAndUpdates()throws Exception{
+  var task=create();var edit=command(task,"workSave");edit.addProperty("title","Мост 100%");edit.addProperty("description","_готово Description");task=store.request(owner,edit).getAsJsonObject("task");
+  var q=input("workList");for(String query:List.of("МОСТ","100% _готово","description",Json.str(task,"code"))){q.addProperty("query",query);assertEquals(1,store.request(owner,q).getAsJsonArray("tasks").size(),query);}
+  q.addProperty("query","100x");assertTrue(store.request(owner,q).getAsJsonArray("tasks").isEmpty());
+  edit=command(task,"workSave");edit.addProperty("title","New title");edit.addProperty("description","");task=store.request(owner,edit).getAsJsonObject("task");q.addProperty("query","МОСТ");assertTrue(store.request(owner,q).getAsJsonArray("tasks").isEmpty());q.addProperty("query","NEW TITLE");assertEquals(1,store.request(owner,q).getAsJsonArray("tasks").size());assertTrue(store.request(other,q).getAsJsonArray("tasks").isEmpty());
+ }
+ @Test void listOmitsDetailCollectionsWithoutChangingSavedTask()throws Exception{
+  var task=create();var comment=command(task,"workComment");comment.addProperty("text","Keep this comment");task=store.request(owner,comment).getAsJsonObject("task");
+  var stage=command(task,"workSubtask");stage.addProperty("title","Keep this stage");task=store.request(owner,stage).getAsJsonObject("task");
+  var before=store.request(owner,command(task,"workGet")).getAsJsonObject("task");var rows=store.request(owner,input("workList")).getAsJsonArray("tasks");assertEquals(1,rows.size());var preview=rows.get(0).getAsJsonObject();
+  for(String field:List.of("comments","history","dependencies","reservations","stocks","subtasks","resources"))assertFalse(preview.has(field),field);
+  assertEquals(1,preview.get("stagesTotal").getAsInt());assertEquals(0,preview.get("stagesDone").getAsInt());
+  var after=store.request(owner,command(task,"workGet")).getAsJsonObject("task");for(String field:List.of("comments","history","subtasks","resources","dependencies","reservations"))assertEquals(before.get(field),after.get(field),field);
+  assertEquals("Keep this comment",Json.str(after.getAsJsonArray("comments").get(0).getAsJsonObject(),"text"));
+ }
  @Test void undoUsesLatestRevisionAndCannotOverwriteNewerChanges()throws Exception{var original=create();var status=command(original,"workStatus");status.addProperty("status","working");var changed=store.request(owner,status).getAsJsonObject("task");var undo=command(changed,"workStatus");undo.addProperty("status","open");var rename=command(changed,"workSave");rename.addProperty("title","Newer title");rename.addProperty("description","Keep this");var latest=store.request(owner,rename).getAsJsonObject("task");assertThrows(CommunityFailure.class,()->store.request(owner,undo));var current=command(latest,"workStatus");current.addProperty("status","open");var reverted=store.request(owner,current).getAsJsonObject("task");assertEquals("open",Json.str(reverted,"status"));assertEquals("Newer title",Json.str(reverted,"title"));}
  @Test void personalTasksArePrivateAndCodesSurviveRename()throws Exception{var t=create();String code=Json.str(t,"code");assertEquals("Build",store.sharedEntry(owner,"tasks",Json.str(t,"id")));assertEquals("",Json.str(store.sharedReference(owner,"tasks",Json.str(t,"id")),"group"));assertThrows(CommunityFailure.class,()->store.sharedEntry(other,"tasks",Json.str(t,"id")));assertFalse(code.contains("-"));assertThrows(CommunityFailure.class,()->store.request(other,command(t,"workGet")));var q=command(t,"workSave");q.addProperty("title","Renamed");q.addProperty("description","");var renamed=store.request(owner,q).getAsJsonObject("task");assertEquals(code,Json.str(renamed,"code"));assertThrows(CommunityFailure.class,()->store.request(owner,q));assertEquals(1,store.request(owner,input("workList")).getAsJsonArray("tasks").size());}
  @Test void stockNeedsOwnerAndInventoryCannotBeCountedTwice()throws Exception{var t=create();String code=Json.str(t,"code");var tasks=new CommunityTasks(db,store);var stock=new JsonObject();stock.addProperty("inventory","chest:1");stock.addProperty("at",10);var items=new JsonObject();items.addProperty("minecraft:stone",64);stock.add("items",items);assertThrows(CommunityFailure.class,()->tasks.bind(other,"Owner",code,"sign:1",stock));tasks.bind(owner,"Owner",code,"sign:1",stock);assertThrows(CommunityFailure.class,()->tasks.bind(owner,"Owner",code,"sign:2",stock));tasks.bind(owner,"Owner",code,"sign:1",stock);var q=command(t,"workResources");var resources=new JsonArray();var need=new JsonObject();need.addProperty("item","minecraft:stone");need.addProperty("amount",100);resources.add(need);q.add("resources",resources);t=store.request(owner,q).getAsJsonObject("task");assertEquals(64,t.getAsJsonArray("stocks").get(0).getAsJsonObject().getAsJsonObject("items").get("minecraft:stone").getAsInt());tasks.stock("sign:1",new JsonObject(),true);assertEquals(0,tasks.bindings().size());}
@@ -28,6 +43,51 @@ import static org.junit.jupiter.api.Assertions.*;
   var cycle=command(first,"workDependencies");cycle.addProperty("codes",Json.str(second,"code"));assertThrows(IllegalArgumentException.class,()->store.request(owner,cycle));
   var finish=command(first,"workStatus");finish.addProperty("status","done");store.request(owner,finish);assertEquals("working",Json.str(store.request(owner,start).getAsJsonObject("task"),"status"));
   var foreign=input("workSave");foreign.addProperty("title","Private");foreign.addProperty("description","");var hidden=store.request(other,foreign).getAsJsonObject("task");var link=command(create(),"workDependencies");link.addProperty("codes",Json.str(hidden,"code"));assertThrows(IllegalArgumentException.class,()->store.request(owner,link));
+ }
+ @Test void reservationReadsPoolOnceAndLaterRequestsSeeChanges()throws Exception{
+  var task=withStoneRequirement(create());var tasks=new CommunityTasks(db,store);
+  tasks.bind(owner,"Owner",Json.str(task,"code"),"stock",Json.parse("{\"inventory\":\"chest\",\"at\":1,\"items\":{\"minecraft:stone\":10}}"));
+  PerformanceMetrics.clear();PerformanceMetrics.detailed(true);
+  try{
+   task=store.request(owner,command(task,"workReserve")).getAsJsonObject("task");
+   assertEquals(1,PerformanceMetrics.snapshot().get("task.stock.query").count());
+   assertEquals(1,PerformanceMetrics.snapshot().get("task.reserved.query").count());
+   assertEquals(10,task.getAsJsonObject("confirmedPool").get("minecraft:stone").getAsInt());
+   assertTrue(task.getAsJsonObject("reservedElsewhere").isEmpty());
+   tasks.stock("stock",Json.parse("{\"inventory\":\"chest\",\"at\":2,\"items\":{\"minecraft:stone\":20}}"),false);
+   var release=command(task,"workReserve");release.addProperty("release",true);
+   task=store.request(owner,release).getAsJsonObject("task");assertTrue(task.getAsJsonObject("reservations").isEmpty());
+   assertEquals(20,task.getAsJsonObject("confirmedPool").get("minecraft:stone").getAsInt());
+   assertEquals(2,PerformanceMetrics.snapshot().get("task.stock.query").count());
+   assertEquals(2,PerformanceMetrics.snapshot().get("task.reserved.query").count());
+  }finally{PerformanceMetrics.detailed(false);PerformanceMetrics.clear();}
+ }
+ JsonObject withStoneRequirement(JsonObject task)throws Exception{
+  var q=command(task,"workResources");q.add("resources",JsonParser.parseString("[{\"item\":\"minecraft:stone\",\"amount\":7}]").getAsJsonArray());return store.request(owner,q).getAsJsonObject("task");
+ }
+ @Test void concurrentReservationsCannotOverbookAndFailureRollsBack()throws Exception{
+  var first=withStoneRequirement(create());var second=withStoneRequirement(create());
+  new CommunityTasks(db,store).bind(owner,"Owner",Json.str(first,"code"),"stock",Json.parse("{\"inventory\":\"chest\",\"at\":1,\"items\":{\"minecraft:stone\":10}}"));
+  var ready=new java.util.concurrent.CountDownLatch(2);var go=new java.util.concurrent.CountDownLatch(1);
+  var executor=java.util.concurrent.Executors.newFixedThreadPool(2);
+  try{
+   var futures=new ArrayList<java.util.concurrent.Future<Boolean>>();
+   for(var task:List.of(first,second))futures.add(executor.submit(()->{
+    ready.countDown();assertTrue(go.await(5,java.util.concurrent.TimeUnit.SECONDS));
+    try{store.request(owner,command(task,"workReserve"));return true;}
+    catch(IllegalArgumentException e){assertTrue(e.getMessage().startsWith("Не хватает"),e.getMessage());return false;}
+   }));
+   assertTrue(ready.await(5,java.util.concurrent.TimeUnit.SECONDS));go.countDown();
+   int successes=0;long total=0;
+   for(int i=0;i<2;i++){
+    boolean success=futures.get(i).get(10,java.util.concurrent.TimeUnit.SECONDS);if(success)successes++;
+    var before=List.of(first,second).get(i);var after=store.request(owner,command(before,"workGet")).getAsJsonObject("task");
+    assertEquals(before.get("revision").getAsLong()+(success?1:0),after.get("revision").getAsLong());
+    if(success)total+=after.getAsJsonObject("reservations").get("minecraft:stone").getAsLong();
+    else{assertEquals(before.get("history"),after.get("history"));assertEquals(before.get("reservations"),after.get("reservations"));}
+   }
+   assertEquals(1,successes);assertEquals(7,total);
+  }finally{go.countDown();executor.shutdownNow();assertTrue(executor.awaitTermination(10,java.util.concurrent.TimeUnit.SECONDS));}
  }
  @Test void reservationsUseConfirmedStockOnceAndReleaseOnResourceChange()throws Exception{
   var first=create();var second=create();var tasks=new CommunityTasks(db,store);var stock=Json.parse("{\"inventory\":\"chest\",\"at\":1,\"items\":{\"minecraft:stone\":10}}");tasks.bind(owner,"Owner",Json.str(first,"code"),"stock",stock);

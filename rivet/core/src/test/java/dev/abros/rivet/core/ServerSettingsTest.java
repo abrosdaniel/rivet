@@ -109,4 +109,19 @@ class ServerSettingsTest {
   Path file=root.resolve("config/rivet-server.toml");Files.createDirectories(file.getParent());Files.writeString(file,original);
   assertNotNull(ServerSettings.load(root));assertEquals(original,Files.readString(file));
  }
+ @Test void cavePermissionUpgradePreservesOwnerValues()throws Exception{
+  Path file=root.resolve("config/rivet-server.toml");Files.createDirectories(file.getParent());String old=ServerSettings.template().replace("caves = true", "");Files.writeString(file,old);
+  assertTrue(ServerSettings.load(root).flag("map.caves"));assertTrue(Files.readString(file).contains("caves = true"));Files.writeString(file,Files.readString(file).replace("caves = true","caves = false"));assertFalse(ServerSettings.load(root).flag("map.caves"));assertTrue(Files.readString(file).contains("caves = false"));
+ }
+ @Test void obsoleteExchangeSettingsAreIgnoredAndNeverAdded()throws Exception{
+  String template=ServerSettings.template();assertFalse(template.contains("shareTiles"));assertFalse(template.contains("sharing ="));
+  Path file=root.resolve("config/rivet-server.toml");Files.createDirectories(file.getParent());String old=template.replace("[map]","[map]\nsharing = true\nshareTiles = 16384");Files.writeString(file,old);assertNotNull(ServerSettings.load(root));assertEquals(old,Files.readString(file));
+ }
+
+ @Test void positionSettingsUpgradePreservesOwnerChoice()throws Exception{
+  Path file=root.resolve("config/rivet-server.toml");Files.createDirectories(file.getParent());Files.writeString(file,ServerSettings.template().replace("positions = true", "").replace("nearbyRadius = 128", ""));
+  var settings=ServerSettings.load(root);assertTrue(settings.flag("map.positions"));assertEquals(128,settings.number("map.nearbyRadius"));
+  String chosen=Files.readString(file).replace("positions = true","positions = false").replace("nearbyRadius = 128","nearbyRadius = 64");Files.writeString(file,chosen);assertFalse(ServerSettings.load(root).flag("map.positions"));assertEquals(chosen,Files.readString(file));assertThrows(IllegalArgumentException.class,()->ServerSettings.parse(chosen.replace("nearbyRadius = 64","nearbyRadius = 0")));
+ }
+
 }

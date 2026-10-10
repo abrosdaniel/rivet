@@ -12,10 +12,10 @@ public final class ServerMenuData {
         for(var item:links){
             JsonObject link=item.getAsJsonObject();Json.keys(link,"name","url");text(link,"name",60);
             URI uri=URI.create(text(link,"url",512));
-            if(!"https".equals(uri.getScheme())||uri.getHost()==null||uri.getUserInfo()!=null)throw new IllegalArgumentException("Links must use HTTPS");
+            if(!"https".equals(uri.getScheme())||uri.getHost()==null||uri.getUserInfo()!=null)throw new IllegalArgumentException(dev.abros.rivet.core.Messages.text("rivet.message.error_4238414ce980"));
         }
         // Reserve room for the response envelope and indentation added by its parent.
-        if(Json.GSON.toJson(input).length()>24000)throw new IllegalArgumentException("Menu data exceeds network limit");
+        if(Json.GSON.toJson(input).length()>24000)throw new IllegalArgumentException(dev.abros.rivet.core.Messages.text("rivet.message.error_24cf73d8730f"));
         return input.deepCopy();
     }
     private static JsonArray array(JsonObject input,String key,int maximum){

@@ -26,7 +26,7 @@ public class Remote {
   try{return send(request);}finally{poll.cancel(false);}
  }
  public static class Unavailable extends IOException{public Unavailable(String message,Throwable cause){super(message,cause);}public Unavailable(String message){super(message);}}
- public static final class CoolingDown extends Unavailable{private final URI source;public CoolingDown(URI source){super("Источник временно ограничил загрузки");this.source=source;}public void await(AtomicBoolean cancel)throws IOException,InterruptedException{awaitHost(source,cancel);}}
+ public static final class CoolingDown extends Unavailable{private final URI source;public CoolingDown(URI source){super(dev.abros.rivet.core.Messages.text("rivet.core.source_has_temporarily_limited_downloads_6a7fe469"));this.source=source;}public void await(AtomicBoolean cancel)throws IOException,InterruptedException{awaitHost(source,cancel);}}
  public static final class HttpFailure extends Unavailable {
   public final int status;public final URI endpoint;
   public HttpFailure(int status,URI endpoint){super("HTTP "+status+" from "+endpoint.getHost());this.status=status;this.endpoint=endpoint;}

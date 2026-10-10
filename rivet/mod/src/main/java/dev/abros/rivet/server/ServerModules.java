@@ -12,6 +12,7 @@ final class ServerModules {
  private static final ModuleRuntime<ServerStartingEvent> runtime=new ModuleRuntime<>(List.of(
   new ModuleRuntime.Module<>("pack",List.of("base"),e->ServerDatabase.settings().flag("pack.enabled"),e->ServerPack.start(),e->ServerPack.stop()),
   module("base",List.of(),e->ServerDatabase.get(),e->{}),
+  new ModuleRuntime.Module<>("map",List.of("base"),e->ServerDatabase.settings().flag("map.enabled"),e->ServerMap.start(e.getServer()),e->ServerMap.stop()),
   new ModuleRuntime.Module<>("auth",List.of("base"),e->!ServerDatabase.settings().text("auth.mode").equals("false"),AuthServer::start,e->AuthServer.stop()),
   new ModuleRuntime.Module<>("skins",List.of("base"),e->ServerDatabase.settings().flag("skins.enabled"),e->ServerSkins.start(),e->ServerSkins.stop()),
   module("social",List.of("base"),ServerFeatures::start,e->ServerFeatures.stop()),

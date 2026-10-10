@@ -9,7 +9,7 @@ public final class RestartScreen extends Screen {
     public RestartScreen(Screen parent,String transaction){super(Client.tr("restart.title"));this.parent=parent;this.transaction=transaction;}
     @Override protected void init(){
         addRenderableWidget(UiActions.button(Client.tr("restart.close"),UiActions.Tone.NORMAL,"",b->{b.active=false;Client.IO.submit(()->{try{Client.hub.startHelper(transaction);minecraft.execute(()->{if(minecraft.level!=null){minecraft.level.disconnect();minecraft.disconnect();}minecraft.stop();});}catch(Exception e){error=Errors.message(e);minecraft.execute(()->b.active=true);}});}).bounds(width/2-100,height/2+20,200,20).build());
-        addRenderableWidget(UiActions.button(Component.literal("Продолжить до выхода"),UiActions.Tone.NORMAL,"",b->onClose()).bounds(width/2-100,height/2+46,200,20).build());
+        addRenderableWidget(UiActions.button(Client.tr("ui.continue_until_exit_bb2001dd"),UiActions.Tone.NORMAL,"",b->onClose()).bounds(width/2-100,height/2+46,200,20).build());
     }
     @Override public void render(GuiGraphics g,int mx,int my,float pt){UiDialog.render(parent,this,g,pt,()->{super.render(g,mx,my,pt);Ui.centered(g,font,title,width/2,height/2-65,UiPalette.color(0xE2BE75));Ui.wrap(g,font,Client.tr("restart.message"),width/2-150,height/2-35,300,0xFFFFFF);if(!error.isEmpty())Ui.wrap(g,font,Component.literal(error),10,height-40,width-20,UiPalette.color(0xFF9999));});}
     @Override public void onClose(){minecraft.setScreen(parent);}

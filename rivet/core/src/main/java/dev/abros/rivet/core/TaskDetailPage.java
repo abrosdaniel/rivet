@@ -8,7 +8,7 @@ final class TaskDetailPage {
   page(task,"comments","commentOffset",offset(request,"commentOffset",-1));
   if(task.has("history"))for(var event:task.getAsJsonArray("history"))if(event.getAsJsonObject().has("changes"))for(var e:event.getAsJsonObject().getAsJsonArray("changes")){
    var change=e.getAsJsonObject();for(String key:new String[]{"before","after"})if(change.has(key)){
-    var value=change.get(key);if(value.isJsonArray()&&value.toString().length()>300)change.addProperty(key,"Записей: "+value.getAsJsonArray().size());
+    var value=change.get(key);if(value.isJsonArray()&&value.toString().length()>300)change.addProperty(key,Messages.text("rivet.core.entries_c955cbb5")+value.getAsJsonArray().size());
     else if(value.toString().length()>300)change.addProperty(key,ChangeSummary.text(value).substring(0,Math.min(250,ChangeSummary.text(value).length()))+"…");
    }
   }
@@ -18,7 +18,7 @@ final class TaskDetailPage {
    if(!trimmed)break;
   }
  }
- private static int offset(JsonObject request,String key,int fallback){if(!request.has(key))return fallback;long n=request.get(key).getAsLong();if(n<0||n>Integer.MAX_VALUE)throw new IllegalArgumentException("Некорректная страница задачи");return (int)n;}
+ private static int offset(JsonObject request,String key,int fallback){if(!request.has(key))return fallback;long n=request.get(key).getAsLong();if(n<0||n>Integer.MAX_VALUE)throw new IllegalArgumentException(dev.abros.rivet.core.Messages.text("rivet.core.invalid_task_page_794996e4"));return (int)n;}
  private static void page(JsonObject task,String key,String offsetKey,int requested){
   var all=task.has(key)?task.getAsJsonArray(key):new JsonArray();int count=all.size();int start=requested<0?Math.max(0,count-SIZE):Math.min(requested,Math.max(0,count-1));
   var rows=new JsonArray();for(int n=start;n<Math.min(count,start+SIZE);n++)rows.add(all.get(n).deepCopy());

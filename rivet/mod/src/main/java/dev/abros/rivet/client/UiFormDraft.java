@@ -7,7 +7,7 @@ import java.util.function.Consumer;
 final class UiFormDraft {
  private final DraftStore store;private final String server,account,context;
  UiFormDraft(String context){var mc=Minecraft.getInstance();store=new DraftStore(mc.gameDirectory.toPath().resolve("rivet/drafts"));server=mc.getCurrentServer()==null?"":mc.getCurrentServer().ip;account=Json.opt(ServerMenuClient.state,"uuid","");this.context=context;}
- void restore(Consumer<JsonObject> ready,Consumer<String> error){Client.IO.submit(()->{try{var saved=store.load(server,account,context);Minecraft.getInstance().execute(()->ready.accept(saved));}catch(Exception ex){Minecraft.getInstance().execute(()->error.accept("Не удалось восстановить черновик"));}});}
- void save(JsonObject fields,Consumer<String> error){var snapshot=fields.deepCopy();Client.IO.submit(()->{try{store.save(server,account,context,snapshot);}catch(Exception ex){Minecraft.getInstance().execute(()->error.accept("Не удалось сохранить черновик"));}});}
- void remove(Consumer<String> error){Client.IO.submit(()->{try{store.remove(server,account,context);}catch(Exception ex){Minecraft.getInstance().execute(()->error.accept("Не удалось удалить черновик"));}});}
+ void restore(Consumer<JsonObject> ready,Consumer<String> error){Client.IO.submit(()->{try{var saved=store.load(server,account,context);Minecraft.getInstance().execute(()->ready.accept(saved));}catch(Exception ex){Minecraft.getInstance().execute(()->error.accept(Client.text("ui.could_not_restore_the_draft_c26953b0")));}});}
+ void save(JsonObject fields,Consumer<String> error){var snapshot=fields.deepCopy();Client.IO.submit(()->{try{store.save(server,account,context,snapshot);}catch(Exception ex){Minecraft.getInstance().execute(()->error.accept(Client.text("ui.could_not_save_the_draft_ad7b64ba")));}});}
+ void remove(Consumer<String> error){Client.IO.submit(()->{try{store.remove(server,account,context);}catch(Exception ex){Minecraft.getInstance().execute(()->error.accept(Client.text("ui.could_not_delete_the_draft_a3cfa3fa")));}});}
 }

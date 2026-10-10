@@ -27,6 +27,7 @@ public final class UiTheme {
   if(style.tone()==UiActions.Tone.PRIMARY)base=accent;else if(style.tone()==UiActions.Tone.DANGER)base=mix(UiKit.surface(),accent,0.12f);
   UiKit.surface(g,x,y,w,h,b.active?mix(base,style.tone()==UiActions.Tone.PRIMARY?mix(accent,UiKit.onAccent(),.10f):UiKit.surface(UiKit.Surface.HOVER),hover):UiKit.surface());
   if(b.isFocused())UiKit.focus(g,x,y,w,h);
+  if(UiActions.isTool(b)){UiIcons.draw(g,style.icon(),x+(w-12)/2,y+(h-12)/2,b.active?UiActions.iconColor(b,UiKit.text()):UiKit.muted());return;}
   if(text.equals("×")||text.equals("+")||text.equals("↑")||text.equals("↓")){UiIcons.draw(g,text.equals("×")?UiIcons.CLEAR:text.equals("↑")?UiIcons.UP:text.equals("↓")?UiIcons.DOWN:UiIcons.PLUS,x+(w-12)/2,y+(h-12)/2,b.active?UiKit.text():UiKit.muted());return;}
   boolean dropdown=text.endsWith(" ▾");if(dropdown)text=text.substring(0,text.length()-2);if(text.startsWith("+ "))text=text.substring(2);
   int foreground=b.active?(style.tone()==UiActions.Tone.PRIMARY?UiKit.onAccent():UiKit.text()):UiKit.muted(),ty=y+(h-8)/2;

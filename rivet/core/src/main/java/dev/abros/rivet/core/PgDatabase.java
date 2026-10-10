@@ -52,7 +52,7 @@ public final class PgDatabase implements AutoCloseable {
     public <T> T communityTransaction(Work<T> work) throws Exception {
         if (current.get()!=null) return work.run();
         if (!communitySlots.tryAcquire(2, java.util.concurrent.TimeUnit.SECONDS))
-            throw new CommunityFailure(CommunityFailure.Code.UNAVAILABLE,"Сервер занят. Повторите действие чуть позже.");
+            throw new CommunityFailure(CommunityFailure.Code.UNAVAILABLE,dev.abros.rivet.core.Messages.text("rivet.core.server_busy_try_again_shortly_924a43a8"));
         try { return transaction(work); }
         finally { communitySlots.release(); }
     }
@@ -68,7 +68,9 @@ public final class PgDatabase implements AutoCloseable {
     public <T> T transaction(Work<T> work) throws Exception {
         if (current.get() != null) return work.run();
         long started=System.nanoTime();boolean failed=true;
+        long acquire=PerformanceMetrics.start();
         try (Connection connection = pool.getConnection()) {
+            PerformanceMetrics.end("database.acquire",acquire);
             connection.setAutoCommit(false);
             current.set(connection);
             try { T result = work.run(); connection.commit(); failed=false;return result; }

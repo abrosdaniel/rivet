@@ -26,7 +26,7 @@ final class SparkMetrics {
     }
     static JsonObject read(long now)throws Exception {
         var row=new JsonObject();row.addProperty("at",now);
-        Object api;try{api=Class.forName("me.lucko.spark.api.SparkProvider").getMethod("get").invoke(null);}catch(java.lang.reflect.InvocationTargetException failure){if(failure.getCause() instanceof IllegalStateException)throw new dev.abros.rivet.core.OptionalIntegration.NotReadyException("spark ещё не зарегистрировал API");throw failure;}
+        Object api;try{api=Class.forName("me.lucko.spark.api.SparkProvider").getMethod("get").invoke(null);}catch(java.lang.reflect.InvocationTargetException failure){if(failure.getCause() instanceof IllegalStateException)throw new dev.abros.rivet.core.OptionalIntegration.NotReadyException(dev.abros.rivet.core.Messages.text("rivet.core.spark_has_not_registered_its_api_3fddd46b"));throw failure;}
         String type="me.lucko.spark.api.Spark";
         Object tps=call(api,type,"tps");if(tps!=null)SparkTimeline.metric(row,"tps",((Number)poll(tps,"TicksPerSecond","SECONDS_10","DoubleStatistic")).doubleValue());
         Object mspt=call(api,type,"mspt");if(mspt!=null){Object average=poll(mspt,"MillisPerTick","SECONDS_10","GenericStatistic");if(average!=null){SparkTimeline.metric(row,"mspt",((Number)call(average,"me.lucko.spark.api.statistic.misc.DoubleAverageInfo","mean")).doubleValue());SparkTimeline.metric(row,"mspt95",((Number)call(average,"me.lucko.spark.api.statistic.misc.DoubleAverageInfo","percentile95th")).doubleValue());}}

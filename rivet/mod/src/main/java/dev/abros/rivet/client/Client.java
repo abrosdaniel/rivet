@@ -19,9 +19,13 @@ public final class Client {
     private static boolean initialized;
     static CoreUpdater.Update offeredUpdate;
     static synchronized Hub ensureHub()throws java.io.IOException {if(hub==null)hub=new Hub(Minecraft.getInstance().gameDirectory.toPath(),Rivet.VERSION,ModList.get().getModContainerById("neoforge").orElseThrow().getModInfo().getVersion().toString());return hub;}
+    public static String text(String key){return net.minecraft.locale.Language.getInstance().getOrDefault("rivet."+key);}
+    static <T> java.util.List<T> labels(java.util.function.Supplier<java.util.List<T>> factory){
+        var value=new LocalizedValue<>(factory);return new java.util.AbstractList<>(){public T get(int index){return value.get().get(index);}public int size(){return value.get().size();}};
+    }
     public static Component tr(String key,Object...args){return Component.translatable("rivet."+key,args);}
-    public static void install(net.neoforged.bus.api.IEventBus bus){ClientModules.install(bus);loadedJar=System.getProperty("rivet.bundlePath")==null?ModList.get().getModFileById("rivet").getFile().getFilePath():java.nio.file.Path.of(System.getProperty("rivet.bundlePath"));NeoForge.EVENT_BUS.addListener(Client::screen);NeoForge.EVENT_BUS.addListener(UiNavigation::opening);NeoForge.EVENT_BUS.addListener(UiKeyboard::initialized);NeoForge.EVENT_BUS.addListener(UiNavigation::key);Protocol.clientState=()->{
-        var j=new com.google.gson.JsonObject();j.addProperty("coreVersion",Rivet.VERSION);j.addProperty("packHash",hub==null?"":hub.activeHash());return j;
+    public static void install(net.neoforged.bus.api.IEventBus bus){Messages.clientResolver(key->net.minecraft.locale.Language.getInstance().getOrDefault(key));ClientModules.install(bus);loadedJar=System.getProperty("rivet.bundlePath")==null?ModList.get().getModFileById("rivet").getFile().getFilePath():java.nio.file.Path.of(System.getProperty("rivet.bundlePath"));NeoForge.EVENT_BUS.addListener(Client::screen);NeoForge.EVENT_BUS.addListener(UiNavigation::opening);NeoForge.EVENT_BUS.addListener(UiKeyboard::initialized);NeoForge.EVENT_BUS.addListener(UiNavigation::key);Protocol.clientState=()->{
+        var j=new com.google.gson.JsonObject();j.addProperty("coreVersion",Rivet.VERSION);j.addProperty("language",Minecraft.getInstance().getLanguageManager().getSelected());j.addProperty("packHash",hub==null?"":hub.activeHash());return j;
     };}
     private static void screen(ScreenEvent.Init.Post e){
         if(!(e.getScreen() instanceof TitleScreen))return;

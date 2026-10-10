@@ -46,7 +46,7 @@ public final class PagedMenuController {
     private void dispatch(JsonObject packet) { request = Json.str(packet, "request"); sender.accept(packet); }
     public void retry() { if (busy || !failed) return; busy = true; failed = false; sent = clock.getAsLong(); dispatch(session.retry(sent)); }
     public void failure(String text) { session.cancel(); busy = false; failed = true; error = text; window.stopRefresh(); }
-    public boolean timeout() { if (!session.timeout(clock.getAsLong())) return false; busy = false; failed = true; error = "Нет ответа. Нажмите «Повторить»."; window.stopRefresh(); return true; }
+    public boolean timeout() { if (!session.timeout(clock.getAsLong())) return false; busy = false; failed = true; error = dev.abros.rivet.core.Messages.text("rivet.core.no_response_click_retry_c724443a"); window.stopRefresh(); return true; }
     public Outcome receive(JsonObject response) {
         if (!request.equals(Json.opt(response, "request", "")) || response.has("page") && response.get("page").getAsInt() != page)
             return new Outcome(false, false, false);

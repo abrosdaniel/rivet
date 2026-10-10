@@ -4,9 +4,16 @@ tasks.register('standaloneJar', Jar) {
     duplicatesStrategy = DuplicatesStrategy.EXCLUDE
     manifest { attributes 'Main-Class': 'dev.abros.rivet.helper.Main' }
     from sourceSets.main.output
-    dependsOn configurations.runtimeClasspath
-    from { configurations.runtimeClasspath.findAll { !it.name.startsWith('postgresql-') && !it.name.startsWith('HikariCP-') && !it.name.startsWith('checker-qual-') && !it.name.startsWith('bcprov-') && !it.name.startsWith('bcpkix-') && !it.name.startsWith('bcutil-') }.collect { it.isDirectory() ? it : zipTree(it) } }
-    exclude 'dev/abros/rivet/core/auth/**', 'dev/abros/rivet/core/PgDatabase*', 'dev/abros/rivet/core/DatabaseSettings*', 'dev/abros/rivet/core/CommunityStore*', 'dev/abros/rivet/core/CommunityReports*', 'META-INF/*.SF', 'META-INF/*.RSA', 'META-INF/*.DSA', 'module-info.class', 'META-INF/versions/**/module-info.class'
+    dependsOn ':core:classes', configurations.runtimeClasspath
+    // The external updater only applies/reverts file transactions. Keep server,
+    // map and UI classes out of its independent runtime. Include nested DTOs used by Gson.
+    from(project(':core').sourceSets.main.output.classesDirs) {
+        ['Hashes', 'Json', 'Planner', 'SafePaths', 'Transactions'].each { name ->
+            include "dev/abros/rivet/core/${name}.class", "dev/abros/rivet/core/${name}\$*.class"
+        }
+    }
+    from { configurations.runtimeClasspath.findAll { it.name.startsWith('gson-') }.collect { zipTree(it) } }
+    exclude 'META-INF/*.SF', 'META-INF/*.RSA', 'META-INF/*.DSA', 'module-info.class', 'META-INF/versions/**/module-info.class'
 }
 
 tasks.named('test') { dependsOn tasks.named('standaloneJar'); systemProperty 'rivet.helperJar', tasks.named('standaloneJar').get().archiveFile.get().asFile.absolutePath }

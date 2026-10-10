@@ -88,7 +88,7 @@ public final class TaskWorkspace {
         if(op.equals("workList")&&listLoaded)packet.add("knownTaskRows",RowDelta.known(tasks));
         operation = op; busy = true; retry = false;
         redrawAfterReply = !reading() || !listLoaded || !id.isEmpty() && !data.has("task");
-        notice = reading() ? "Загрузка…" : "Сохраняем изменения…";
+        notice = reading() ? Messages.text("rivet.server.loading") : Messages.text("rivet.core.saving_changes_fd0cdfb7");
         dispatch(session.begin(packet, !reading(), clock.getAsLong()));
     }
     private void dispatch(JsonObject packet) { request = Json.str(packet, "request"); sender.accept(packet); }
@@ -96,7 +96,7 @@ public final class TaskWorkspace {
     public boolean tick() {
         boolean changed = undo != null && clock.getAsLong() >= undoUntil;
         if (changed) undo = null;
-        if (session.timeout(clock.getAsLong())) { busy = false; retry = true; notice = "Нет ответа. Повтор безопасен."; changed = true; }
+        if (session.timeout(clock.getAsLong())) { busy = false; retry = true; notice = Messages.text("rivet.ui.no_response_it_is_safe_to_27824cb3"); changed = true; }
         return changed;
     }
     public boolean undoAvailable() { return undo != null && clock.getAsLong() < undoUntil; }
@@ -117,7 +117,7 @@ public final class TaskWorkspace {
             for (int n = tasks.size() - 1; n >= 0; n--) if (Json.str(tasks.get(n).getAsJsonObject(), "id").equals(id)) tasks.remove(n);
             clearSelection(); undo = null; return new Outcome(true, true, false, false, false);
         }
-        if(reply.has("tasksDelta")){try{reply=reply.deepCopy();reply.add("tasks",RowDelta.apply(tasks,reply.getAsJsonObject("tasksDelta")));}catch(RuntimeException invalid){notice="Список изменился. Обновите задачи.";listLoaded=false;return new Outcome(true,true,false,false,false);}}
+        if(reply.has("tasksDelta")){try{reply=reply.deepCopy();reply.add("tasks",RowDelta.apply(tasks,reply.getAsJsonObject("tasksDelta")));}catch(RuntimeException invalid){notice=Messages.text("rivet.core.list_changed_refresh_tasks_38076dd8");listLoaded=false;return new Outcome(true,true,false,false,false);}}
         if (reply.has("tasks")) {
             boolean create = reply.has("canCreate") && reply.get("canCreate").getAsBoolean();
             changed = !listLoaded || !tasks.equals(reply.get("tasks")) || !nextCursor.equals(Json.opt(reply, "nextCursor", "")) || canCreate != create;
@@ -132,8 +132,8 @@ public final class TaskWorkspace {
             if (operation.equals("workStatus") && !undoing && data.has("task")) {
                 undo = new JsonObject(); undo.addProperty("group", group); undo.addProperty("task", typed.id());
                 undo.addProperty("revision", typed.revision()); undo.addProperty("status", MenuData.Task.read(data.getAsJsonObject("task")).status());
-                undoUntil = clock.getAsLong() + 10000; notice = "Статус изменён";
-            } else if (!reading()) { notice = undoing ? "Изменение отменено" : "Изменения сохранены"; undoing = false; }
+                undoUntil = clock.getAsLong() + 10000; notice = Messages.text("rivet.core.status_changed_3ca6ac17");
+            } else if (!reading()) { notice = undoing ? Messages.text("rivet.core.change_cancelled_785f35ed") : Messages.text("rivet.ui.changes_saved_9bf756bd"); undoing = false; }
             id = typed.id(); changed = !data.has("task") || !UiPayload.same(data.getAsJsonObject("task"), task);
             data.add("task", task.deepCopy());
             if (undo != null && undo.get("revision").getAsLong() != typed.revision()) undo = null;
