@@ -45,7 +45,7 @@ public final class TabLayoutHarness {
    }
    if(frame==COUNTS.length*3*2*3){
     check(RivetTab.pingText(-1).equals("—"),"Unknown latency displayed as a negative number");
-    check(RivetTab.pingText(10000).equals("10000 мс"),"Exact latency lost digits");
+    check(RivetTab.pingText(10000).equals("10000"+Client.text("ui.ms_5160aea6")),"Exact latency lost digits");
     check(!RivetTab.scrollTab(-1,true),"TAB intercepted scrolling inside another screen");
     var previous=ServerMenuClient.state.deepCopy();
     try{

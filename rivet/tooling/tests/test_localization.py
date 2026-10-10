@@ -56,3 +56,19 @@ class LocalizationTest(unittest.TestCase):
         for path in ROOT.glob("*/src/main/java/**/*.java"):
             for key in re.findall(r'(?:Messages.text|LocalizedText.key)\("([^"]+)"\)',path.read_text(encoding="utf-8")):
                 self.assertTrue(key in shared,f"Missing {key} in {path.name}")
+
+    def test_ci_harness_selectors_use_localized_keys(self):
+        entries=catalog(ASSETS / "en_us.json")
+        names=("ApprovedUiHarness","HudUiHarness","NativeUiHarness","UiFlowHarness",
+               "AdaptiveUiHarness","ReorderUiHarness","TabLayoutHarness","AuditFixesUiHarness",
+               "ReleaseCorrectionsHarness")
+        for name in names:
+            path=ROOT / f"mod/src/uiHarness/java/dev/abros/rivet/client/{name}.java"
+            source=path.read_text(encoding="utf-8")
+            for key in re.findall(r'Client\.(?:text|tr)\("([^"\n]+)"',source):
+                self.assertIn("rivet."+key,entries,f"Missing {key} in {name}")
+            # Fixture content may be Russian. Actions selecting actual UI must not be.
+            for selector in re.findall(r'(?:press|adminTab)\([^;\n]*?\)',source):
+                self.assertNotRegex(selector,r'[А-Яа-яЁё]',name+": "+selector)
+            for comparison in re.findall(r'getMessage\(\)\.getString\(\)\.(?:equals|contains|startsWith)\("[^"\n]*"\)',source):
+                self.assertNotRegex(comparison,r'[А-Яа-яЁё]',name+": "+comparison)

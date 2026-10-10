@@ -107,10 +107,15 @@ jobs:
   ui:
     needs: plan
     if: needs.plan.outputs.full == 'true'
+    strategy:
+      fail-fast: false
+      matrix:
+        language: [ru_ru, en_us]
     runs-on: ubuntu-latest
     timeout-minutes: 45
     env:
       RIVET_UI_SCREENSHOTS: 'false'
+      RIVET_UI_LANGUAGE: ${{ matrix.language }}
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
       - uses: actions/setup-java@cf277c60eb25467037889841efdb72551f06f6c3
@@ -133,7 +138,16 @@ jobs:
           EOF
           mkdir -p rivet/mod/run
           # Automated clients cannot dismiss Minecraft's first-launch welcome screen.
-          printf 'onboardAccessibility:false\n' > rivet/mod/run/options.txt
+          printf 'onboardAccessibility:false\nlang:%s\n' "$RIVET_UI_LANGUAGE" > rivet/mod/run/options.txt
+      - name: Check pack components and appearance profiles
+        timeout-minutes: 6
+        env:
+          RIVET_RELEASE_CORRECTIONS: ${{ github.workspace }}/visual/pack
+          LIBGL_ALWAYS_SOFTWARE: '1'
+        run: |
+          set -o pipefail
+          timeout --signal=TERM --kill-after=20s 5m xvfb-run -a -s '-screen 0 1280x1024x24' ./gradlew :mod:runClient -PrivetUiHarness -I ui-client.init.gradle --no-daemon --console=plain 2>&1 | tee visual-pack.log
+          python3 rivet/tooling/verify_ui_snapshots.py unused checks visual-pack.log RIVET_RELEASE_CORRECTIONS_OK
       - name: Check native components
         timeout-minutes: 6
         env:
@@ -152,23 +166,15 @@ jobs:
           set -o pipefail
           timeout --signal=TERM --kill-after=20s 5m xvfb-run -a -s '-screen 0 1280x1024x24' ./gradlew :mod:runClient -PrivetUiHarness -I ui-client.init.gradle --no-daemon --console=plain 2>&1 | tee visual-hud.log
       - run: python3 rivet/tooling/verify_ui_snapshots.py visual/hud/screenshots checks visual-hud.log RIVET_HUD_UI_OK
-      - name: Check task flows and navigation in Russian and English
-        timeout-minutes: 12
+      - name: Check task flows and navigation
+        timeout-minutes: 6
         env:
           RIVET_NATIVE_UI: ${{ github.workspace }}/visual/tasks
           LIBGL_ALWAYS_SOFTWARE: '1'
         run: |
           set -o pipefail
-          for language in ru_ru en_us; do
-            python3 - "$language" <<'PYLANG'
-          import pathlib, sys
-          path = pathlib.Path("rivet/mod/run/options.txt")
-          lines = [line for line in path.read_text().splitlines() if not line.startswith("lang:")]
-          path.write_text("\n".join(lines + ["lang:" + sys.argv[1]]) + "\n")
-          PYLANG
-            timeout --signal=TERM --kill-after=20s 5m xvfb-run -a -s '-screen 0 1280x1024x24' ./gradlew :mod:runClient -PrivetUiHarness -I ui-client.init.gradle --no-daemon --console=plain 2>&1 | tee "visual-tasks-$language.log"
-            python3 rivet/tooling/verify_ui_snapshots.py visual/tasks/screenshots checks "visual-tasks-$language.log" RIVET_NATIVE_OK
-          done
+          timeout --signal=TERM --kill-after=20s 5m xvfb-run -a -s '-screen 0 1280x1024x24' ./gradlew :mod:runClient -PrivetUiHarness -I ui-client.init.gradle --no-daemon --console=plain 2>&1 | tee visual-tasks.log
+          python3 rivet/tooling/verify_ui_snapshots.py visual/tasks/screenshots checks visual-tasks.log RIVET_NATIVE_OK
       - name: Check adaptive layouts and live resizing
         timeout-minutes: 6
         env:
@@ -208,7 +214,7 @@ jobs:
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
         if: failure()
         with:
-          name: ui-regression-logs
+          name: ui-regression-logs-${{ matrix.language }}
           path: |
             visual-*.log
             rivet/mod/run/logs/

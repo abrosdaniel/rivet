@@ -12,7 +12,7 @@ final class ServerPackScreen extends ScrollScreen {
  private final List<Row> rows;
  ServerPackScreen(Screen parent,PackManifest manifest,Set<String> selected,Consumer<Set<String>> apply){super(Client.tr("ui.server_pack_88518674"));this.parent=parent;this.selected=new HashSet<>(selected);this.apply=apply;
   var items=new ArrayList<Row>();
-  for(var c:manifest.components())items.add(new Row(c.id(),c.name(),c.description(),false));
+  for(var c:manifest.components())items.add(new Row(c.id(),c.name(),c.description(),!c.optional()));
   for(var file:manifest.files())if(file.component().isEmpty()){
    String name=file.path().substring(file.path().lastIndexOf('/')+1);
    items.add(new Row("",name,Client.text("ui.required_file_9792ac97")+file.path(),true));

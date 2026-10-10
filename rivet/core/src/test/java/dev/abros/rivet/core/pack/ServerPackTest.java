@@ -11,6 +11,25 @@ class ServerPackTest {
  @org.junit.jupiter.api.BeforeEach void canonicalRoot()throws Exception{root=root.toRealPath();}
  PackPublisher publisher()throws Exception{return new PackPublisher(root.resolve("source"),root.resolve("published"));}
  void source(String path,String contents)throws Exception{var file=root.resolve("source").resolve(path);Files.createDirectories(file.getParent());Files.writeString(file,contents);}
+ @Test void requiredComponentsCannotBeDeselectedAndLegacyClientsStillInstallTheirFiles()throws Exception{
+  var p=publisher();source("resourcepacks/library.zip","required");source("resourcepacks/extra.zip","optional");
+  source("pack.toml","[[components]]\nid='library'\nname='Shared Library'\ndescription='Required functionality'\noptional=false\nselected=false\nfiles=['resourcepacks/library.zip']\n[[components]]\nid='extra'\noptional=true\nselected=false\nfiles=['resourcepacks/extra.zip']\n");
+  var manifest=p.prepare("1.21.1","21.1.250");p.activate(manifest,false);
+  assertEquals(Set.of("library"),manifest.initial());assertEquals(List.of("resourcepacks/library.zip"),manifest.selected(Set.of()).stream().map(PackManifest.Entry::path).toList());
+  assertEquals(manifest,PackManifest.parse(manifest.bytes()));assertFalse(manifest.components().getFirst().optional());
+  var legacy=manifest.legacy();assertEquals(List.of("extra"),legacy.components().stream().map(PackManifest.Component::id).toList());assertEquals(manifest.selected(Set.of()).getFirst().hash(),legacy.selected(Set.of()).getFirst().hash());assertEquals(legacy,p.load(legacy.hash()));
+  try(var server=new PackServer(p,root.resolve("identity"),"127.0.0.1",0,true,0,0,0);var client=new PackClient("127.0.0.1",server.port(),server.fingerprint())){
+   assertEquals(manifest,client.manifest().manifest());
+   try(var socket=(javax.net.ssl.SSLSocket)dev.abros.rivet.core.auth.AuthTls.client(server.fingerprint()).getSocketFactory().createSocket("127.0.0.1",server.port())){
+    socket.startHandshake();var q=new com.google.gson.JsonObject();q.addProperty("action","manifest");PackWire.write(new java.io.DataOutputStream(socket.getOutputStream()),q);var reply=PackWire.read(new java.io.DataInputStream(socket.getInputStream()),8*1024*1024);
+    assertEquals(legacy.hash(),Json.str(reply,"hash"));assertEquals(1,reply.getAsJsonObject("manifest").get("protocol").getAsInt());
+   }
+   Path game=root.resolve("game");Files.createDirectories(game);var installer=new PackInstaller(game,new Cache(game,new Remote()));
+   var review=installer.review("server",manifest,Set.of());new Transactions(game).apply(installer.stage(review,client,new AtomicBoolean(),status->{}));assertEquals("required",Files.readString(game.resolve("resourcepacks/library.zip")));assertFalse(Files.exists(game.resolve("resourcepacks/extra.zip")));
+   var state=Json.read(game.resolve("rivet/state.json"));state.getAsJsonObject("serverChoices").getAsJsonObject("server").addProperty("library",false);Json.write(game.resolve("rivet/state.json"),state);assertTrue(installer.choices("server",manifest).contains("library"));
+   var download=root.resolve("old-client-download");client.download(legacy.hash(),legacy.selected(Set.of()).getFirst(),download,new AtomicBoolean(),status->{});assertEquals("required",Files.readString(download));assertEquals(manifest.hash(),installer.installedHash());Files.delete(game.resolve("resourcepacks/library.zip"));assertEquals("invalid",installer.installedHash());
+  }
+ }
  @Test void cancelledEmptyPreparationDoesNotCreatePublication()throws Exception{
   var p=publisher();Thread.currentThread().interrupt();
   try{assertThrows(java.io.InterruptedIOException.class,()->p.prepare("1.21.1","21.1.250"));assertTrue(Thread.currentThread().isInterrupted());}
