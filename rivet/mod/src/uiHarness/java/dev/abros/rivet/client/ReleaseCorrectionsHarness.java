@@ -14,7 +14,7 @@ public final class ReleaseCorrectionsHarness {
  private static void check(boolean condition,String message){if(!condition)throw new IllegalStateException(message);checks++;}
  private static Button button(String prefix){return Minecraft.getInstance().screen.children().stream().filter(c->c instanceof Button b&&b.getMessage().getString().startsWith(prefix)).map(c->(Button)c).findFirst().orElseThrow();}
  @SubscribeEvent public static void render(net.neoforged.neoforge.client.event.ScreenEvent.Render.Post event){if(System.getenv("RIVET_RELEASE_CORRECTIONS")==null||done)return;var mc=Minecraft.getInstance();try{
-  if(frames==null){if(!(mc.screen instanceof TitleScreen))return;frames=VisualMatrixHarness.samples(3,0,2);check(MapSettings.INSTANCE.size==112,"Fresh minimap default");}
+  if(frames==null){if(!(mc.screen instanceof TitleScreen))return;frames=VisualMatrixHarness.samples(3,0,2);check(MapSettings.INSTANCE.size==96,"Fresh minimap default: expected 96, got "+MapSettings.INSTANCE.size);}
   if(System.currentTimeMillis()<next)return;next=System.currentTimeMillis()+140;
   if(frame>0)UiGeometryHarness.verify(mc.screen);
   if(frame==5){var output=new java.io.File(System.getenv("RIVET_RELEASE_CORRECTIONS"));output.mkdirs();UiCaptureHarness.grab(output,"required-components.png",mc.getMainRenderTarget(),message->{});}

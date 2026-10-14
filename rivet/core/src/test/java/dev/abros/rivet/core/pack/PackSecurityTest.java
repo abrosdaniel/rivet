@@ -25,6 +25,23 @@ class PackSecurityTest {
   temp=temp.toRealPath();var path=temp.resolve("object");Files.writeString(path,"good");String hash=Hashes.sha256(path);var verifier=new PackObjectVerifier();verifier.check(path,hash,4);verifier.check(path,hash,4);
   var replacement=temp.resolve("new");Files.writeString(replacement,"evil");Files.move(replacement,path,StandardCopyOption.REPLACE_EXISTING);assertThrows(IOException.class,()->verifier.check(path,hash,4));
  }
+ @Test void sameSizeCorruptionWithRestoredModificationTimeIsRejected()throws Exception{
+  temp=temp.toRealPath();var path=temp.resolve("object");Files.writeString(path,"good");
+  var modified=Files.getLastModifiedTime(path);String hash=Hashes.sha256(path);var verifier=new PackObjectVerifier();verifier.check(path,hash,4);
+  Files.writeString(path,"evil");Files.setLastModifiedTime(path,modified);
+  assertThrows(IOException.class,()->verifier.check(path,hash,4));
+ }
+ @Test void filesystemWithoutChangeTimestampNeverReusesVerification()throws Exception{
+  // ZIP supplies only basic timestamps, reproducing ambiguous metadata on every OS.
+  try(var fs=FileSystems.newFileSystem(temp.resolve("objects.zip"),java.util.Map.of("create","true"))){
+   var path=fs.getPath("/object");Files.writeString(path,"good");
+   var attrs=Files.readAttributes(path,java.nio.file.attribute.BasicFileAttributes.class);
+   var verifier=new PackObjectVerifier();String hash=Hashes.sha256(path);verifier.check(path,hash,4);verifier.check(path,hash,4);
+   Files.writeString(path,"evil");
+   Files.getFileAttributeView(path,java.nio.file.attribute.BasicFileAttributeView.class).setTimes(attrs.lastModifiedTime(),attrs.lastAccessTime(),attrs.creationTime());
+   assertThrows(IOException.class,()->verifier.check(path,hash,4));
+  }
+ }
  @Test void blockedWriteTimesOutButTimeOutsideWritesDoesNot()throws Exception{
   try(var listener=new ServerSocket(0);var client=new Socket("127.0.0.1",listener.getLocalPort());var peer=listener.accept()){
    var timer=new java.util.concurrent.ScheduledThreadPoolExecutor(1);try(var guard=new PackTransferGuard(peer,timer,java.time.Duration.ofMillis(100))){Thread.sleep(150);assertFalse(peer.isClosed());guard.begin();Thread.sleep(250);assertTrue(peer.isClosed());assertThrows(IOException.class,guard::end);}finally{timer.shutdownNow();}
