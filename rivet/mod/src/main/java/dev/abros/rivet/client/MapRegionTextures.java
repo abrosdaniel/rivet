@@ -23,17 +23,40 @@ final class MapRegionTextures {
     private static final Map<Key,Prepared> prepared=new LinkedHashMap<>();
     private static final Map<Key,Long> checked=new HashMap<>();
     private static final Set<Key> pending=new HashSet<>();
+    private static final Set<Key> previewReads=new LinkedHashSet<>(),previewPending=new HashSet<>();
     private static long generation;
+    private static boolean preview(Key key){
+        var repo=WorldMapClient.ownRepository();if(repo==null||previewReads.contains(key))return previewPending.contains(key);
+        long owner=generation;
+        if(!WorldMapClient.io(()->{
+            int[] pixels=null;try{pixels=repo.previews().read(key.layer(),key.x(),key.z(),key.level()).orElse(null);}catch(java.io.IOException ignored){/* A disposable preview never blocks the original terrain. */}
+            int[] read=pixels;Minecraft.getInstance().execute(()->{
+                if(owner!=generation)return;previewPending.remove(key);
+                if(read==null||textures.containsKey(key)||prepared.containsKey(key))return;
+                var image=new NativeImage(64,64,false);for(int z=0;z<64;z++)for(int x=0;x<64;x++)image.setPixelRGBA(x,z,read[z*64+x]);
+                prepared.put(key,new Prepared(image,key.level(),Long.MIN_VALUE,false,MapTerrainCache.styleEpoch()));
+                while(prepared.size()>512){var oldest=prepared.keySet().iterator().next();prepared.remove(oldest).image().close();checked.remove(oldest);}
+            });
+        }))return false;
+        previewReads.add(key);previewPending.add(key);while(previewReads.size()>8192){var oldest=previewReads.iterator().next();previewReads.remove(oldest);}return true;
+    }
+    private static void persist(Key key,Texture texture){
+        var repo=WorldMapClient.ownRepository();if(repo==null||!texture.complete())return;
+        var image=texture.texture().getPixels();int[] pixels=new int[4096];for(int z=0;z<64;z++)for(int x=0;x<64;x++)pixels[z*64+x]=image.getPixelRGBA(x,z);
+        WorldMapClient.io(()->{try{repo.previews().write(key.layer(),key.x(),key.z(),key.level(),pixels);}catch(java.io.IOException ignored){/* Original tiles remain authoritative. */}});
+    }
     static Texture texture(Key key,int level){
         if(key.level()!=level)throw new IllegalArgumentException("Region level mismatch");
         var existing=textures.get(key);var ready=prepared.get(key);
-        if(ready!=null&&ready.styleEpoch()!=MapTerrainCache.styleEpoch()){prepared.remove(key);ready.image().close();checked.remove(key);ready=null;}
+        if(existing==null&&ready==null&&preview(key))return null;
+        // Disk previews intentionally show the previous view until fresh terrain is composed.
+        if(ready!=null&&ready.signature()!=Long.MIN_VALUE&&ready.styleEpoch()!=MapTerrainCache.styleEpoch()){prepared.remove(key);ready.image().close();checked.remove(key);ready=null;}
         if(ready!=null&&MapTerrainCache.uploadAllowed()){
             prepared.remove(key);
             if(existing!=null&&existing.level()!=ready.level()){Minecraft.getInstance().getTextureManager().release(existing.id());existing=null;}
             if(existing==null){var id=ResourceLocation.fromNamespaceAndPath("rivet","map/region/"+UUID.randomUUID());var dynamic=new DynamicTexture(ready.image());dynamic.setFilter(false,false);clamp(dynamic);Minecraft.getInstance().getTextureManager().register(id,dynamic);existing=new Texture(id,dynamic,ready.level(),ready.signature(),ready.complete());}
             else{existing.texture().setPixels(ready.image());existing.texture().upload();clamp(existing.texture());existing=new Texture(existing.id(),existing.texture(),ready.level(),ready.signature(),ready.complete());}
-            MapTerrainCache.uploaded();textures.put(key,existing);
+            MapTerrainCache.uploaded();textures.put(key,existing);persist(key,existing);
         }
         if(pending.contains(key)||prepared.containsKey(key))return existing;
         long stamp=MapTerrainCache.stateRevision()+WorldMapClient.terrainIndexRevision();
@@ -47,7 +70,7 @@ final class MapRegionTextures {
             signature=signature*31+(image==null?0:image.revision());any|=image!=null;
         }
         if(!any)return existing;
-        if(existing!=null&&existing.signature()==signature&&existing.level()==level){if(complete){checked.put(key,stamp);if(!existing.complete()){existing=new Texture(existing.id(),existing.texture(),existing.level(),existing.signature(),true);textures.put(key,existing);}}return existing;}
+        if(existing!=null&&existing.signature()==signature&&existing.level()==level){if(complete){checked.put(key,stamp);if(!existing.complete()){existing=new Texture(existing.id(),existing.texture(),existing.level(),existing.signature(),true);textures.put(key,existing);persist(key,existing);}}return existing;}
         if(!MapTerrainCache.canWork())return existing;
         // Missing source pages during a disk/cache refill must not erase already drawn terrain.
         int[] previous=new int[64*64];
@@ -90,6 +113,6 @@ final class MapRegionTextures {
         var matrix=g.pose().last().pose();var vertices=com.mojang.blaze3d.vertex.Tesselator.getInstance().begin(com.mojang.blaze3d.vertex.VertexFormat.Mode.QUADS,com.mojang.blaze3d.vertex.DefaultVertexFormat.POSITION_TEX);
         vertices.addVertex(matrix,left,top,0).setUv(u0,v0);vertices.addVertex(matrix,left,bottom,0).setUv(u0,v1);vertices.addVertex(matrix,right,bottom,0).setUv(u1,v1);vertices.addVertex(matrix,right,top,0).setUv(u1,v0);com.mojang.blaze3d.vertex.BufferUploader.drawWithShader(vertices.buildOrThrow());com.mojang.blaze3d.systems.RenderSystem.disableBlend();
     }
-    static void reset(){generation++;for(var texture:textures.values())Minecraft.getInstance().getTextureManager().release(texture.id());textures.clear();for(var image:prepared.values())image.image().close();prepared.clear();pending.clear();checked.clear();}
+    static void reset(){generation++;for(var texture:textures.values())Minecraft.getInstance().getTextureManager().release(texture.id());textures.clear();for(var image:prepared.values())image.image().close();prepared.clear();pending.clear();checked.clear();previewReads.clear();previewPending.clear();}
     private MapRegionTextures(){}
 }

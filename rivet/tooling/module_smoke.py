@@ -10,7 +10,7 @@ def configuration(template, mode, port):
                              "password": '""', "passwordEnv": '"RIVET_TEST_DB_PASSWORD"', "sslMode": '"disable"'},
                "auth": {"mode": '"base"' if mode == "base" else '"false"'}}
     if mode == "disabled":
-        changes.update(skins={"enabled": "false"}, chat={"enabled": "false"})
+        changes.update(skins={"enabled": "false"}, chat={"enabled": "false"}, map={"enabled": "false"})
         for feature in ("groups", "tasks", "storage", "board", "events", "polls", "ideas", "reports", "server"):
             changes[feature] = {"enabled": "false"}
     lines = template.splitlines()

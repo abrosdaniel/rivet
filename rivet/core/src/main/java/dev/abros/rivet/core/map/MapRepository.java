@@ -11,9 +11,12 @@ import java.util.*;
 /** Versioned, bounded files; callers schedule disk work outside the game thread. */
 public final class MapRepository {
     private final Path root;
+    private final MapPreviewCache previews;
     public MapRepository(Path maps,UUID world,UUID player) {
         root=maps.resolve(world.toString()).resolve(player.toString());
+        previews=new MapPreviewCache(root);
     }
+    public MapPreviewCache previews(){return previews;}
     public Path storageDirectory(){return root.toAbsolutePath().normalize();}
     private Path dimension(String dimension) {
         if(!dimension.matches("[a-z0-9_.-]+:[a-z0-9_./-]+"))throw new IllegalArgumentException("Invalid dimension");

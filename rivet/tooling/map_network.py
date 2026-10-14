@@ -14,6 +14,7 @@ from module_smoke import configuration
 LP_URL = "https://cdn.modrinth.com/data/Vebnzrzj/versions/dKAPoPGd/LuckPerms-NeoForge-5.4.150.jar"
 LP_SHA = "26de0e74d87b91acf3b71050ed1880a50ffd1809b3a1309a2e24bee5413193f27a5056e13b69d8f39085e28711244c02bc5fc329be13174abb520008a0ca9682"
 SCENARIOS = (
+    ("terrain", "RIVET_MAP_TERRAIN_ADDRESS", "RivetMapTest", "RIVET_TERRAIN_OK", 300),
     ("ingress", "RIVET_INGRESS_TEST_ADDRESS", "RivetMapGuest", "RIVET_INGRESS_OK", 180),
     ("publication", "RIVET_MAP_PUBLICATION_ADDRESS", "RivetMapTest", "RIVET_MAP_PUBLICATIONS_OK", 600),
     ("light", "RIVET_MAP_LIGHT_ADDRESS", "RivetMapTest", "RIVET_MAP_LIGHT_OK", 240),

@@ -27,6 +27,8 @@ public final class ModuleLifecycleHarness {
   check(field("ServerFeatures","community")!=null,"Community store missing");
   check(field("ServerPlayerStatistics","store")!=null,"Statistics store missing");
   if("disabled".equals(System.getenv("RIVET_MODULE_SMOKE"))){
+   check(!runtime.active().contains("map")&&field("ServerMap","world")==null,"Disabled map retained world identity");
+   check(field("ServerChatHistory","store")==null&&field("ServerChatHistory","worker")==null,"Disabled chat history allocated resources");
    check(!runtime.active().contains("chat")&&!runtime.active().contains("auth"),"Disabled module was started");
    check(field("ServerSkins","store")==null&&field("ServerSkins","WORK")==null,"Disabled skins allocated resources");
    check(!runtime.active().contains("reports")&&!runtime.active().contains("storage")&&!runtime.active().contains("server"),"Disabled functional module started");
@@ -36,20 +38,23 @@ public final class ModuleLifecycleHarness {
    check(runtime.active().containsAll(java.util.Set.of("reports","storage","server")),"Functional module did not start");
    check(field("ServerReportsModule","reports")!=null&&field("ServerTaskStocks","tasks")!=null&&((Boolean)field("ServerManagement","active")),"Functional resource missing");
    check(runtime.active().contains("chat"),"Chat did not start");
+   check(runtime.active().contains("map")&&field("ServerMap","world")!=null,"Map did not start");
+   check(field("ServerChatHistory","store")!=null&&field("ServerChatHistory","worker")!=null,"Chat history did not start");
    check(field("ServerSkins","store")!=null,"Skin store missing");
   }
   if("base".equals(System.getenv("RIVET_MODULE_SMOKE")))check(runtime.active().contains("auth")&&field("AuthServer","WORK")!=null,"Base auth did not allocate its workers");
-  for(String[] row:new String[][]{{"ServerFeatures","STORAGE"},{"ServerFeatures","CONTROL"},{"ServerFeatures","READS"},{"ServerSkins","WORK"},{"ServerSkins","FALLBACK"},{"AuthServer","WORK"},{"AuthServer","OFFICIAL"},{"AuthServer","DEADLINES"},{"AuthServer","VALIDATION"},{"ServerPlayerStatistics","writer"}}){var worker=field(row[0],row[1]);if(worker instanceof ExecutorService service)workers.add(service);}
+  for(String[] row:new String[][]{{"ServerChatHistory","worker"},{"ServerFeatures","STORAGE"},{"ServerFeatures","CONTROL"},{"ServerFeatures","READS"},{"ServerSkins","WORK"},{"ServerSkins","FALLBACK"},{"AuthServer","WORK"},{"AuthServer","OFFICIAL"},{"AuthServer","DEADLINES"},{"AuthServer","VALIDATION"},{"ServerPlayerStatistics","writer"}}){var worker=field(row[0],row[1]);if(worker instanceof ExecutorService service)workers.add(service);}
   System.out.println("RIVET_MODULE_START_OK "+runtime.active());
  }
  @SubscribeEvent public static void tick(ServerTickEvent.Post event){if(enabled()&&++ticks==20)event.getServer().halt(false);}
  @SubscribeEvent(priority=EventPriority.LOWEST) public static void stopped(ServerStoppedEvent event)throws Exception{
   if(!enabled())return;
   check(((ModuleRuntime<?>)field("ServerModules","runtime")).active().isEmpty(),"Module survives server shutdown");
-  for(String[] row:new String[][]{{"ServerFeatures","STORAGE"},{"ServerFeatures","CONTROL"},{"ServerFeatures","READS"},{"ServerSkins","WORK"},{"ServerSkins","FALLBACK"},{"AuthServer","WORK"},{"AuthServer","OFFICIAL"},{"AuthServer","DEADLINES"},{"AuthServer","VALIDATION"},{"ServerPlayerStatistics","writer"}})
+  for(String[] row:new String[][]{{"ServerChatHistory","worker"},{"ServerFeatures","STORAGE"},{"ServerFeatures","CONTROL"},{"ServerFeatures","READS"},{"ServerSkins","WORK"},{"ServerSkins","FALLBACK"},{"AuthServer","WORK"},{"AuthServer","OFFICIAL"},{"AuthServer","DEADLINES"},{"AuthServer","VALIDATION"},{"ServerPlayerStatistics","writer"}})
    check(field(row[0],row[1])==null,"Worker retained: "+row[0]+"."+row[1]);
   check(field("ServerFeatures","community")==null&&field("ServerPlayerStatistics","store")==null&&field("ServerSkins","store")==null,"Database-backed feature retained");
   check(field("ServerReportsModule","reports")==null&&field("ServerTaskStocks","tasks")==null&&!((Boolean)field("ServerManagement","active")),"Functional resource retained after shutdown");
+  check(field("ServerMap","world")==null&&field("ServerChatHistory","store")==null,"Map or chat history retained after shutdown");
   check(workers.stream().allMatch(ExecutorService::isTerminated),"Worker threads survived shutdown");workers.clear();
   System.out.println("RIVET_MODULE_STOP_OK");
  }

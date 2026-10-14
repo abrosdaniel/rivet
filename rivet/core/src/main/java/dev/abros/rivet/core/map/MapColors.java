@@ -113,14 +113,19 @@ public final class MapColors {
     private static int environmental(MapTile tile,int x,int z,int north,int northWest,int ceiling,int depth,int worldHeight,boolean legible,Style style){
         boolean cave=ceiling!=MapLayer.SURFACE,glow=tile.glowing(x,z);
         int h=tile.groundHeight(x,z),base=tile.color(x,z),sky=tile.skyLight(x,z);
-        if(sky<0)sky=cave?0:base>>>24&15;
+        // A surface column starts above every visible block. Reconstruct direct sky
+        // through its saved transparent layers instead of trusting incomplete light packets.
+        // This also repairs old zero-sky surface samples without deleting exploration.
+        var layers=tile.layers(x,z);int directSky=15;
+        if(!cave){if(layers!=null)for(var layer:layers)directSky=Math.max(0,directSky-layer.opacity());sky=layers==null?base>>>24&15:directSky;}
+        else if(sky<0)sky=0;
         int block=tile.blockLight(x,z);if(block<0)block=cave?base>>>24&15:0;
         float altitude=1;
         if(!glow&&style.depth()&&!(cave&&legible))altitude=Math.clamp(cave?(ceiling==MapLayer.FULL?.7f+.3f*h/Math.max(1,worldHeight):.7f+.3f*(h-ceiling+depth)/depth):h/63f,style.slopes()>=2?.9f:.7f,style.slopes()>=2?1:1.15f);
         float ground=direction(h,north,northWest,glow,style.slopes())*altitude*(glow?1:cave&&legible?caveDepth(h,ceiling,depth):light(block,sky,style));
-        float remaining=1;float[] rgb=new float[3];var layers=tile.layers(x,z);
+        float remaining=1;float[] rgb=new float[3];directSky=15;
         if(layers==null){int overlay=tile.overlay(x,z);remaining=(overlay>>>24)/255f;float factor=cave&&legible?caveDepth(tile.height(x,z),ceiling,depth):light(block,sky,style);for(int n=0;n<3;n++)rgb[n]=(overlay>>>(16-n*8)&255)*factor;}
-        else for(var layer:layers){float a=(layer.color()>>>24)/255f;int ls=layer.skyLight()<0?(cave?0:15):layer.skyLight();float factor=cave&&legible?caveDepth(tile.height(x,z),ceiling,depth):light(layer.light(),ls,style);for(int n=0;n<3;n++)rgb[n]+=(layer.color()>>>(16-n*8)&255)*a*remaining*factor;remaining*=1-a;}
+        else for(var layer:layers){float a=(layer.color()>>>24)/255f;int ls=layer.skyLight()<0?(cave?0:directSky):layer.skyLight();if(!cave){ls=directSky;directSky=Math.max(0,directSky-layer.opacity());}float factor=cave&&legible?caveDepth(tile.height(x,z),ceiling,depth):light(layer.light(),ls,style);for(int n=0;n<3;n++)rgb[n]+=(layer.color()>>>(16-n*8)&255)*a*remaining*factor;remaining*=1-a;}
         int result=0xff000000;for(int n=0;n<3;n++)result|=Math.clamp((int)((base>>>(16-n*8)&255)*ground*remaining+rgb[n]),0,255)<<(16-n*8);return result;
     }
     private static float direction(int height,int north,int northWest,boolean glow,int mode){

@@ -19,6 +19,7 @@ class ModuleSmoke(unittest.TestCase):
             self.assertEqual("base" if mode == "base" else "false", data["auth"]["mode"])
             self.assertEqual(mode != "disabled", data["chat"]["enabled"])
             self.assertEqual(mode != "disabled", data["skins"]["enabled"])
+            self.assertEqual(mode != "disabled", data["map"]["enabled"])
 
     def test_both_lifecycle_markers_are_required(self):
         with tempfile.TemporaryDirectory() as directory:

@@ -16,13 +16,19 @@ import java.util.*;
 public final class MapPublicationHarness {
  private static final String ADDRESS=System.getenv("RIVET_MAP_PUBLICATION_ADDRESS");
  private static final List<VisualMatrixHarness.Frame> FRAMES="true".equals(System.getenv("RIVET_MAP_NETWORK_SMOKE"))?VisualMatrixHarness.flows(1,1):VisualMatrixHarness.samples(1,0);
- private static int phase=-1,ticks,frame;private static long deadline;private static boolean done;
+ private static int phase=-1,ticks,frame;private static final Set<String> captured=new HashSet<>();private static long deadline;private static boolean done;
  private static WorldMapScreen map;private static MapMarker marker;private static MapTerritory area;
  private static void check(boolean value,String message){if(!value)throw new IllegalStateException(message);}
- private static Button button(String key){var screen=Minecraft.getInstance().screen;return screen==null?null:screen.children().stream().filter(c->c instanceof Button b&&b.active&&b.getMessage().equals(Client.tr(key))).map(c->(Button)c).findFirst().orElse(null);}
+ private static Button button(String key){var screen=Minecraft.getInstance().screen;if(screen==null)return null;
+  for(int pass=0;pass<3;pass++){var found=screen.children().stream().filter(c->c instanceof Button b&&b.active&&b.getMessage().equals(Client.tr(key))).map(c->(Button)c).findFirst().orElse(null);if(found!=null)return found;
+   if(screen instanceof ScrollScreen scroll){scroll.revealRow(pass==0?0:100);scroll.rebuildWidgets();}else break;
+  }return null;
+ }
  private static boolean press(String key){var b=button(key);if(b==null)return false;b.onPress();return true;}
  private static void confirm(){var screen=Minecraft.getInstance().screen;check(screen instanceof UiConfirmDialog,"Expected confirmation");((Button)screen.children().stream().filter(c->c instanceof Button b&&b.active&&UiActions.style(b).tone()==UiActions.Tone.PRIMARY).findFirst().orElseThrow()).onPress();}
  private static Optional<MapMarker> published(){return MapPublications.markers().stream().filter(m->m.id().equals(marker.id())).findFirst();}
+ private static boolean loaded(){try{if(!(Minecraft.getInstance().screen instanceof MapPublicationsScreen screen))return false;var f=MapPublicationsScreen.class.getDeclaredField("loaded");f.setAccessible(true);var b=MapPublicationsScreen.class.getDeclaredField("busy");b.setAccessible(true);return f.getBoolean(screen)&&!b.getBoolean(screen);}catch(ReflectiveOperationException ex){throw new IllegalStateException(ex);}}
+ @SubscribeEvent public static void capture(net.neoforged.neoforge.client.event.ScreenEvent.Render.Post event){String path=System.getenv("RIVET_PUBLICATION_SCREENSHOTS");if(path==null||!loaded())return;String name="publication-"+frame+"-"+phase+".png";if(captured.add(name)){var dir=new java.io.File(path);dir.mkdirs();net.minecraft.client.Screenshot.grab(dir,name,Minecraft.getInstance().getMainRenderTarget(),message->{});}}
  @SubscribeEvent public static void tick(net.neoforged.neoforge.client.event.ClientTickEvent.Post event){
   if(ADDRESS==null||done)return;var mc=Minecraft.getInstance();
   try{
@@ -34,10 +40,12 @@ public final class MapPublicationHarness {
      mc.setScreen(new MapTerritoryScreen(map,new MapTerritories.Draft(area)));UiGeometryHarness.verify(mc.screen);
      check(press("map.save"),"Personal territory save missing");check(WorldMapClient.territories().contains(area),"Personal territory not saved");mc.setScreen(new MapPublicationsScreen(map,marker));phase++;
     }
-    case 1->{if(press("map.submitPublication"))phase++;}
+    case 1->{if(press("map.submitPublication")){var submitting=mc.screen;submitting.onClose();check(mc.screen==submitting,"Publication submission lost on Close");phase++;}}
     case 2->{if(button("map.approve")==null)return;check(published().isEmpty(),"Draft leaked before approval");UiGeometryHarness.verify(mc.screen);press("map.approve");confirm();phase++;}
-    case 3->{if(published().isEmpty())return;check(published().get().name().equals("Publication test "+frame),"Wrong public marker");marker=new MapMarker(marker.id(),marker.dimension(),"Edited publication "+frame,marker.x(),marker.y(),marker.z(),marker.color(),marker.icon());WorldMapClient.put(marker);mc.setScreen(new MapPublicationsScreen(map,marker));phase++;}
-    case 4->{if(press("map.submitPublication"))phase++;}
+    case 3->{if(published().isEmpty())return;check(published().get().name().equals("Publication test "+frame),"Wrong public marker");mc.setScreen(new MapPublicationsScreen(map));phase=30;}
+    case 30->{if(!loaded())return;UiGeometryHarness.verify(mc.screen);var search=(net.minecraft.client.gui.components.EditBox)mc.screen.children().stream().filter(c->c instanceof net.minecraft.client.gui.components.EditBox).findFirst().orElseThrow();search.setValue("no-matching-publication");check(mc.screen.children().stream().noneMatch(c->c instanceof UiSummaryCard),"Search did not filter publications");search=(net.minecraft.client.gui.components.EditBox)mc.screen.children().stream().filter(c->c instanceof net.minecraft.client.gui.components.EditBox).findFirst().orElseThrow();search.setValue("");((Button)mc.screen.children().stream().filter(c->c instanceof UiSummaryCard).findFirst().orElseThrow()).onPress();phase=31;}
+    case 31->{if(!loaded())return;UiGeometryHarness.verify(mc.screen);marker=new MapMarker(marker.id(),marker.dimension(),"Edited publication "+frame,marker.x(),marker.y(),marker.z(),marker.color(),marker.icon());WorldMapClient.put(marker);mc.setScreen(new MapPublicationsScreen(map,marker));phase=4;}
+    case 4->{if(press("map.submitChanges"))phase++;}
     case 5->{if(button("map.approve")==null)return;check(published().orElseThrow().name().equals("Publication test "+frame),"Unapproved edit replaced snapshot");check(button("map.withdraw")!=null,"Cannot withdraw while pending");press("map.approve");confirm();phase++;}
     case 6->{if(published().isEmpty()||!published().get().name().equals(marker.name()))return;if(!press("map.withdraw"))return;confirm();phase++;}
     case 7->{if(published().isPresent())return;mc.setScreen(map);mc.getConnection().sendCommand("rivet shareMarker "+MapMarkerLink.encode(marker));phase++;}
