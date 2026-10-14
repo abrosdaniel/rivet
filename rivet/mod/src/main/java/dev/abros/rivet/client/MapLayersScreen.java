@@ -4,7 +4,8 @@ import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.screens.Screen;
 
 /** Shared visibility controls in one modal; source permissions remain authoritative. */
-final class MapLayersScreen extends ScrollScreen {
+final class MapLayersScreen extends ScrollScreen implements UiParentScreen {
+ @Override public net.minecraft.client.gui.screens.Screen parentScreen(){return parent;}
  private final Screen parent;private UiDialog dialog;private java.util.List<MapLayers.Layer> available=java.util.List.of();
  MapLayersScreen(Screen parent){super(Client.tr("map.layers"));this.parent=parent;}
  @Override protected void init(){

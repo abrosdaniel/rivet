@@ -124,4 +124,10 @@ class ServerSettingsTest {
   String chosen=Files.readString(file).replace("positions = true","positions = false").replace("nearbyRadius = 128","nearbyRadius = 64");Files.writeString(file,chosen);assertFalse(ServerSettings.load(root).flag("map.positions"));assertEquals(chosen,Files.readString(file));assertThrows(IllegalArgumentException.class,()->ServerSettings.parse(chosen.replace("nearbyRadius = 64","nearbyRadius = 0")));
  }
 
+ @Test void packProtectionMigratesWithCommentsAndKeepsCustomLimits()throws Exception{
+  String t=ServerSettings.template();int start=t.indexOf("[pack.protection]"),end=t.indexOf("[pack.downloads]",start);String old=t.substring(0,start)+t.substring(end);Path file=root.resolve("config/rivet-server.toml");Files.createDirectories(file.getParent());Files.writeString(file,old);
+  assertEquals(16,ServerSettings.load(root).number("pack.protection.connectionsPerAddress"));assertTrue(Files.readString(file).contains("[pack.protection]"));assertTrue(Files.readString(file).contains("NAT"));
+  Files.writeString(file,Files.readString(file).replace("connectionsPerAddress = 16","connectionsPerAddress = 32"));assertEquals(32,ServerSettings.load(root).number("pack.protection.connectionsPerAddress"));
+  assertThrows(IllegalArgumentException.class,()->ServerSettings.parse(t.replace("idleSeconds = 30","idleSeconds = 0")));
+ }
 }

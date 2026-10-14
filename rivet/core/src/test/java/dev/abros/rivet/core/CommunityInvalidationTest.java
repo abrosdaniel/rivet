@@ -9,6 +9,12 @@ class CommunityInvalidationTest {
    var q=command(op);assertTrue(MenuRequests.read(q),op);assertFalse(MenuRequests.invalidatesCommunity(q),op);
   }
  }
+ @Test void publicationsUseTheirDedicatedChangeChannel(){
+  for(String op:new String[]{"mapObjectSubmit","mapObjectApprove","mapObjectReject","mapObjectWithdraw"}){
+   assertEquals(MenuCommands.Effect.WRITE,MenuCommands.describe(command(op)).effect(),op);
+   assertFalse(MenuRequests.invalidatesCommunity(command(op)),op);
+  }
+ }
  @Test void writesStillNotifySubscribersWhilePositionChangesUseDedicatedPath(){
   for(String op:new String[]{"plusTerritorySave","leave","invite","delete","workSave","plusKick"})assertTrue(MenuRequests.invalidatesCommunity(command(op)),op);
   assertFalse(MenuRequests.invalidatesCommunity(command("mapPositionSave")));

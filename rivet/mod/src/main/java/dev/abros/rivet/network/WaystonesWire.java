@@ -26,7 +26,8 @@ public final class WaystonesWire {
  }
  public static java.util.function.Consumer<Snapshot> client=p->{};
  public static void register(RegisterPayloadHandlersEvent event){var r=event.registrar("1").optional();
-  r.playToServer(Request.TYPE,Request.CODEC,(p,c)->c.enqueueWork(()->{if(c.player() instanceof net.minecraft.server.level.ServerPlayer player)dev.abros.rivet.server.ServerWaystones.request(player,p.sequence);}));
+  r.executesOn(net.neoforged.neoforge.network.registration.HandlerThread.NETWORK).playToServer(Request.TYPE,Request.CODEC,(p,c)->Ingress.dispatch(4,c,()->{if(c.player() instanceof net.minecraft.server.level.ServerPlayer player)dev.abros.rivet.server.ServerWaystones.request(player,p.sequence);}));
+  r=r.executesOn(net.neoforged.neoforge.network.registration.HandlerThread.MAIN);
   r.playToClient(Snapshot.TYPE,Snapshot.CODEC,(p,c)->c.enqueueWork(()->client.accept(p)));
  }
  private WaystonesWire(){}

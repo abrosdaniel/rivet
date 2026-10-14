@@ -1,7 +1,8 @@
 package dev.abros.rivet.client;
 import net.minecraft.client.gui.GuiGraphics;
 /** Small-view alternative for the same marker draft; Save remains in the card. */
-final class MapMarkerDetailsScreen extends net.minecraft.client.gui.screens.Screen{
+final class MapMarkerDetailsScreen extends net.minecraft.client.gui.screens.Screen implements UiParentScreen {
+ @Override public net.minecraft.client.gui.screens.Screen parentScreen(){return parent;}
  private final WorldMapScreen parent;private final MapMarkerPanel panel;private UiDialog dialog;
  MapMarkerDetailsScreen(WorldMapScreen parent,MapMarkerPanel panel){super(Client.tr("map.details"));this.parent=parent;this.panel=panel;}
  @Override protected void init(){dialog=UiDialog.fit(width,height,300,170);var b=dialog.body();panel.extras(parent,b.x(),b.y(),b.width(),this::addRenderableWidget,this::rebuildWidgets);UiActions.close(new dev.abros.rivet.core.NativeLayout.Box(dialog.footer().x(),dialog.footer().bottom()-20,dialog.footer().width(),20),this::addRenderableWidget,this::onClose);}

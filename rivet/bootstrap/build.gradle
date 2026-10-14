@@ -53,7 +53,7 @@ tasks.register('verifyBundle') {
                 }
                 libraries[dependency.identifier.artifact] = entries
             }
-            assert libraries.keySet() == ['postgresql', 'HikariCP', 'bcprov-jdk18on', 'bcutil-jdk18on', 'bcpkix-jdk18on'] as Set
+            assert libraries.keySet() == ['postgresql', 'HikariCP', 'bcprov-jdk18on', 'bcutil-jdk18on', 'bcpkix-jdk18on', 'httpclient5', 'httpcore5', 'httpcore5-h2'] as Set
             assert libraries['postgresql'].contains('org/postgresql/Driver.class')
             assert libraries['HikariCP'].contains('com/zaxxer/hikari/HikariDataSource.class')
             assert !innerEntries.keySet().any { it.contains('sqlite') }

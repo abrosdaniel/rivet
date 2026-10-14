@@ -7,17 +7,31 @@ import java.util.*;
 /** Viewport-clipped scanlines support concave polygons without triangulation artifacts. */
 final class MapTerritories {
  static final class Draft {
-  final String group,name;final long revision;final UUID id;final String dimension;int color;final List<MapTerritory.Point> points=new ArrayList<>();
+  final String group;String name;final long revision;final UUID id;final String dimension;int color;final List<MapTerritory.Point> points=new ArrayList<>();
   Draft(MapGroupClient.Group g,String dimension){id=UUID.fromString(g.id());group=g.id();revision=g.revision();var t=g.territory();this.dimension=t==null?dimension:t.dimension();name=g.title();color=t==null?MapMarkerPanel.COLOURS[0]:t.color();if(t!=null)points.addAll(t.points());}
+  Draft(String dimension){id=UUID.randomUUID();group="";revision=0;this.dimension=dimension;name=Client.tr("map.personalTerritory").getString();color=MapMarkerPanel.COLOURS[0];}
+  Draft(MapTerritory value){id=value.id();group="";revision=0;dimension=value.dimension();name=value.name();color=value.color();points.addAll(value.points());}
   MapTerritory value(){return new MapTerritory(id,dimension,name,color,points);}
  }
+ private static List<MapTerritory> personalSource=List.of(),publicSource=List.of(),combined=List.of();
+ private static MapTerritoryIndex index=new MapTerritoryIndex(List.of());
+ private static List<MapGroupClient.Group> groupSource=List.of();
+ static List<MapTerritory> all(){
+  var personal=WorldMapClient.territories();var groups=MapGroupClient.groups();var published=MapPublications.territories();
+  if(personal==personalSource&&groups==groupSource&&published==publicSource)return combined;
+  personalSource=personal;groupSource=groups;publicSource=published;
+  var out=new ArrayList<>(personal);for(var group:groups)if(group.territory()!=null)out.add(group.territory());
+  var ids=new HashSet<UUID>();out.forEach(t->ids.add(t.id()));for(var t:published)if(ids.add(t.id()))out.add(t);
+  combined=List.copyOf(out);index=new MapTerritoryIndex(combined);return combined;
+ }
  static void world(GuiGraphics g,String dimension,MapViewport view,int width,int height,Draft draft){
-  if(MapLayers.visible(MapLayers.Layer.TERRITORIES,false))for(var t:MapGroupClient.territories())if(t.dimension().equals(dimension)&&(draft==null||!draft.id.equals(t.id())))draw(g,t.points(),t.color(),t.name(),p->new double[]{view.screenX(p.x(),width/2d),view.screenZ(p.z(),height/2d)},0,0,width,height,false,true);
+  all();if(MapLayers.visible(MapLayers.Layer.TERRITORIES,false))for(var t:index.visible(dimension,view.worldX(0,width/2d),view.worldZ(0,height/2d),view.worldX(width,width/2d),view.worldZ(height,height/2d)))if(t.dimension().equals(dimension)&&(draft==null||!draft.id.equals(t.id())))draw(g,t.points(),t.color(),t.name(),p->new double[]{view.screenX(p.x(),width/2d),view.screenZ(p.z(),height/2d)},0,0,width,height,false,true);
   if(draft!=null&&draft.dimension.equals(dimension))draw(g,draft.points,draft.color,"",p->new double[]{view.screenX(p.x(),width/2d),view.screenZ(p.z(),height/2d)},0,0,width,height,false,false);
  }
  static void minimap(GuiGraphics g,MinimapProjection projection,String dimension,int x,int y,int side,boolean round){
   if(!MapLayers.visible(MapLayers.Layer.TERRITORIES,true))return;
-  for(var t:MapGroupClient.territories())if(t.dimension().equals(dimension))draw(g,t.points(),t.color(),"",p->new double[]{x+side/2d+projection.screenX(p.x(),p.z()),y+side/2d+projection.screenY(p.x(),p.z())},x,y,side,side,round,true);
+  all();double radius=Math.sqrt(2)*side/(2*projection.zoom());
+  for(var t:index.visible(dimension,projection.x()-radius,projection.z()-radius,projection.x()+radius,projection.z()+radius))if(t.dimension().equals(dimension))draw(g,t.points(),t.color(),"",p->new double[]{x+side/2d+projection.screenX(p.x(),p.z()),y+side/2d+projection.screenY(p.x(),p.z())},x,y,side,side,round,true);
  }
  private static void draw(GuiGraphics g,List<MapTerritory.Point> vertices,int color,String name,java.util.function.Function<MapTerritory.Point,double[]> project,int left,int top,int width,int height,boolean round,boolean closed){
   if(vertices.isEmpty())return;var points=vertices.stream().map(project).toList();

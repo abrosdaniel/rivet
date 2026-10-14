@@ -13,6 +13,7 @@ import java.util.*;
 /** The map owns the whole viewport. Controls are floating layers, never canvas columns. */
 final class WorldMapScreen extends Screen {
     private final Screen parent;
+    private static double lastZoom=Math.pow(1.25,3);
     final MapViewport view=new MapViewport();
     private String dimension="",query="";
     private MapMarkerPanel markerPanel;
@@ -29,10 +30,10 @@ final class WorldMapScreen extends Screen {
     private long lastClick;private boolean navigationActive;
     private MapTerritories.Draft territoryDraft;private boolean groupsAvailable;
     private int markerSize(){return Math.round(24*MapRenderSettings.INSTANCE.markerScale);}
-    WorldMapScreen(Screen parent){super(Client.tr("map.title"));this.parent=parent;view.zoomAt(3,0,0,0,0);}
+    WorldMapScreen(Screen parent){super(Client.tr("map.title"));this.parent=parent;view.zoomAt(Math.log(lastZoom)/Math.log(1.25),0,0,0,0);}
     NativeLayout.Box canvas(){return new NativeLayout.Box(0,0,width,height);}
     private int toolPitch(){return height<196?24:28;}
-    private int toolCount(){return (navigationActive?9:8)-(MapGroupClient.available()?0:1);}
+    private int toolCount(){return (navigationActive?9:8);}
     private int toolRows(){return Math.clamp((height-56)/toolPitch(),1,toolCount());}
     private NativeLayout.Box toolbar(){return new NativeLayout.Box(8,8,32+28*((toolCount()-1)/toolRows()),8+toolPitch()*toolRows());}
     double measuredDistance(){return rulerStart==null||rulerEnd==null?Double.NaN:Math.hypot(rulerEnd[0]-rulerStart[0],rulerEnd[1]-rulerStart[1]);}
@@ -46,11 +47,11 @@ final class WorldMapScreen extends Screen {
     String selectedDimension(){return dimension;}
     void refreshPanels(){rebuildWidgets();}
     void closeMarker(){cancelMarkerDrag();markerPanel=null;rebuildWidgets();}
-    void openMarker(MapMarker marker,boolean create){if(marker.death()){markerPanel=null;rebuildWidgets();deathActions(marker,(int)view.screenX(marker.x()+.5,midX()),(int)view.screenZ(marker.z()+.5,midZ()));return;}markerPanel=new MapMarkerPanel(marker,create);if(markerDrawer&&drawerBox().right()+8>markerBox().x())markerDrawer=false;rebuildWidgets();ensureMarkerVisible(marker);}
+    void openMarker(MapMarker marker,boolean create){if(!create&&!WorldMapClient.personal(marker)){minecraft.setScreen(new UiConfirmDialog(yes->{minecraft.setScreen(this);if(yes){var copy=new MapMarker(UUID.randomUUID(),marker.dimension(),marker.name(),marker.x(),marker.y(),marker.z(),marker.color(),marker.icon());WorldMapClient.put(copy);openMarker(copy,false);}},Client.tr("map.addShared"),Component.literal(marker.name())));return;}if(marker.death()){markerPanel=null;rebuildWidgets();deathActions(marker,(int)view.screenX(marker.x()+.5,midX()),(int)view.screenZ(marker.z()+.5,midZ()));return;}markerPanel=new MapMarkerPanel(marker,create);if(markerDrawer&&drawerBox().right()+8>markerBox().x())markerDrawer=false;rebuildWidgets();ensureMarkerVisible(marker);}
     MapMarker draftMarker(){return markerPanel==null?null:markerPanel.draft();}
     List<MapMarker> visibleMarkers(){
         var visibility=WorldMapClient.markerVisibility(false);
-        var rows=new ArrayList<>(WorldMapClient.markers().stream().filter(m->m.dimension().equals(dimension)&&visibility.test(m)&&view.zoom()>=MapRenderSettings.INSTANCE.markerMinZoom&&(!m.death()||MapSettings.INSTANCE.deathMap)&&(markerPanel==null||!m.id().equals(markerPanel.marker.id()))).toList());
+        var rows=new ArrayList<>(WorldMapClient.displayedMarkers().stream().filter(m->m.dimension().equals(dimension)&&visibility.test(m)&&view.zoom()>=MapRenderSettings.INSTANCE.markerMinZoom&&(!m.death()||MapSettings.INSTANCE.deathMap)&&(markerPanel==null||!m.id().equals(markerPanel.marker.id()))).toList());
         var draft=draftMarker();if(draft!=null&&draft.dimension().equals(dimension))rows.add(draft);
         return rows;
     }
@@ -86,7 +87,7 @@ final class WorldMapScreen extends Screen {
         tool(row++,"map.zoomIn","zoom_in",()->zoom(1));
         tool(row++,"map.zoomOut","zoom_out",()->zoom(-1));
         tool(row++,"map.layers","layers",()->minecraft.setScreen(new MapLayersScreen(this)));
-        if(MapGroupClient.available())tool(row++,"map.territories","territory",()->{if(territoryDraft==null)minecraft.setScreen(new MapTerritoriesScreen(this));});
+        tool(row++,"map.territories","territory",()->{if(territoryDraft==null)minecraft.setScreen(new MapTerritoriesScreen(this));});
         tool(row,"map.ruler","ruler",()->{ruler=!ruler;rulerStart=rulerEnd=null;rebuildWidgets();});
         var settings=addRenderableWidget(UiActions.tool(Client.tr("map.settings"),MapGlyphs.icon("settings"),12,height-36,()->minecraft.setScreen(new MapSettingsScreen(this))));settings.setWidth(24);settings.setHeight(24);
         var top=titleBox();addRenderableWidget(UiActions.button(dev.abros.rivet.network.DimensionLabels.name(dimension).copy().append(" ▾"),UiActions.Tone.NORMAL,MapGlyphs.icon("dimension"),this::dimensions).bounds(top.x(),top.y(),top.width(),top.height()).build());
@@ -114,8 +115,9 @@ final class WorldMapScreen extends Screen {
     private void create(int x,int z){if(!WorldMapClient.markersReady()||Math.abs((long)x)>30000000||Math.abs((long)z)>30000000)return;openMarker(point(x,z),true);}
     private double distance(MapMarker m,double x,double y){return Math.hypot(view.screenX(m.x()+.5,midX())-x,view.screenZ(m.z()+.5,midZ())-y);}
     private MapMarker hit(double x,double y){var draft=draftMarker();if(draft!=null&&draft.dimension().equals(dimension)&&distance(draft,x,y)<=markerSize()/2+3)return draft;return visibleMarkers().stream().filter(m->distance(m,x,y)<=markerSize()/2+3).min(Comparator.comparingDouble(m->distance(m,x,y))).orElse(null);}
-    boolean canTeleport(String targetDimension){var root=minecraft.getConnection().getCommands().getRoot();return (root.getChild("teleport")!=null||root.getChild("tp")!=null)&&(targetDimension.equals(minecraft.level.dimension().location().toString())||(root.getChild("execute")!=null&&root.getChild("execute").getChild("in")!=null));}
-    void teleport(MapMarker m){if(!canTeleport(m.dimension()))return;String cmd=dev.abros.rivet.core.map.MapTeleport.command(m,minecraft.level.dimension().location().toString(),minecraft.getConnection().getCommands().getRoot().getChild("tp")!=null);minecraft.player.connection.sendCommand(cmd);onClose();}
+    private boolean hasMapTeleport(){var root=minecraft.getConnection().getCommands().getRoot().getChild("rivet");return root!=null&&root.getChild("mapTeleport")!=null;}
+    boolean canTeleport(String targetDimension){if(ServerMenuClient.supports("map-teleport-permission"))return hasMapTeleport();if(hasMapTeleport())return true;var root=minecraft.getConnection().getCommands().getRoot();return (root.getChild("teleport")!=null||root.getChild("tp")!=null)&&(targetDimension.equals(minecraft.level.dimension().location().toString())||(root.getChild("execute")!=null&&root.getChild("execute").getChild("in")!=null));}
+    void teleport(MapMarker m){if(!canTeleport(m.dimension()))return;String cmd=hasMapTeleport()?"rivet mapTeleport "+m.dimension()+" "+m.x()+" "+m.y()+" "+m.z():dev.abros.rivet.core.map.MapTeleport.command(m,minecraft.level.dimension().location().toString(),minecraft.getConnection().getCommands().getRoot().getChild("tp")!=null);minecraft.player.connection.sendCommand(cmd);onClose();}
     void navigate(MapMarker m){DirectionCue.start(m);WorldMapClient.flush();minecraft.setScreen(null);}
     void delete(MapMarker m){minecraft.setScreen(new UiConfirmDialog(yes->{if(yes){try{WorldMapClient.delete(m.id());markerPanel=null;minecraft.setScreen(this);}catch(Exception ex){openMarker(m,false);minecraft.setScreen(this);}}else minecraft.setScreen(this);},Client.tr("map.deleteConfirm"),Component.literal(m.name())).dangerous().compact());}
     private void deathActions(MapMarker marker,int x,int y){
@@ -131,14 +133,16 @@ final class WorldMapScreen extends Screen {
         canvasPressed=false;dragged=false;lastClick=0;
         var marker=hit(x,y);int bx=(int)Math.floor(view.worldX(x,midX())),bz=(int)Math.floor(view.worldZ(y,midZ()));if(Math.abs((long)bx)>30000000||Math.abs((long)bz)>30000000)return;
         var place=marker==null?point(bx,bz):marker;var rows=new ArrayList<UiContextPopup.Item>();
+        if(marker!=null&&ServerMenuClient.supports("map-marker-links"))rows.add(new UiContextPopup.Item(Client.tr("map.shareChat"),()->minecraft.setScreen(new UiConfirmDialog(yes->{minecraft.setScreen(this);if(yes&&minecraft.getConnection()!=null)minecraft.getConnection().sendCommand("rivet shareMarker "+MapMarkerLink.encode(marker));},Client.tr("map.shareChat"),Component.literal(marker.name()+" · "+marker.x()+", "+marker.y()+", "+marker.z()))),false));
+        if(marker!=null&&!marker.death()&&WorldMapClient.personal(marker)&&MapPublications.available())rows.add(new UiContextPopup.Item(Client.tr("map.publications"),()->minecraft.setScreen(new MapPublicationsScreen(this,marker)),false));
         if(WorldMapClient.markersReady())rows.add(new UiContextPopup.Item(Client.tr("map.add"),()->create(bx,bz),false));
-        if(marker!=null&&!marker.death())rows.add(new UiContextPopup.Item(Client.tr("map.edit"),()->openMarker(marker,false),false));
+        if(marker!=null&&!marker.death()&&WorldMapClient.personal(marker))rows.add(new UiContextPopup.Item(Client.tr("map.edit"),()->openMarker(marker,false),false));
         if(MapLayers.visible(MapLayers.Layer.TERRITORIES,false))for(var t:MapGroupClient.territories())if(t.dimension().equals(dimension)&&t.contains(view.worldX(x,midX()),view.worldZ(y,midZ())))rows.add(new UiContextPopup.Item(Client.tr("map.territory").copy().append(": "+t.name()),()->MapGroupClient.open(this,t.id().toString()),false));
         rows.add(new UiContextPopup.Item(Client.tr("map.navigate"),()->navigate(place),false));
         if(DirectionCue.hasTarget())rows.add(new UiContextPopup.Item(Client.tr("map.stop"),DirectionCue::clear,false));
         if(canTeleport(place.dimension())&&(marker!=null||!minecraft.gameMode.canHurtPlayer()||knownHeight(bx,bz)))rows.add(new UiContextPopup.Item(Client.tr(marker==null?"map.teleportHere":"map.teleportMarker"),()->teleport(place),false));
         rows.add(new UiContextPopup.Item(Client.tr("map.copy"),()->minecraft.keyboardHandler.setClipboard(place.x()+" "+place.y()+" "+place.z()),false));
-        if(marker!=null)rows.add(new UiContextPopup.Item(Client.tr("map.delete"),()->delete(marker),true));
+        if(marker!=null&&WorldMapClient.personal(marker))rows.add(new UiContextPopup.Item(Client.tr("map.delete"),()->delete(marker),true));
         rows.add(new UiContextPopup.Item(Client.tr("map.export"),()->minecraft.setScreen(new MapExportScreen(this)),false));
         minecraft.setScreen(new UiContextPopup(this,(int)x,(int)y,rows));
     }
@@ -147,7 +151,7 @@ final class WorldMapScreen extends Screen {
         if(territoryDraft==null&&!ruler&&MapSharedOverlay.clickWorld(this,dimension,view,x,y,button))return true;
         if(button==1&&territoryDraft!=null){if(!territoryDraft.points.isEmpty())territoryDraft.points.removeLast();return true;}
         if(button==1){cancelMarkerDrag();if(ruler){rulerStart=null;rulerEnd=null;}else context(x,y);return true;}
-        if(button==0){downX=x;downY=y;dragged=false;canvasPressed=true;pressedMarker=ruler||territoryDraft!=null?null:hit(x,y);dragOrigin=null;return true;}
+        if(button==0){downX=x;downY=y;dragged=false;canvasPressed=true;pressedMarker=ruler||territoryDraft!=null?null:hit(x,y);if(pressedMarker!=null&&!WorldMapClient.personal(pressedMarker)&&(markerPanel==null||!markerPanel.marker.id().equals(pressedMarker.id())))pressedMarker=null;dragOrigin=null;return true;}
         return false;
     }
     @Override public boolean mouseDragged(double x,double y,int button,double dx,double dy){
@@ -252,9 +256,10 @@ final class WorldMapScreen extends Screen {
         String status=WorldMapClient.error().isEmpty()?(int)Math.floor(view.worldX(x,midX()))+", "+(int)Math.floor(view.worldZ(y,midZ()))+" · "+Client.tr("map.scale").getString()+" "+String.format(Locale.ROOT,"%.2f",view.zoom()):WorldMapClient.error();if(ruler){double[] end=rulerEnd==null?new double[]{view.worldX(x,midX()),view.worldZ(y,midZ())}:rulerEnd;status=rulerStart==null?Client.tr("map.rulerStart").getString():String.format(Locale.ROOT,"%.1f",Math.hypot(end[0]-rulerStart[0],end[1]-rulerStart[1]))+" "+Client.tr("map.blocks").getString()+" · "+Client.tr(rulerEnd==null?"map.rulerEnd":"map.rulerAgain").getString();}if(MapRenderSettings.INSTANCE.hoverBiome&&inside(x,y)){String biome=biomeAt((int)Math.floor(view.worldX(x,midX())),(int)Math.floor(view.worldZ(y,midZ())));if(!biome.isEmpty())status+=" · "+biome;}if(territoryDraft!=null)status=Client.tr("map.territoryHint").getString()+" · "+territoryDraft.points.size()+"/128";if(MapCaves.options().showTop()&&MapCaves.layer(dimension).cave())status=MapCaves.label(dimension)+" · "+status;int footerX=markerDrawer?drawerBox().right()+8:toolbar().right()+8,footerRight=markerPanel!=null?markerBox().x()-8:width-8;int available=footerRight-footerX-16;if(available>=40){status=UiKit.fit(font,status,available);int sw=font.width(status)+16;UiKit.material(g,footerX,height-28,sw,20);Ui.text(g,font,status,footerX+8,height-22,UiKit.muted(),false);}
         if(inside(x,y)){var marker=hit(x,y);if(marker!=null){g.flush();g.renderComponentTooltip(font,marker.death()?List.of(Client.tr("map.death"),Component.literal(CommunityScreen.local(marker.deathAt())),Component.literal(marker.x()+", "+marker.y()+", "+marker.z()+" · "+dev.abros.rivet.network.DimensionLabels.name(marker.dimension()).getString())):List.of(Component.literal(marker.name())),x,y);g.flush();}}
     }
-    @Override public void tick(){if(groupsAvailable!=MapGroupClient.available()){groupsAvailable=MapGroupClient.available();if(!groupsAvailable)territoryDraft=null;rebuildWidgets();}super.tick();if(navigationActive!=DirectionCue.hasTarget())rebuildWidgets();if(categorySnapshot!=WorldMapClient.categories()){categorySnapshot=WorldMapClient.categories();if(!categoryFilter.equals("*")&&!categoryFilter.isEmpty()&&categorySnapshot.stream().noneMatch(c->c.id().toString().equals(categoryFilter)))categoryFilter="";if(markerDrawer)rebuildWidgets();}if(markerDrawer&&!query.equals(appliedQuery)){appliedQuery=query;boolean focus=searchField!=null&&searchField.isFocused();int cursor=searchField==null?0:searchField.getCursorPosition();markerScroll=0;rebuildWidgets();if(focus){setFocused(searchField);searchField.setCursorPosition(cursor);}}if(markerSnapshot!=WorldMapClient.markers()){markerSnapshot=WorldMapClient.markers();if(markerDrawer)rebuildWidgets();}}
-    @Override public boolean keyPressed(int key,int scan,int modifiers){if(territoryDraft!=null){if(key==256){cancelTerritory();return true;}if(key==257||key==335)return true;if(key==259){if(!territoryDraft.points.isEmpty())territoryDraft.points.removeLast();return true;}}if(key==256&&dragOrigin!=null){cancelMarkerDrag();return true;}if(key==256&&ruler){if(rulerStart!=null){rulerStart=null;rulerEnd=null;}else{ruler=false;rebuildWidgets();}return true;}if(key==256&&markerPanel!=null){closeMarker();return true;}if(key==256&&markerDrawer){markerDrawer=false;rebuildWidgets();return true;}return super.keyPressed(key,scan,modifiers);}
+    @Override public void tick(){if(groupsAvailable!=MapGroupClient.available()){groupsAvailable=MapGroupClient.available();if(!groupsAvailable&&territoryDraft!=null&&!territoryDraft.group.isEmpty())territoryDraft=null;rebuildWidgets();}super.tick();if(navigationActive!=DirectionCue.hasTarget())rebuildWidgets();if(categorySnapshot!=WorldMapClient.categories()){categorySnapshot=WorldMapClient.categories();if(!categoryFilter.equals("*")&&!categoryFilter.isEmpty()&&categorySnapshot.stream().noneMatch(c->c.id().toString().equals(categoryFilter)))categoryFilter="";if(markerDrawer)rebuildWidgets();}if(markerDrawer&&!query.equals(appliedQuery)){appliedQuery=query;boolean focus=searchField!=null&&searchField.isFocused();int cursor=searchField==null?0:searchField.getCursorPosition();markerScroll=0;rebuildWidgets();if(focus){setFocused(searchField);searchField.setCursorPosition(cursor);}}if(markerSnapshot!=WorldMapClient.markers()){markerSnapshot=WorldMapClient.markers();if(markerDrawer)rebuildWidgets();}}
+    @Override public boolean keyPressed(int key,int scan,int modifiers){if(territoryDraft!=null){if(key==256){cancelTerritory();return true;}if(key==257||key==335)return true;if(key==259){if(!territoryDraft.points.isEmpty())territoryDraft.points.removeLast();return true;}}if(key==256&&dragOrigin!=null){cancelMarkerDrag();return true;}if(key==256&&ruler){if(rulerStart!=null){rulerStart=null;rulerEnd=null;}else{ruler=false;rebuildWidgets();}return true;}if(key==256&&markerPanel!=null){closeMarker();return true;}if(key==256&&markerDrawer){markerDrawer=false;rebuildWidgets();return true;}if(key==256){onClose();return true;}return super.keyPressed(key,scan,modifiers);}
     @Override public boolean isPauseScreen(){return false;}
-    @Override public void onClose(){WorldMapClient.flush();minecraft.setScreen(parent);}
+    @Override public void removed(){lastZoom=view.zoom();super.removed();}
+    @Override public void onClose(){lastZoom=view.zoom();WorldMapClient.flush();minecraft.setScreen(parent);}
     static void releaseTextures(){MapRegionTextures.reset();}
 }

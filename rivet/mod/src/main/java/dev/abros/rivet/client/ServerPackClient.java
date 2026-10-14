@@ -32,7 +32,7 @@ public final class ServerPackClient {
   void background(Runnable task){try{Client.CONNECT.execute(task);}catch(Exception ex){fail(ex);}}
   void check(){mc.setScreen(loading);background(()->{try{
    Client.ensureHub();
-   installer=new PackInstaller(Client.hub.game,Client.hub.cache,dev.abros.rivet.Rivet.VERSION);trust=new PackTrust(Client.hub.game);
+   installer=new PackInstaller(Client.hub.game,Client.hub.cache,dev.abros.rivet.Rivet.VERSION,Client.hub.neoVersion());trust=new PackTrust(Client.hub.game);
    var resolved=ServerNameResolver.DEFAULT.resolveAddress(address).orElseThrow(()->new java.io.IOException(Client.text("ui.could_not_resolve_the_server_address_d2e1a78a")));
    endpoint=PackDiscovery.query(resolved.asInetSocketAddress(),address.getHost(),address.getPort(),address.getHost());
    if(cancel.get())return;
@@ -40,7 +40,7 @@ public final class ServerPackClient {
    String known=trust.fingerprint(server);if(!known.equals(endpoint.fingerprint()))mc.execute(()->{if(cancel.get())return;mc.setScreen(new UiConfirmDialog(yes->{if(!yes){cancel();return;}mc.setScreen(loading);fetch(true);},Component.literal(known.isEmpty()?Client.text("ui.server_pack_88518674"):Client.text("ui.server_key_changed_3600f2c5")),Component.literal(Client.text("ui.server_ce169643")+server+Client.text("ui.key_ac804c85")+endpoint.fingerprint()+"\n\n"+(known.isEmpty()?Client.text("ui.allow_downloading_files_from_this_server_6be6c08a"):Client.text("ui.verify_the_new_key_with_the_065a5528")))));});else fetch(false);
   }catch(Exception ex){fail(ex);}});}
   void fetch(boolean accepted){background(()->{try(var client=new PackClient(endpoint.host(),endpoint.port(),endpoint.fingerprint())){active=client;if(cancel.get())return;if(accepted)trust.accept(server,endpoint.fingerprint());offer=client.manifest();if(offer==null){if(configure)throw new java.io.IOException(Client.text("ui.the_owner_has_not_published_a_92a25485"));resume();return;}
-   if(!offer.manifest().minecraft().equals("1.21.1")||!offer.manifest().loader().equals(Client.hub.neoVersion()))throw new java.io.IOException(Client.text("ui.install_minecraft_50fb718a")+offer.manifest().minecraft()+Client.text("ui.and_neoforge_b399f786")+offer.manifest().loader()+Client.text("ui.before_connecting_6905d240"));
+   if(!PackRuntime.supported(offer.manifest().minecraft(),offer.manifest().loader(),Client.hub.neoVersion()))throw new java.io.IOException(Client.text("ui.install_minecraft_50fb718a")+offer.manifest().minecraft()+Client.text("ui.and_neoforge_b399f786")+offer.manifest().loader()+Client.text("ui.before_connecting_6905d240"));
    var selected=installer.choices(server,offer.manifest());var review=installer.review(server,offer.manifest(),selected);
    if(!configure&&review.plan().changes().isEmpty()&&installer.installedHash().equals(offer.hash())){installer.validateMods(review);if(!Json.opt(review.state(),"packServer","").equals(server)){installer.saveSelection(review);}resume();return;}
    mc.execute(()->{if(!cancel.get())mc.setScreen(new ServerPackScreen(parent,offer.manifest(),selected,choice->review(choice)));});

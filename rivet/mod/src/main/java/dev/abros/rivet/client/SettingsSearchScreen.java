@@ -5,12 +5,12 @@ import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.network.chat.Component;
 /** Local settings index: navigation opens the matching row in the original workspace. */
-final class SettingsSearchScreen extends ScrollScreen {
+final class SettingsSearchScreen extends ScrollScreen implements UiParentScreen {
  private final Screen parent;private final boolean mapOnly;private UiDialog dialog;private String query="";private long changed;private List<SettingsCatalog.Entry> results=List.of();
  SettingsSearchScreen(Screen parent){this(parent,false);}
  SettingsSearchScreen(Screen parent,boolean mapOnly){super(Client.tr("ui.search_settings_c64fa265"));this.parent=parent;this.mapOnly=mapOnly;}
  private List<SettingsCatalog.Entry> matching(){return search(query).stream().filter(e->!mapOnly||e.section()==5||e.section()==7).toList();}
- Screen parentScreen(){return parent;}
+ public Screen parentScreen(){return parent;}
  static List<SettingsCatalog.Entry> entries(){return SettingsCatalog.entries();}
  static List<SettingsCatalog.Entry> search(String query){var words=query.strip().toLowerCase(Locale.ROOT).split("\\s+");return entries().stream().filter(e->{String text=(e.name()+" "+UiSettingsShell.SECTIONS.get(e.section())+" "+e.aliases()).toLowerCase(Locale.ROOT);return Arrays.stream(words).allMatch(text::contains);}).toList();}
  private void search(){results=matching();resetScroll();rebuildWidgets();}

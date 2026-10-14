@@ -5,7 +5,8 @@ import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.network.chat.Component;
 import java.util.*;
 /** Category identity survives edits; deleting a category keeps its markers. */
-final class MapCategoriesScreen extends ScrollScreen{
+final class MapCategoriesScreen extends ScrollScreen implements UiParentScreen {
+ @Override public net.minecraft.client.gui.screens.Screen parentScreen(){return parent;}
  private final Screen parent;private UiDialog dialog;private UUID id=UUID.randomUUID();private String name="",error="";private boolean map=true,mini=true,existing;
  MapCategoriesScreen(Screen parent){super(Client.tr("map.categories"));this.parent=parent;}
  private void select(MapCategory c){id=c.id();name=c.name();map=c.mapVisible();mini=c.minimapVisible();existing=true;error="";rebuildWidgets();}

@@ -5,7 +5,8 @@ import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.network.chat.Component;
 import java.util.function.Consumer;
 /** All Rivet confirmations share the dialog and footer components; vanilla is untouched. */
-final class UiConfirmDialog extends Screen {
+final class UiConfirmDialog extends Screen implements UiParentScreen {
+ @Override public net.minecraft.client.gui.screens.Screen parentScreen(){return parent;}
  private final Screen parent;private final Consumer<Boolean> answer;private final Component message;private final ContentPane content=new ContentPane();private UiDialog dialog;private boolean answered,dangerous,compact;
  UiConfirmDialog compact(){compact=true;return this;}
  UiConfirmDialog dangerous(){dangerous=true;return this;}

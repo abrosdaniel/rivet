@@ -5,10 +5,10 @@ import net.minecraft.network.chat.Component;
 import dev.abros.rivet.core.NativeLayout;
 
 /** Export is explicit and keeps the map view intact when returning. */
-final class MapExportScreen extends Screen {
+final class MapExportScreen extends Screen implements UiParentScreen {
  private final WorldMapScreen parent;private final MapExport.Area area;private UiDialog dialog;private MapExport.Job job;private String error="";
  MapExportScreen(WorldMapScreen parent){super(Client.tr("map.export"));this.parent=parent;var v=parent.view;int x=(int)Math.floor(v.worldX(0,parent.width/2d)),z=(int)Math.floor(v.worldZ(0,parent.height/2d));area=new MapExport.Area(x,z,Math.max(1,(int)Math.ceil(parent.width/v.zoom())),Math.max(1,(int)Math.ceil(parent.height/v.zoom())));}
- Screen parentScreen(){return parent;}
+ public Screen parentScreen(){return parent;}
  @Override protected void init(){dialog=UiDialog.fit(width,height,340,190);var b=dialog.body();addRenderableWidget(UiActions.button(Client.tr("ui.export_visible_area_968b0608"),UiActions.Tone.PRIMARY,MapGlyphs.icon("save"),ignored->{try{job=MapExport.export(MapCaves.layer(parent.selectedDimension()),area);error="";rebuildWidgets();}catch(RuntimeException e){error=e.getMessage();}}).bounds(b.x(),b.bottom()-28,b.width(),24).build()).active=job==null||job.done;UiActions.close(new NativeLayout.Box(dialog.footer().right()-96,dialog.footer().bottom()-20,96,20),this::addRenderableWidget,this::onClose);}
  @Override public void tick(){if(job!=null&&job.done&&children().stream().anyMatch(c->c instanceof net.minecraft.client.gui.components.Button b&&!b.active))rebuildWidgets();}
  @Override public void renderBackground(GuiGraphics g,int x,int y,float d){UiDialog.surface(g,dialog.frame().x(),dialog.frame().y(),dialog.frame().width(),dialog.frame().height());}

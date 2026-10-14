@@ -53,7 +53,8 @@ public final class Protocol {
             catch(Exception e){context.disconnect(net.minecraft.network.chat.Component.literal("Invalid Rivet handshake"));}
         });
         handshake.configurationToServer(ClientState.TYPE,ClientState.CODEC,(payload,context)->{try{serverReply.accept(Json.parse(payload.json()),context);}catch(Exception e){context.disconnect(net.minecraft.network.chat.Component.literal("Invalid Rivet client state"));}});
-        registrar.playToServer(FeatureRequest.TYPE,FeatureRequest.CODEC,(payload,context)->{try{featureRequest.accept(Json.parse(payload.json()),context);}catch(Exception error){failedPacket(error);}});
+        registrar.executesOn(net.neoforged.neoforge.network.registration.HandlerThread.NETWORK).playToServer(FeatureRequest.TYPE,FeatureRequest.CODEC,(payload,context)->Ingress.dispatch(payload.json(),context,()->{try{featureRequest.accept(Json.parse(payload.json()),context);}catch(Exception error){failedPacket(error);}}));
+        registrar=registrar.executesOn(net.neoforged.neoforge.network.registration.HandlerThread.MAIN);
         registrar.playToClient(FeatureState.TYPE,FeatureState.CODEC,(payload,context)->{try{featureState.accept(Json.parse(payload.json()));}catch(Exception error){failedPacket(error);}});
     }
 }

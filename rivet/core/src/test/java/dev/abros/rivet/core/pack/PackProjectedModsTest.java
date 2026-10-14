@@ -21,6 +21,15 @@ class PackProjectedModsTest {
  PackManifest.Entry cached(Cache cache,Path source,String destination,String component)throws Exception{
   String hash=Hashes.sha256(source);Path object=cache.path(hash);Files.createDirectories(object.getParent());Files.copy(source,object);return new PackManifest.Entry(destination,hash,Files.size(source),component,"replace");
  }
+ @Test void selectedModsAreCheckedAgainstInstalledLoaderNotRecommendation()throws Exception{
+  var cache=new Cache(game,new Remote());var file=cached(cache,jar("extra.jar","extra","1.0",dependency("extra","neoforge","required","[21.1.251,21.2)","CLIENT")),"mods/extra.jar","extra");
+  var m=manifest(List.of(new PackManifest.Component("extra","Extra","",true)),List.of(file));
+  var older=new PackInstaller(game,cache,"2.1.1","21.1.250");
+  assertThrows(IOException.class,()->older.validateMods(older.review("server",m,Set.of("extra"))));
+  assertDoesNotThrow(()->older.validateMods(older.review("server",m,Set.of())));
+  var newer=new PackInstaller(game,cache,"2.1.1","21.1.251");
+  assertDoesNotThrow(()->newer.validateMods(newer.review("server",m,Set.of("extra"))));
+ }
  @Test void switchingCannotRemoveLibraryRequiredByPersonalMod()throws Exception{
   var cache=new Cache(game,new Remote());var library=jar("mods/library.jar","library","1.0","");var personal=jar("mods/personal.jar","personal","1.0",dependency("personal","library","required","[1,2)","CLIENT"));own("mods/library.jar");
   var before=Json.read(game.resolve("rivet/state.json"));var installer=installer(cache);var review=installer.review("new-server",manifest(List.of(),List.of()),Set.of());

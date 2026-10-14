@@ -6,7 +6,7 @@ import net.minecraft.client.gui.components.Button;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.network.chat.Component;
 /** Short contextual choice without losing the current list or selection. */
-final class ChoicePopup extends ScrollScreen implements CommunityScreen.Receiver {
+final class ChoicePopup extends ScrollScreen implements CommunityScreen.Receiver, UiParentScreen {
  private final java.util.Set<Integer> dangerous=new java.util.HashSet<>();
  ChoicePopup danger(int index){dangerous.add(index);return this;}
  private int selected=-1;private int anchorX=-1,anchorY,anchorWidth,anchorTop;private final Screen parent;private final List<String> labels;private final Consumer<Integer> choose;
@@ -23,7 +23,7 @@ final class ChoicePopup extends ScrollScreen implements CommunityScreen.Receiver
  @Override public void renderBackground(GuiGraphics g,int x,int y,float d){if(anchorX<0)UiDialog.surface(g,panelLeft(),panelTop(),panelWidth(),panelHeight());else{UiTheme.panel(g,panelLeft(),panelTop(),panelWidth(),panelHeight(),UiKit.surface());g.renderOutline(panelLeft(),panelTop(),panelWidth(),panelHeight(),UiKit.border());}}
  @Override public void render(GuiGraphics g,int x,int y,float d){UiDialog.render(parent,this,g,d,()->{super.render(g,x,y,d);if(anchorX<0)UiHeading.dialog(g,font,title,panelLeft()+10,panelTop(),panelWidth()-20);});}
  @Override public boolean mouseClicked(double x,double y,int button){if(anchorX>=0&&(x<panelLeft()||x>panelLeft()+panelWidth()||y<panelTop()||y>panelTop()+panelHeight())){onClose();return true;}return super.mouseClicked(x,y,button);}
- Screen parentScreen(){return parent;}
+ public Screen parentScreen(){return parent;}
  void invalidate(){if(parent instanceof CommunityScreen screen)screen.invalidate();}
  @Override public void receiveCommunity(com.google.gson.JsonObject response){if(parent instanceof CommunityScreen screen)screen.receive(response);else if(parent instanceof CommunityScreen.Receiver receiver)receiver.receiveCommunity(response);}
  @Override public void tick(){if(parent!=null)parent.tick();}

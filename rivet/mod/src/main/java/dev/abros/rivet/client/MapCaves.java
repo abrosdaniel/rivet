@@ -49,7 +49,7 @@ final class MapCaves {
  static int top(String dim){
   if(!WorldMapClient.cavesAllowed())return MapLayer.SURFACE;
   var v=view(dim);if(v.mode()==0)return MapLayer.SURFACE;
-  var screen=Minecraft.getInstance().screen;while(true){if(screen instanceof ChoicePopup popup)screen=popup.parentScreen();else if(screen instanceof SettingsSearchScreen search)screen=search.parentScreen();else if(screen instanceof MapExportScreen export)screen=export.parentScreen();else if(screen instanceof MapSettingsScreen settings)screen=settings.parentScreen();else break;}
+  var screen=Minecraft.getInstance().screen;for(int i=0;i<32&&screen instanceof UiParentScreen modal;i++)screen=modal.parentScreen();
   boolean mapOpen=screen instanceof WorldMapScreen||screen instanceof MapCaveScreen;
   int top=MapLayer.SURFACE;
   if(mapOpen&&v.mode()==2)top=v.top();

@@ -11,6 +11,8 @@ allprojects {
                 includeGroup 'org.bouncycastle'
                 includeGroup 'org.postgresql'
                 includeGroup 'com.zaxxer'
+                includeGroup 'org.apache.httpcomponents.client5'
+                includeGroup 'org.apache.httpcomponents.core5'
             }
         }
         mavenCentral()

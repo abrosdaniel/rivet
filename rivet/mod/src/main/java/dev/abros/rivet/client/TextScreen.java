@@ -5,7 +5,8 @@ import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.network.chat.Component;
 import net.minecraft.util.FormattedCharSequence;
 import java.util.*;
-public class TextScreen extends ScrollScreen {
+public class TextScreen extends ScrollScreen implements UiParentScreen {
+ @Override public net.minecraft.client.gui.screens.Screen parentScreen(){return parent;}
     private final boolean literal;private final int footer;private final Screen parent;private final String text;private List<FormattedCharSequence> lines=List.of();
     public TextScreen(Screen parent,Component title,String text){this(parent,title,text,40);}
     public TextScreen(Screen parent,Component title,String text,boolean literal){this(parent,title,text,40,literal);}

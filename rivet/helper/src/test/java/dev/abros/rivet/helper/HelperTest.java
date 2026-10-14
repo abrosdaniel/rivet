@@ -34,6 +34,37 @@ class HelperTest {
         assertFalse(Files.exists(game.resolve("rivet/pending.json")));
         assertEquals("preserve",Files.readString(game.resolve("player-owned.txt")));
     }
+    @Test void forciblyKilledApplyRecoversAllFilesAndCanUpdateAgain()throws Exception{
+        String java=Path.of(System.getProperty("java.home"),"bin","java").toString();
+        String old=Hashes.sha256("old".getBytes()),next=Hashes.sha256("new".repeat(22000).getBytes());
+        var cache=new Cache(game,new Remote());Files.createDirectories(cache.path(next).getParent());Files.writeString(cache.path(next),"new".repeat(22000));
+        Files.createDirectories(game.resolve("mods"));Files.writeString(game.resolve("player-owned.txt"),"preserve");
+        var changes=new ArrayList<Planner.Change>();
+        for(int n=0;n<512;n++){String path="mods/crash-"+n+".jar";Files.writeString(game.resolve(path),"old");changes.add(new Planner.Change(path,old,next));}
+        var plan=new Planner.Plan(UUID.randomUUID().toString(),"crash-test",changes,Map.of(),Set.of(),List.of(),0);
+        var tx=new Transactions(game);tx.prepare(plan,new byte[0],new JsonObject());
+        // A real exited parent identity allows the standalone helper to start applying.
+        Process parent=new ProcessBuilder(java,"-version").redirectErrorStream(true).redirectOutput(ProcessBuilder.Redirect.DISCARD).start();
+        assertTrue(parent.waitFor(10,TimeUnit.SECONDS));
+        Process helper=new ProcessBuilder(java,"-jar",System.getProperty("rivet.helperJar"),"apply",game.toString(),plan.id(),Long.toString(parent.pid()),"1970-01-01T00:00:00Z")
+            .redirectErrorStream(true).redirectOutput(game.resolve("helper.log").toFile()).start();
+        try{
+            long until=System.nanoTime()+TimeUnit.SECONDS.toNanos(30);
+            while(Files.size(game.resolve("mods/crash-0.jar"))==3&&helper.isAlive()&&System.nanoTime()<until)Thread.sleep(1);
+            assertTrue(Files.size(game.resolve("mods/crash-0.jar"))>3,"Helper did not reach file mutation");
+            helper.destroyForcibly();assertTrue(helper.waitFor(10,TimeUnit.SECONDS));
+        }finally{helper.destroyForcibly();helper.waitFor(10,TimeUnit.SECONDS);}
+        assertEquals("APPLYING",Json.str(Json.read(tx.directory(plan.id()).resolve("journal.json")),"status"));
+        Process recover=new ProcessBuilder(java,"-jar",System.getProperty("rivet.helperJar"),"recover",game.toString(),plan.id())
+            .redirectErrorStream(true).redirectOutput(game.resolve("recover.log").toFile()).start();
+        try{assertTrue(recover.waitFor(30,TimeUnit.SECONDS));assertEquals(0,recover.exitValue(),()->{try{return Files.readString(game.resolve("recover.log"));}catch(IOException e){return e.toString();}});}finally{recover.destroyForcibly();}
+        for(var change:changes)assertEquals("old",Files.readString(game.resolve(change.path())));
+        assertFalse(Files.exists(game.resolve("rivet/pending.json")));assertEquals("preserve",Files.readString(game.resolve("player-owned.txt")));
+        tx.recover(plan.id());
+        var retry=new Planner.Plan(UUID.randomUUID().toString(),"retry",List.of(changes.getFirst()),Map.of(),Set.of(),List.of(),0);
+        tx.prepare(retry,new byte[0],new JsonObject());tx.apply(retry.id());assertEquals(next,Hashes.sha256(game.resolve(changes.getFirst().path())));
+    }
+
     @Test void helperWaitsForActualParentBeforeApplying()throws Exception{
         String hash=Hashes.sha256("new".getBytes());Path object=game.resolve("rivet/cache/objects/"+hash.substring(0,2)+"/"+hash);Files.createDirectories(object.getParent());Files.writeString(object,"new");var plan=new Planner.Plan(UUID.randomUUID().toString(),"test",List.of(new Planner.Change("mods/test.jar",null,hash)),Map.of(),Set.of(),List.of(),0);new Transactions(game).prepare(plan,new byte[0],new JsonObject());
         String java=Path.of(System.getProperty("java.home"),"bin","java").toString();String parentClasses=Path.of(Parent.class.getProtectionDomain().getCodeSource().getLocation().toURI()).toString();Process parent=new ProcessBuilder(java,"-cp",parentClasses,Parent.class.getName()).start();Process helper=null;

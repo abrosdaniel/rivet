@@ -15,13 +15,13 @@ final class ServerChat {
  private static long nextSample;
  private static final Set<UUID> emptyLocalWarned=new HashSet<>();
  static void start(){nextSample=0;emptyLocalWarned.clear();ServerChatHistory.start();}
- static void stop(){emptyLocalWarned.clear();ServerChatHistory.stop();}
+ static void stop(){markerShares.clear();emptyLocalWarned.clear();ServerChatHistory.stop();}
  static void install(){
   NeoForge.EVENT_BUS.addListener(ServerChat::chat);
   NeoForge.EVENT_BUS.addListener(net.neoforged.bus.api.EventPriority.LOWEST,ServerChat::rememberGlobal);
   NeoForge.EVENT_BUS.addListener((net.neoforged.neoforge.event.entity.player.PlayerEvent.PlayerLoggedInEvent e)->{if(e.getEntity() instanceof ServerPlayer p)ServerChatHistory.joined(p);});
   NeoForge.EVENT_BUS.addListener(ServerChat::commands);
-  NeoForge.EVENT_BUS.addListener((net.neoforged.neoforge.event.entity.player.PlayerEvent.PlayerLoggedOutEvent e)->{emptyLocalWarned.remove(e.getEntity().getUUID());if(e.getEntity() instanceof ServerPlayer p)ServerChatHistory.left(p);});
+  NeoForge.EVENT_BUS.addListener((net.neoforged.neoforge.event.entity.player.PlayerEvent.PlayerLoggedOutEvent e)->{emptyLocalWarned.remove(e.getEntity().getUUID());markerShares.remove(e.getEntity().getUUID());if(e.getEntity() instanceof ServerPlayer p)ServerChatHistory.left(p);});
   NeoForge.EVENT_BUS.addListener((net.neoforged.neoforge.event.tick.ServerTickEvent.Post e)->{
    ServerChatHistory.tick(e.getServer());long now=System.currentTimeMillis();if(now<nextSample)return;nextSample=now+1000;
    var settings=ServerDatabase.settings();if(!settings.flag("chat.enabled")||!settings.flag("chat.local")||emptyLocalWarned.isEmpty())return;
@@ -66,6 +66,18 @@ final class ServerChat {
   try{ServerFeatures.storage(()->{try{var members=store.chatMembers(channel,p.getUUID().toString());var own=store.playerGroups(p.getUUID().toString());String label=own.stream().filter(j->Json.str(j,"id").equals(channel)).map(j->Json.str(j,"title")).findFirst().orElse(dev.abros.rivet.core.Messages.text("rivet.ui.group_4fb407c1"));p.server.execute(dev.abros.rivet.core.Messages.capture(()->{if(epoch!=ServerSocial.generation()||p.server.getPlayerList().getPlayer(p.getUUID())!=p||!AuthServer.authenticated(p))return;var audience=p.server.getPlayerList().getPlayers().stream().filter(v->AuthServer.authenticated(v)&&members.contains(v.getUUID().toString())).toList();var formatted=formatted(p,label,body,"groupColor");for(var recipient:audience)recipient.sendSystemMessage(sender(formatted,p));ServerChatHistory.remember(p,channel,formatted,audience);com.mojang.logging.LogUtils.getLogger().info("[Rivet group] {}: {}",p.getGameProfile().getName(),message);}));}catch(Exception denied){p.server.execute(dev.abros.rivet.core.Messages.capture(()->{if(epoch==ServerSocial.generation())p.sendSystemMessage(Component.translatable("rivet.core.message_not_sent_check_your_group_b09287a8"));}));}});}catch(java.util.concurrent.RejectedExecutionException full){p.sendSystemMessage(Component.translatable("rivet.core.chat_busy_send_your_message_again_36311b98"));return 0;}return 1;
  }
  private static void deliver(ServerPlayer p,String label,String message,List<ServerPlayer> audience){var line=formatted(p,label,content(p,message),"localColor");for(var recipient:audience)recipient.sendSystemMessage(sender(line,p));ServerChatHistory.remember(p,"local",line,audience);com.mojang.logging.LogUtils.getLogger().info("[Rivet {}] {}: {}",label,p.getGameProfile().getName(),message);}
+ private static final Map<UUID,Long> markerShares=new HashMap<>();
+ static int shareMarker(ServerPlayer player,dev.abros.rivet.core.map.MapMarker marker){
+  if(!ServerDatabase.settings().flag("chat.enabled"))return 0;
+  long now=System.currentTimeMillis();if(now-markerShares.getOrDefault(player.getUUID(),0L)<2000)return 0;
+  markerShares.put(player.getUUID(),now);
+  var body=Component.literal("["+marker.name()+"]").withStyle(style->style.withColor(0x83C6C4).withUnderlined(true)
+   .withHoverEvent(new HoverEvent(HoverEvent.Action.SHOW_TEXT,Component.translatable("rivet.map.addShared")))
+   .withClickEvent(new ClickEvent(ClickEvent.Action.RUN_COMMAND,"/rivet addMarker "+dev.abros.rivet.core.map.MapMarkerLink.encode(marker))));
+  var line=formatted(player,ServerDatabase.settings().text("chat.globalName"),body,"globalColor");
+  for(var recipient:player.server.getPlayerList().getPlayers())if(AuthServer.authenticated(recipient))recipient.sendSystemMessage(sender(line,player));
+  ServerChatHistory.remember(player,"global",line,List.of());return 1;
+ }
  private static void commands(net.neoforged.neoforge.event.RegisterCommandsEvent e){var root=Commands.literal("rivet");
   var chat=Commands.literal("chat").requires(source->ServerDatabase.settings().flag("chat.enabled"));chat.then(Commands.literal("local").then(Commands.argument("message",com.mojang.brigadier.arguments.StringArgumentType.greedyString()).executes(c->channel(c.getSource().getPlayerOrException(),"local",com.mojang.brigadier.arguments.StringArgumentType.getString(c,"message")))));chat.then(Commands.literal("group").then(Commands.argument("group",com.mojang.brigadier.arguments.StringArgumentType.word()).suggests((c,b)->{var p=c.getSource().getPlayer();if(p!=null){ServerSocial.suggestGroups(p,b);}return b.buildFuture();}).then(Commands.argument("message",com.mojang.brigadier.arguments.StringArgumentType.greedyString()).executes(c->channel(c.getSource().getPlayerOrException(),com.mojang.brigadier.arguments.StringArgumentType.getString(c,"group"),com.mojang.brigadier.arguments.StringArgumentType.getString(c,"message"))))));root.then(chat);e.getDispatcher().register(root);
  }

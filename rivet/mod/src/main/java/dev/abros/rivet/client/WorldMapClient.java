@@ -40,6 +40,7 @@ public final class WorldMapClient {
     private record Window(MapLayer layer,int minX,int maxX,int minZ,int maxZ,long revision){}
     private static final Map<Window,List<TileKey>> windows=new LinkedHashMap<>(16,.75f,true);
     private static long knownRevision;
+    private static final Map<MapLayer,MapChunkIndex> knownSpatial=new HashMap<>();
     private static final Set<MapLayer> indexing=new HashSet<>(),indexed=new HashSet<>();
     private static final Set<TileKey> changedChunks=new LinkedHashSet<>();
     private record Scanned(java.lang.ref.WeakReference<net.minecraft.world.level.chunk.LevelChunk> chunk,int tick){}
@@ -51,6 +52,7 @@ public final class WorldMapClient {
     private static final Deque<MapMarker> pendingDeaths=new ArrayDeque<>();
     private static long deathRetry;
     private static List<MapMarker> markers=List.of();
+    private static List<MapTerritory> territories=List.of();
     private static List<MapCategory> categories=List.of();
     private static Map<String,MapCategory> categoryIndex=Map.of();
     private static MapRepository repository,receivedRepository,importing;
@@ -84,6 +86,10 @@ public final class WorldMapClient {
     static boolean ready() { return repository!=null&&allowed(); }
     static String error() { return error; }
     static List<MapMarker> markers() { return markers; }
+    private static List<MapMarker> combinedMarkers=List.of(),lastPersonal=List.of(),lastPublic=List.of();
+    static List<MapMarker> displayedMarkers(){var published=MapPublications.markers();if(lastPersonal!=markers||lastPublic!=published){lastPersonal=markers;lastPublic=published;var all=new LinkedHashMap<UUID,MapMarker>();published.forEach(m->all.put(m.id(),m));markers.forEach(m->all.put(m.id(),m));combinedMarkers=List.copyOf(all.values());}return combinedMarkers;}
+    static boolean personal(MapMarker marker){return markers.stream().anyMatch(m->m.id().equals(marker.id()));}
+
     static List<MapCategory> categories(){return categories;}
     static String categoryName(String id){var category=categoryIndex.get(id);return category==null?Client.tr("map.uncategorized").getString():category.name();}
     private static void categories(List<MapCategory> next){categories=List.copyOf(next);var index=new HashMap<String,MapCategory>();for(var category:categories)index.putIfAbsent(category.id().toString(),category);categoryIndex=Map.copyOf(index);}
@@ -100,7 +106,7 @@ public final class WorldMapClient {
     private static boolean submit(Runnable action) { if(IO.getQueue().size()>=IO_CAPACITY)return false;return enqueue(action); }
     private static boolean enqueue(Runnable action) { try{IO.execute(action);return true;}catch(RejectedExecutionException ex){return false;} }
     static void reset() {
-        flush(true);MapCaves.reset();scanLayer=null;scanTop=MapLayer.SURFACE;deaths.reset();pendingDeaths.clear();deathRetry=0;repository=null;receivedRepository=null;receivedTiles.clear();combinedTiles.clear();world=player=null;tiles.clear();loading.clear();dirty.clear();known.clear();windows.clear();knownRevision++;indexing.clear();indexed.clear();changedChunks.clear();scanned.clear();scanChunk=null;scanTile=null;scanOriginX=scanOriginZ=Integer.MIN_VALUE;retries.clear();markers=List.of();categories(List.of());markersReady=markersLoading=false;markerRetry=0;indexRetries.clear();error="";scan=scanRadius=scanPixel=0;scanning=null;lastFrame=0;scanOffsets=List.of();MapTerrainCache.reset();
+        flush(true);MapCaves.reset();scanLayer=null;scanTop=MapLayer.SURFACE;deaths.reset();pendingDeaths.clear();deathRetry=0;repository=null;receivedRepository=null;receivedTiles.clear();combinedTiles.clear();world=player=null;tiles.clear();loading.clear();dirty.clear();known.clear();knownSpatial.clear();windows.clear();knownRevision++;indexing.clear();indexed.clear();changedChunks.clear();scanned.clear();scanChunk=null;scanTile=null;scanOriginX=scanOriginZ=Integer.MIN_VALUE;retries.clear();markers=List.of();territories=List.of();categories(List.of());markersReady=markersLoading=false;markerRetry=0;indexRetries.clear();error="";scan=scanRadius=scanPixel=0;scanning=null;lastFrame=0;scanOffsets=List.of();MapTerrainCache.reset();
         MapBlockColors.clear();Minimap.reset();MapMobIcons.clear();
     }
     static void tick() {
@@ -112,7 +118,7 @@ public final class WorldMapClient {
             reset();deaths.observe(mc.player.isDeadOrDying());world=id;player=owner;repository=new MapRepository(mc.gameDirectory.toPath().resolve("rivet/maps"),id,owner);receivedRepository=new MapRepository(mc.gameDirectory.toPath().resolve("rivet/maps-received"),id,owner);
         }
         if(!markersReady&&!markersLoading&&System.currentTimeMillis()>=markerRetry){
-            var repo=repository;markersLoading=submit(()->{try{var queuedMarkers=writes.pending(writeKey(repo,"markers"));var queuedCategories=writes.pending(writeKey(repo,"categories"));var read=queuedMarkers==null?repo.markers():(List<MapMarker>)queuedMarkers;var groups=queuedCategories==null?repo.categories():(List<MapCategory>)queuedCategories;mc.execute(()->{if(repository==repo){markers=read;categories(groups);markersReady=true;markersLoading=false;}});}catch(Exception ex){mc.execute(()->{if(repository==repo){markersLoading=false;markerRetry=System.currentTimeMillis()+5000;failed(repo,ex);}});}});
+            var repo=repository;markersLoading=submit(()->{try{var queuedMarkers=writes.pending(writeKey(repo,"markers"));var queuedCategories=writes.pending(writeKey(repo,"categories"));var queuedTerritories=writes.pending(writeKey(repo,"territories"));var areas=queuedTerritories==null?repo.territories():(List<MapTerritory>)queuedTerritories;var read=queuedMarkers==null?repo.markers():(List<MapMarker>)queuedMarkers;var groups=queuedCategories==null?repo.categories():(List<MapCategory>)queuedCategories;mc.execute(()->{if(repository==repo){markers=read;territories=areas;categories(groups);markersReady=true;markersLoading=false;}});}catch(Exception ex){mc.execute(()->{if(repository==repo){markersLoading=false;markerRetry=System.currentTimeMillis()+5000;failed(repo,ex);}});}});
         }
         if(deaths.observe(mc.player.isDeadOrDying())){
             long at=System.currentTimeMillis();String name=Client.tr("map.death").getString()+" · "+java.time.Instant.ofEpochMilli(at).atZone(AccessibilityScreen.zone()).format(java.time.format.DateTimeFormatter.ofPattern("dd.MM HH:mm"));
@@ -164,7 +170,7 @@ public final class WorldMapClient {
     }
     private static void index(MapLayer dimension) {
         if(repository!=null&&!indexed.contains(dimension)&&System.currentTimeMillis()>=indexRetries.getOrDefault(dimension,0L)&&indexing.add(dimension)) {
-            var repo=repository;var received=receivedRepository;if(!submit(()->{try{var chunks=new HashSet<>(repo.chunks(dimension));chunks.addAll(received.chunks(dimension));Minecraft.getInstance().execute(()->{if(repository==repo){indexing.remove(dimension);indexRetries.remove(dimension);indexed.add(dimension);if(known.computeIfAbsent(dimension,d->new HashSet<>()).addAll(chunks))knownRevision++;}});}catch(Exception ex){Minecraft.getInstance().execute(()->{if(repository==repo){indexing.remove(dimension);indexRetries.put(dimension,System.currentTimeMillis()+5000);failed(repo,ex);}});}}))indexing.remove(dimension);
+            var repo=repository;var received=receivedRepository;if(!submit(()->{try{var chunks=new HashSet<>(repo.chunks(dimension));chunks.addAll(received.chunks(dimension));Minecraft.getInstance().execute(()->{if(repository==repo){indexing.remove(dimension);indexRetries.remove(dimension);indexed.add(dimension);if(known.computeIfAbsent(dimension,d->new HashSet<>()).addAll(chunks)){knownRevision++;var spatial=knownSpatial.get(dimension);if(spatial!=null)spatial.addAll(chunks);}}});}catch(Exception ex){Minecraft.getInstance().execute(()->{if(repository==repo){indexing.remove(dimension);indexRetries.put(dimension,System.currentTimeMillis()+5000);failed(repo,ex);}});}}))indexing.remove(dimension);
         }
     }
     static List<TileKey> visibleTiles(String dimension,MapViewport view,int width,int height) {return visibleTiles(MapLayer.surface(dimension),view,width,height);}
@@ -174,7 +180,8 @@ public final class WorldMapClient {
         var window=new Window(dimension,(int)Math.floor((view.x()-dx)/16),(int)Math.floor((view.x()+dx)/16),(int)Math.floor((view.z()-dz)/16),(int)Math.floor((view.z()+dz)/16),knownRevision);
         var result=windows.get(window);if(result!=null)return result;
         double centerX=(window.minX()+window.maxX())/2d,centerZ=(window.minZ()+window.maxZ())/2d;
-        result=known.getOrDefault(dimension,Set.of()).stream().filter(c->c.x()>=window.minX()&&c.x()<=window.maxX()&&c.z()>=window.minZ()&&c.z()<=window.maxZ())
+        var spatial=knownSpatial.computeIfAbsent(dimension,d->{var value=new MapChunkIndex();value.addAll(known.getOrDefault(d,Set.of()));return value;});
+        result=spatial.within(window.minX(),window.maxX(),window.minZ(),window.maxZ()).stream()
             .sorted(Comparator.comparingDouble(c->Math.hypot(c.x()-centerX,c.z()-centerZ))).map(c->new TileKey(dimension,c.x(),c.z())).toList();
         windows.put(window,result);while(windows.size()>32)windows.remove(windows.keySet().iterator().next());return result;
     }
@@ -187,8 +194,14 @@ public final class WorldMapClient {
     static Set<TileKey> ownKeys(){return Set.copyOf(tiles.keySet());}
     static MapTile ownSnapshot(TileKey key){var tile=tiles.get(key);return tile==null?null:tile.copy();}
     public static void changed(BlockPos position){if(!ready())return;var mc=Minecraft.getInstance();String dim=mc.level.dimension().location().toString();int x=position.getX()>>4,z=position.getZ()>>4;
+        // Do not commit a half-sampled tile across a block or light update.
+        if(scanning!=null&&scanning.dimension().equals(dim)&&scanning.x()==x&&scanning.z()==z)finishScan();
         scanned.keySet().removeIf(k->k.dimension().equals(dim)&&k.x()==x&&k.z()==z);
         if(changedChunks.size()<4096)changedChunks.add(new TileKey(MapCaves.layer(dim),x,z));}
+    private static boolean sampleReady(net.minecraft.client.multiplayer.ClientLevel level,int x,int z){
+        return !level.getLightEngine().hasLightWork()&&level.hasChunk(x,z)&&!level.getChunk(x,z).isEmpty()
+            &&level.getLightEngine().lightOnInSection(net.minecraft.core.SectionPos.of(x,level.getMinSection(),z));
+    }
     static void frame(){long timing=dev.abros.rivet.core.PerformanceMetrics.start();try{MapTerrainCache.beginFrame();sample();}finally{dev.abros.rivet.core.PerformanceMetrics.end("client.map.sample",timing);}}
     private static void sample(){
         long now=System.nanoTime(),elapsed=lastFrame==0?16_000_000:now-lastFrame;lastFrame=now;
@@ -218,11 +231,11 @@ public final class WorldMapClient {
             scanChunk=level.getChunk(scanning.x(),scanning.z());
         }
         var key=scanning;
-        if(!key.dimension().equals(level.dimension().location().toString())||!level.hasChunk(key.x(),key.z())||level.getChunk(key.x(),key.z())!=scanChunk||scanChunk.isEmpty()){finishScan();return true;}
+        if(!key.dimension().equals(level.dimension().location().toString())||!sampleReady(level,key.x(),key.z())||level.getChunk(key.x(),key.z())!=scanChunk){finishScan();return true;}
         if(scanTile==null){var loaded=ownTile(key.layer(),key.x(),key.z());if(loaded==null){changedChunks.add(key);finishScan();return true;}scanTile=loaded.copy();}
         var chunk=scanChunk;var at=new BlockPos.MutableBlockPos();int end=Math.min(256,scanPixel+16);
         for(;scanPixel<end;scanPixel++){int x=scanPixel%16,z=scanPixel/16;var sample=key.layer().cave()?MapSurfaceSampler.cave(level,chunk,key.x()*16+x,key.z()*16+z,at,scanTop,MapCaves.view(dim).depth()):MapSurfaceSampler.sample(level,chunk,key.x()*16+x,key.z()*16+z,at);if(sample!=null){scanChanged|=scanTile.set(x,z,sample.base(),sample.top(),sample.ground(),sample.overlay(),sample.glowing(),sample.layers());scanChanged|=scanTile.biome(x,z,sample.biome());scanChanged|=scanTile.blockLight(x,z,sample.blockLight());scanChanged|=scanTile.skyLight(x,z,sample.skyLight());}else scanChanged|=scanTile.set(x,z,0,0);}
-        if(scanPixel==256){if(scanChanged){tiles.put(key,scanTile);combinedTiles.remove(key);MapTerrainCache.changed(key);dirty.add(key);if(known.computeIfAbsent(key.layer(),d->new HashSet<>()).add(new MapRepository.Chunk(key.x(),key.z())))knownRevision++;}scanned.put(key,new Scanned(new java.lang.ref.WeakReference<>(chunk),ticks));while(scanned.size()>8192)scanned.remove(scanned.keySet().iterator().next());finishScan();}
+        if(scanPixel==256){if(scanChanged){tiles.put(key,scanTile);combinedTiles.remove(key);MapTerrainCache.changed(key);dirty.add(key);if(known.computeIfAbsent(key.layer(),d->new HashSet<>()).add(new MapRepository.Chunk(key.x(),key.z()))){knownRevision++;var spatial=knownSpatial.get(key.layer());if(spatial!=null)spatial.add(new MapRepository.Chunk(key.x(),key.z()));}}scanned.put(key,new Scanned(new java.lang.ref.WeakReference<>(chunk),ticks));while(scanned.size()>8192)scanned.remove(scanned.keySet().iterator().next());finishScan();}
         return true;
     }
     private static TileKey nextChanged(net.minecraft.client.multiplayer.ClientLevel level){
@@ -230,7 +243,7 @@ public final class WorldMapClient {
             var key=iterator.next();
             if(loading.contains(key)||System.currentTimeMillis()<retries.getOrDefault(key,0L))continue;
             iterator.remove();
-            if(key.layer().equals(scanLayer)&&level.hasChunk(key.x(),key.z())&&!level.getChunk(key.x(),key.z()).isEmpty())return key;
+            if(key.layer().equals(scanLayer)&&sampleReady(level,key.x(),key.z()))return key;
         }
         return null;
     }
@@ -238,7 +251,7 @@ public final class WorldMapClient {
         String dimension=level.dimension().location().toString();
         for(int attempts=0;attempts<scanOffsets.size();attempts++){
             var offset=scanOffsets.get(Math.floorMod(scan++,scanOffsets.size()));
-            int x=scanOriginX+offset.x(),z=scanOriginZ+offset.z();if(!level.hasChunk(x,z)||level.getChunk(x,z).isEmpty())continue;
+            int x=scanOriginX+offset.x(),z=scanOriginZ+offset.z();if(!sampleReady(level,x,z))continue;
             var key=new TileKey(scanLayer,x,z);if(loading.contains(key)||System.currentTimeMillis()<retries.getOrDefault(key,0L))continue;var previous=scanned.get(key);
             // Chunk identity detects a fresh server snapshot at an already visited location.
             if(previous==null||previous.chunk().get()!=level.getChunk(x,z))return key;
@@ -250,7 +263,7 @@ public final class WorldMapClient {
         for(var offset:scanOffsets){
             int x=scanOriginX+offset.x(),z=scanOriginZ+offset.z();var key=new TileKey(scanLayer,x,z);
             var previous=scanned.get(key);
-            if(previous!=null&&ticks-previous.tick()>=600&&level.hasChunk(x,z)&&!level.getChunk(x,z).isEmpty())return key;
+            if(previous!=null&&ticks-previous.tick()>=600&&sampleReady(level,x,z))return key;
         }
         return null;
     }
@@ -262,6 +275,14 @@ public final class WorldMapClient {
         var existing=markers.stream().filter(m->m.id().equals(marker.id())).findFirst().orElse(null);
         if(existing!=null&&existing.death()&&!existing.equals(marker))throw new IllegalStateException(Client.text("message.death_not_editable"));
         var next=new ArrayList<>(markers);next.removeIf(m->m.id().equals(marker.id()));next.add(marker);persist(next);
+    }
+    static List<MapTerritory> territories(){return territories;}
+    static void territory(MapTerritory value){var next=new ArrayList<>(territories);next.removeIf(t->t.id().equals(value.id()));next.add(value);saveTerritories(next);}
+    static void deleteTerritory(UUID id){saveTerritories(territories.stream().filter(t->!t.id().equals(id)).toList());}
+    private static void saveTerritories(List<MapTerritory> next){
+        if(!ready()||!markersReady)throw new IllegalStateException(Client.tr("map.loading").getString());
+        if(next.size()>256)throw new IllegalStateException(Client.tr("map.territoryLimit").getString());
+        var repo=repository;var snapshot=List.copyOf(next);if(!write(repo,"territories",snapshot,v->repo.territories((List<MapTerritory>)v)))throw new IllegalStateException(Client.tr("map.busy").getString());territories=snapshot;
     }
     static void delete(UUID id) { if(!ready()||!markersReady)throw new IllegalStateException(Client.tr("map.loading").getString());var next=new ArrayList<>(markers);next.removeIf(m->m.id().equals(id));persist(next); }
     private static void persist(List<MapMarker> next) {

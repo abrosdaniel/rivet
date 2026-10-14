@@ -20,7 +20,7 @@ public class Remote {
  private static void awaitHost(URI uri,AtomicBoolean cancel)throws IOException,InterruptedException{
   while(true){checkCancelled(cancel);Long until=COOLDOWNS.get(uri.getHost());if(until==null)return;long left=until-System.nanoTime();if(left<=0){COOLDOWNS.remove(uri.getHost(),until);return;}Thread.sleep(Math.max(1,Math.min(100,TimeUnit.NANOSECONDS.toMillis(left))));}
  }
- HttpResponse<InputStream> send(HttpRequest request)throws IOException,InterruptedException{return client.send(request,HttpResponse.BodyHandlers.ofInputStream());}
+ HttpResponse<InputStream> send(HttpRequest request)throws IOException,InterruptedException{return PublicHttp.send(request);}
  private HttpResponse<InputStream> send(HttpRequest request,AtomicBoolean cancel)throws IOException,InterruptedException{
   Thread owner=Thread.currentThread();var poll=TIMER.scheduleAtFixedRate(()->{if(cancel.get())owner.interrupt();},100,100,TimeUnit.MILLISECONDS);
   try{return send(request);}finally{poll.cancel(false);}
@@ -31,20 +31,18 @@ public class Remote {
   public final int status;public final URI endpoint;
   public HttpFailure(int status,URI endpoint){super("HTTP "+status+" from "+endpoint.getHost());this.status=status;this.endpoint=endpoint;}
  }
- private final HttpClient client=HttpClient.newBuilder().connectTimeout(Duration.ofSeconds(10)).followRedirects(HttpClient.Redirect.NEVER).build();
  private static final ScheduledExecutorService TIMER=Executors.newSingleThreadScheduledExecutor(r->{Thread t=new Thread(r,"Rivet network timeout");t.setDaemon(true);return t;});
  private Path metadataCache;
  public void cacheMetadata(Path directory)throws IOException{Files.createDirectories(directory);metadataCache=directory;}
  public static URI https(String s){URI u=URI.create(s);if(!"https".equals(u.getScheme())||u.getHost()==null||u.getUserInfo()!=null||u.getFragment()!=null)throw new IllegalArgumentException("HTTPS required");return u;}
- private static void publicAddress(URI u)throws IOException{for(InetAddress a:InetAddress.getAllByName(u.getHost()))if(a.isAnyLocalAddress()||a.isLoopbackAddress()||a.isLinkLocalAddress()||a.isSiteLocalAddress()||a.isMulticastAddress()||(a.getAddress().length==16&&(a.getAddress()[0]&0xfe)==0xfc))throw new IOException("Private metadata endpoint rejected");}
  public byte[] bytes(String url,int limit)throws IOException,InterruptedException{
   Path cache=metadataCache==null?null:metadataCache.resolve(Hashes.sha256(url.getBytes(java.nio.charset.StandardCharsets.UTF_8)));Path validators=cache==null?null:cache.resolveSibling(cache.getFileName()+".json");
   String etag="";if(validators!=null&&Files.exists(validators))etag=Json.opt(Json.read(validators),"etag","");
   URI u=https(url);
   for(int redirect=0;redirect<=5;redirect++){
-   publicAddress(u);var builder=HttpRequest.newBuilder(u).timeout(Duration.ofSeconds(30)).header("User-Agent","Rivet/1").header("Cache-Control","no-cache");if(!etag.isEmpty()&&cache!=null&&Files.exists(cache))builder.header("If-None-Match",etag);
+   var builder=HttpRequest.newBuilder(u).timeout(Duration.ofSeconds(30)).header("User-Agent","Rivet/1").header("Cache-Control","no-cache");if(!etag.isEmpty()&&cache!=null&&Files.exists(cache))builder.header("If-None-Match",etag);
    HttpResponse<InputStream> response;
-   try{response=client.send(builder.GET().build(),HttpResponse.BodyHandlers.ofInputStream());}catch(IOException e){throw new Unavailable("Metadata unavailable",e);}
+   try{response=send(builder.GET().build());}catch(IOException e){throw new Unavailable("Metadata unavailable",e);}
    try(var in=response.body()){
     int code=response.statusCode();if(code==304&&cache!=null&&Files.exists(cache)){byte[] b=Files.readAllBytes(cache);if(b.length>limit)throw new IOException("Metadata limit");return b;}
     if(code>=300&&code<400){u=https(u.resolve(response.headers().firstValue("Location").orElseThrow()).toString());etag="";continue;}
@@ -71,7 +69,7 @@ public class Remote {
   if(etag.isBlank()||etag.startsWith("W/")||offset>=limit){offset=0;Files.deleteIfExists(to);}
   URI u=https(url);
   for(int redirects=0;redirects<=5;redirects++){
-   checkCancelled(cancel);Long until=COOLDOWNS.get(u.getHost());if(until!=null&&until>System.nanoTime())throw new CoolingDown(u);publicAddress(u);var builder=HttpRequest.newBuilder(u).timeout(Duration.ofSeconds(30)).header("User-Agent","Rivet/1");if(offset>0)builder.header("Range","bytes="+offset+"-").header("If-Range",etag);
+   checkCancelled(cancel);Long until=COOLDOWNS.get(u.getHost());if(until!=null&&until>System.nanoTime())throw new CoolingDown(u);var builder=HttpRequest.newBuilder(u).timeout(Duration.ofSeconds(30)).header("User-Agent","Rivet/1");if(offset>0)builder.header("Range","bytes="+offset+"-").header("If-Range",etag);
    HttpResponse<InputStream> response;try{response=send(builder.GET().build(),cancel);}catch(IOException e){throw new Unavailable("Download unavailable",e);}
    try(var in=response.body()){
     int code=response.statusCode();if(code>=300&&code<400){u=https(u.resolve(response.headers().firstValue("Location").orElseThrow()).toString());continue;}

@@ -7,7 +7,8 @@ import net.minecraft.network.chat.Component;
 import java.util.List;
 
 /** An anchored menu stays above its parent without dimming or moving that parent. */
-final class UiContextPopup extends ScrollScreen {
+final class UiContextPopup extends ScrollScreen implements UiParentScreen {
+ @Override public net.minecraft.client.gui.screens.Screen parentScreen(){return parent;}
     record Item(Component label,Runnable run,boolean danger) {}
     private final Screen parent;private final List<Item> items;private final int anchorX,anchorY;
     private NativeLayout.Box panel;

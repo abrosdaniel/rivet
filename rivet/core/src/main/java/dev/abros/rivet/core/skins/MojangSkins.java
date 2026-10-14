@@ -11,8 +11,9 @@ public final class MojangSkins {
  private static byte[] get(String address,int limit)throws IOException{
   checkCancelled();
   var url=URI.create(address);if(!url.getScheme().equals("https")||!Set.of("api.mojang.com","sessionserver.mojang.com","textures.minecraft.net").contains(url.getHost())||url.getPort()!=-1||url.getUserInfo()!=null)throw new IOException("Invalid Mojang URL");
-  var c=(HttpURLConnection)url.toURL().openConnection();c.setConnectTimeout(5000);c.setReadTimeout(5000);c.setInstanceFollowRedirects(false);
-  try{int status=c.getResponseCode();checkCancelled();if(status==204||status==404)return null;if(status!=200)throw new IOException("Mojang HTTP "+status);try(var in=c.getInputStream()){byte[] bytes=in.readNBytes(limit+1);checkCancelled();if(bytes.length>limit)throw new IOException("Mojang response too large");return bytes;}}finally{c.disconnect();}
+  var response=dev.abros.rivet.core.PublicHttp.send(java.net.http.HttpRequest.newBuilder(url).GET().build());
+  try(var in=response.body()){int status=response.statusCode();checkCancelled();if(status==204||status==404)return null;if(status!=200)throw new IOException("Mojang HTTP "+status);byte[] bytes=in.readNBytes(limit+1);checkCancelled();if(bytes.length>limit)throw new IOException("Mojang response too large");return bytes;}
+
  }
  public static Result find(String nickname,UUID official)throws Exception{
   checkCancelled();

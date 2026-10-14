@@ -96,6 +96,14 @@ public final class MapRepository {
         if(Files.exists(file)){Path backup=root.resolve("backups").resolve("markers-before-import-"+System.currentTimeMillis()+"-"+UUID.randomUUID()+".json");Files.createDirectories(backup.getParent());Files.copy(file,backup);}
         markers(next);
     }
+    public List<MapTerritory> territories()throws IOException{
+        Path file=root.resolve("territories.json");if(!Files.exists(file))return List.of();
+        if(Files.size(file)>2*1024*1024)throw new IOException("Territories too large");
+        try{var j=Json.read(file);if(j.get("version").getAsInt()!=1)throw new IOException("Unsupported territories");var rows=j.getAsJsonArray("territories");if(rows.size()>256)throw new IOException("Too many territories");var out=new ArrayList<MapTerritory>();var ids=new HashSet<UUID>();for(var e:rows){var row=e.getAsJsonObject();var id=UUID.fromString(Json.str(row,"id"));if(!ids.add(id))throw new IOException("Duplicate territory");out.add(MapTerritoryJson.read(row,id));}return List.copyOf(out);}catch(RuntimeException bad){throw new IOException("Invalid territories",bad);}
+    }
+    public void territories(List<MapTerritory> values)throws IOException{
+        if(values.size()>256)throw new IOException("Too many territories");var j=new JsonObject();j.addProperty("version",1);var rows=new JsonArray();var ids=new HashSet<UUID>();for(var value:values){if(!ids.add(value.id()))throw new IOException("Duplicate territory");var row=MapTerritoryJson.write(value);row.addProperty("id",value.id().toString());rows.add(row);}j.add("territories",rows);Json.write(root.resolve("territories.json"),j);
+    }
     public List<MapCategory> categories()throws IOException{
         Path file=root.resolve("categories.json");if(!Files.exists(file))return List.of();
         if(Files.size(file)>65536)throw new IOException("Map categories too large");

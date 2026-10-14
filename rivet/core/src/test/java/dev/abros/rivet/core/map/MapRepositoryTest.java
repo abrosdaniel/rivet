@@ -36,6 +36,14 @@ class MapRepositoryTest {
         repo.write("minecraft:overworld",0,0,new MapTile());repo.markers(List.of());assertTrue(repo.markers().isEmpty());assertTrue(repo.read("minecraft:overworld",0,0).isPresent());
         assertThrows(java.io.IOException.class,()->repo.markers(List.of(marker,marker)));
     }
+    @Test void personalTerritoriesRemainLocalAndRejectDuplicateIds()throws Exception {
+        UUID world=UUID.randomUUID(),player=UUID.randomUUID();var repo=new MapRepository(root,world,player);
+        var territory=new MapTerritory(UUID.randomUUID(),"minecraft:overworld","Дом",0x123456,List.of(new MapTerritory.Point(-20,-10),new MapTerritory.Point(20,-10),new MapTerritory.Point(0,20)));
+        repo.territories(List.of(territory));assertEquals(List.of(territory),new MapRepository(root,world,player).territories());
+        assertTrue(new MapRepository(root,world,UUID.randomUUID()).territories().isEmpty());
+        assertThrows(java.io.IOException.class,()->repo.territories(List.of(territory,territory)));
+        assertEquals(List.of(territory),repo.territories());repo.territories(List.of());assertTrue(repo.territories().isEmpty());
+    }
     @Test void corruptTileIsReportedInsteadOfReplacingExistingFile()throws Exception {
         var repo=new MapRepository(root,UUID.randomUUID(),UUID.randomUUID());repo.write("minecraft:overworld",0,0,new MapTile());
         Path file;try(var files=Files.walk(root)){file=files.filter(p->p.toString().endsWith(".tile")).findFirst().orElseThrow();}

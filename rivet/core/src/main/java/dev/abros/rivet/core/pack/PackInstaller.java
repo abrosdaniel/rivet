@@ -10,9 +10,10 @@ import java.util.function.Consumer;
 /** Reviews current files, owns only explicitly installed paths and stages the common helper transaction. */
 public final class PackInstaller {
  public record Review(Planner.Plan plan,PackManifest manifest,JsonObject state,String server,JsonObject configurations,Map<String,String> activeConfigurations){}
- private final Path game;private final Cache cache;private final String rivetVersion;
+ private final Path game;private final Cache cache;private final String rivetVersion,installedLoader;
  public PackInstaller(Path game,Cache cache){this(game,cache,null);}
- public PackInstaller(Path game,Cache cache,String rivetVersion){this.game=game;this.cache=cache;this.rivetVersion=rivetVersion;}
+ public PackInstaller(Path game,Cache cache,String rivetVersion){this(game,cache,rivetVersion,null);}
+ public PackInstaller(Path game,Cache cache,String rivetVersion,String installedLoader){this.game=game;this.cache=cache;this.rivetVersion=rivetVersion;this.installedLoader=installedLoader;}
  private JsonObject state()throws IOException{Path file=game.resolve("rivet/state.json");return Files.exists(file)?Json.read(file):new JsonObject();}
  public Set<String> choices(String server,PackManifest manifest)throws IOException{var state=state();var selected=new HashSet<String>(manifest.initial());if(state.has("serverChoices")&&state.getAsJsonObject("serverChoices").has(server)){var choice=state.getAsJsonObject("serverChoices").getAsJsonObject(server);for(var c:manifest.components())if(c.optional()&&choice.has(c.id())){if(choice.get(c.id()).getAsBoolean())selected.add(c.id());else selected.remove(c.id());}}return Set.copyOf(selected);}
  public Review review(String server,PackManifest manifest,Set<String> choices)throws IOException{
@@ -87,7 +88,7 @@ public final class PackInstaller {
   }
   var duplicates=ModDuplicates.scanFiles(projected);if(!duplicates.isEmpty())throw new IOException(dev.abros.rivet.core.Messages.text("rivet.core.duplicate_mods_after_installation_abf4e1fa")+String.join("; ",duplicates)+dev.abros.rivet.core.Messages.text("rivet.core.remove_the_personal_duplicate_manually_and_c322f7e8"));
   var inputs=new ArrayList<PackModAudit.Input>();for(var entry:projected.entrySet())inputs.add(new PackModAudit.Input("mods/"+entry.getKey(),entry.getValue(),""));
-  try{PackModAudit.validateInstalled(inputs,review.manifest().minecraft(),review.manifest().loader(),rivetVersion);}
+  try{PackModAudit.validateInstalled(inputs,review.manifest().minecraft(),installedLoader==null?review.manifest().loader():installedLoader,rivetVersion);}
   catch(IOException incompatible){throw new IOException(dev.abros.rivet.core.Messages.text("rivet.core.installed_mod_set_is_incompatible_18ba71db")+incompatible.getMessage()+dev.abros.rivet.core.Messages.text("rivet.core.change_your_selected_components_or_personal_5dcd8279"),incompatible);}
  }
  public String installedHash()throws IOException{var state=state();if(!state.has("serverPack"))return "";var manifest=PackManifest.parse(Json.GSON.toJson(state.get("serverPack")).getBytes(java.nio.charset.StandardCharsets.UTF_8));for(var f:manifest.selected(Set.of()))if(f.policy().equals("replace")&&!f.hash().equals(Planner.hash(SafePaths.resolve(game,f.path()))))return "invalid";return Json.opt(state,"packHash","");}

@@ -10,7 +10,8 @@ import java.nio.file.Path;
 import java.util.*;
 
 /** Explicit local import; no external mod or server endpoint is required. */
-final class MapImportScreen extends ScrollScreen {
+final class MapImportScreen extends ScrollScreen implements UiParentScreen {
+ @Override public net.minecraft.client.gui.screens.Screen parentScreen(){return parent;}
  private static final java.util.concurrent.ExecutorService FILES=java.util.concurrent.Executors.newSingleThreadExecutor(r->{var t=new Thread(r,"rivet-waypoint-import");t.setDaemon(true);return t;});
  private static final java.util.concurrent.atomic.AtomicBoolean PICKER=new java.util.concurrent.atomic.AtomicBoolean();
  private final Screen parent;private final MapRepository owner=WorldMapClient.ownRepository();

@@ -32,5 +32,5 @@ public final class SkinWire {
  }
  private static void request(String json,IPayloadContext context){try{server.accept(Json.parse(json),context);}catch(Exception error){failure(true,error);}}
  private static void response(String json){try{client.accept(Json.parse(json));}catch(Exception error){failure(false,error);}}
- public static void register(RegisterPayloadHandlersEvent e){var r=e.registrar("3").optional();r.playToServer(Request.TYPE,Request.CODEC,(p,c)->c.enqueueWork(()->request(p.json,c)));r.playToClient(Response.TYPE,Response.CODEC,(p,c)->c.enqueueWork(()->response(p.json)));}
+ public static void register(RegisterPayloadHandlersEvent e){var r=e.registrar("3").optional();r.executesOn(net.neoforged.neoforge.network.registration.HandlerThread.NETWORK).playToServer(Request.TYPE,Request.CODEC,(p,c)->Ingress.dispatch(p.json,c,()->request(p.json,c)));r=r.executesOn(net.neoforged.neoforge.network.registration.HandlerThread.MAIN);r.playToClient(Response.TYPE,Response.CODEC,(p,c)->c.enqueueWork(()->response(p.json)));}
 }

@@ -5,7 +5,7 @@ import net.minecraft.client.Minecraft;
 
 /** Local display choices; terrain and markers remain scoped to the world and player. */
 final class MapSettings {
- static final int DEFAULT_SIZE=112;
+ static final int DEFAULT_SIZE=96;
  static void initialize(){}
  static final MapSettings INSTANCE=new MapSettings();
  dev.abros.rivet.core.map.MapHudPreferences hud=new dev.abros.rivet.core.map.MapHudPreferences();

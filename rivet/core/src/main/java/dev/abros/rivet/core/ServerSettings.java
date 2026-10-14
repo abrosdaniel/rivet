@@ -162,6 +162,7 @@ public final class ServerSettings {
     public FeatureModules modules(){return FeatureModules.from(this);}
     private void validate(){
         modules();range("map.nearbyRadius",1,4096);
+        range("pack.protection.connectionsPerAddress",1,64);range("pack.protection.requestsPerSecond",1,1000);range("pack.protection.idleSeconds",1,300);range("pack.protection.queueSeconds",1,600);
         range("pack.network.port",1,65535);range("pack.network.publicPort",1,65535);
         range("pack.downloads.totalMiB",0,1000000);range("pack.downloads.clientMiB",0,1000000);range("pack.downloads.concurrent",0,Integer.MAX_VALUE);
         String packDirectory=text("pack.directory");
