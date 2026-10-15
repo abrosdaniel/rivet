@@ -50,6 +50,16 @@ public final class ApiServerHarness {
         if(!ServerApiKeys.console(console))throw new IllegalStateException("Console rejected");
         var player=new net.minecraft.server.level.ServerPlayer(server,server.overworld(),
             new com.mojang.authlib.GameProfile(java.util.UUID.randomUUID(),"ApiAdminTest"),net.minecraft.server.level.ClientInformation.createDefault());
+        // PlayerList does not contain this actor yet, just like command sync during login.
+        ServerPermissions.profile(player);ServerPermissions.allowed(player,"rivet.diagnostics");
+        var permissions=ServerProviders.find(IntegrationApi.PERMISSIONS,"luckperms").orElseThrow();
+        try{permissions.profile(player.getUUID(),true);throw new IllegalStateException("Lifecycle actor leaked into public API");}
+        catch(ApiException expected){if(expected.code()!=ApiException.Code.UNAVAILABLE)throw expected;}
+        try{ServerProviders.withPermissionActor(player,()->{throw new IllegalArgumentException("scope cleanup");});}
+        catch(IllegalArgumentException expected){}
+        try{permissions.allowed(player.getUUID(),"rivet.diagnostics");throw new IllegalStateException("Failed lifecycle scope leaked");}
+        catch(ApiException expected){if(expected.code()!=ApiException.Code.UNAVAILABLE)throw expected;}
+        System.out.println("RIVET_PERMISSION_LIFECYCLE_OK unlistedActor=true publicOfflineDenied=true scopeCleanup=true");
         var playerStack=console.withEntity(player).withPermission(4);
         var blockStack=console.withSource(net.minecraft.commands.CommandSource.NULL).withPermission(4);
         var rconStack=new net.minecraft.server.rcon.RconConsoleSource(server).createCommandSourceStack();
@@ -221,7 +231,30 @@ public final class ApiServerHarness {
         if(!retained.terrain().cancel(cancellable.id()).get().state().equals("CANCELLED"))throw new IllegalStateException("Job cancellation failed");
         System.out.println("RIVET_TERRAIN_NATIVE_OK job=true png=true topBlock=true overview=true skipped=true cancelled=true");
     }
+    private static com.google.gson.JsonObject awaitMessage(java.util.concurrent.BlockingQueue<String> received,String expected)throws Exception {
+        long until=System.nanoTime()+java.util.concurrent.TimeUnit.SECONDS.toNanos(5);
+        while(System.nanoTime()<until){
+            String raw=received.poll(Math.max(1,until-System.nanoTime()),java.util.concurrent.TimeUnit.NANOSECONDS);
+            if(raw==null)break;
+            var message=com.google.gson.JsonParser.parseString(raw).getAsJsonObject();
+            String type=message.has("type")?message.get("type").getAsString():"";
+            if(type.equals(expected))return message;
+            // Pushes from the preceding subscription can already be in flight.
+            if(!type.equals("terrain.changed")&&!type.equals("resource.snapshot"))
+                throw new IllegalStateException("Expected WS "+expected+", received "+message);
+        }
+        throw new IllegalStateException("Timed out waiting for WS "+expected);
+    }
+
     private static void checkWebSocket(String secret)throws Exception{
+        var interleaved=new java.util.concurrent.LinkedBlockingQueue<String>();
+        interleaved.add("{\"type\":\"terrain.changed\"}");
+        interleaved.add("{\"type\":\"resource.snapshot\"}");
+        interleaved.add("{\"type\":\"terrain.snapshot\"}");
+        awaitMessage(interleaved,"terrain.snapshot");
+        interleaved.add("{\"type\":\"error\"}");
+        try{awaitMessage(interleaved,"terrain.snapshot");throw new AssertionError("Unexpected error ignored");}
+        catch(IllegalStateException expected){}
         var received=new java.util.concurrent.LinkedBlockingQueue<String>();
         try(var client=java.net.http.HttpClient.newBuilder().version(java.net.http.HttpClient.Version.HTTP_1_1).build()){
             var socket=client.newWebSocketBuilder().header("Authorization","Bearer "+secret).buildAsync(java.net.URI.create("ws://127.0.0.1:"+ServerDatabase.settings().number("api.websocket.port")+"/api/v1/ws"),new java.net.http.WebSocket.Listener(){
@@ -232,27 +265,27 @@ public final class ApiServerHarness {
             }).get(3,java.util.concurrent.TimeUnit.SECONDS);
             try {
             socket.sendText("{\"type\":\"request\",\"id\":\"status\",\"method\":\"GET\",\"path\":\"/api/v1/server/status\",\"session\":null,\"ifMatch\":null,\"body\":null}",true).join();
-            var reply=com.google.gson.JsonParser.parseString(received.poll(5,java.util.concurrent.TimeUnit.SECONDS)).getAsJsonObject();
+            var reply=awaitMessage(received,"response");
             if(reply.getAsJsonObject("data").get("status").getAsInt()!=200)throw new IllegalStateException("Native WS request failed");
             socket.sendText("{\"type\":\"watch\",\"id\":\"map\",\"path\":\"map/objects\",\"query\":{},\"session\":null,\"cursor\":null}",true).join();
-            var pushed=com.google.gson.JsonParser.parseString(received.poll(5,java.util.concurrent.TimeUnit.SECONDS)).getAsJsonObject();
+            var pushed=awaitMessage(received,"resource.snapshot");
             if(!pushed.get("type").getAsString().equals("resource.snapshot")||!pushed.getAsJsonObject("data").getAsJsonObject("resource").has("items"))throw new IllegalStateException("Native WS subscription failed");
             socket.sendText("{\"type\":\"subscribe\",\"topic\":\"map.tiles\",\"cursor\":null}",true).join();
-            var terrain=com.google.gson.JsonParser.parseString(received.poll(5,java.util.concurrent.TimeUnit.SECONDS)).getAsJsonObject();
+            var terrain=awaitMessage(received,"terrain.snapshot");
             if(!terrain.get("type").getAsString().equals("terrain.snapshot"))throw new IllegalStateException("Native terrain subscription failed");
             nativeServer.execute(()->nativeServer.overworld().setBlock(new net.minecraft.core.BlockPos(0,300,0),net.minecraft.world.level.block.Blocks.DIAMOND_BLOCK.defaultBlockState(),3));
             boolean updated=false;while(System.currentTimeMillis()<deadline){Thread.sleep(100);var pixels=javax.imageio.ImageIO.read(new java.io.ByteArrayInputStream(retained.terrain().tile(new TerrainApi.Tile("minecraft:overworld",0,0,0)).get().png()));int c=pixels.getRGB(0,0);if((c&255)>(c>>>16&255)){updated=true;break;}}if(!updated)throw new IllegalStateException("Automatic block change did not update terrain");
-            var changed=com.google.gson.JsonParser.parseString(received.poll(5,java.util.concurrent.TimeUnit.SECONDS)).getAsJsonObject();
+            var changed=awaitMessage(received,"terrain.changed");
             if(!changed.get("type").getAsString().equals("terrain.changed")||changed.getAsJsonObject("data").getAsJsonArray("items").isEmpty())throw new IllegalStateException("Terrain update not pushed");
             socket.sendText("{\"type\":\"subscribe\",\"topic\":\"map.tiles.isometric\",\"cursor\":null}",true).join();
-            var iso=com.google.gson.JsonParser.parseString(received.poll(5,java.util.concurrent.TimeUnit.SECONDS)).getAsJsonObject();
+            var iso=awaitMessage(received,"terrain.snapshot");
             if(!iso.getAsJsonObject("data").getAsJsonObject("projection").get("profile").getAsString().equals("isometric"))throw new IllegalStateException("Isometric WS profile missing");
             socket.sendText("{\"type\":\"subscribe\",\"topic\":\"map.tiles\",\"profile\":\"staff\",\"cursor\":null}",true).join();
-            var privateSnapshot=com.google.gson.JsonParser.parseString(received.poll(5,java.util.concurrent.TimeUnit.SECONDS)).getAsJsonObject();if(!privateSnapshot.getAsJsonObject("data").get("profile").getAsString().equals("staff"))throw new IllegalStateException("Private WS selection failed");
+            var privateSnapshot=awaitMessage(received,"terrain.snapshot");if(!privateSnapshot.getAsJsonObject("data").get("profile").getAsString().equals("staff"))throw new IllegalStateException("Private WS selection failed");
             socket.sendText("{\"type\":\"subscribe\",\"topic\":\"map.tiles\",\"profile\":\"caves\",\"cursor\":null}",true).join();
-            var caveSnapshot=com.google.gson.JsonParser.parseString(received.poll(5,java.util.concurrent.TimeUnit.SECONDS)).getAsJsonObject();if(caveSnapshot.getAsJsonObject("data").getAsJsonObject("slice").get("minY").getAsInt()!=16)throw new IllegalStateException("Cave WS slice missing");
+            var caveSnapshot=awaitMessage(received,"terrain.snapshot");if(caveSnapshot.getAsJsonObject("data").getAsJsonObject("slice").get("minY").getAsInt()!=16)throw new IllegalStateException("Cave WS slice missing");
             socket.sendText("{\"type\":\"subscribe\",\"topic\":\"map.tiles\",\"profile\":\"vault\",\"cursor\":null}",true).join();
-            var forbidden=com.google.gson.JsonParser.parseString(received.poll(5,java.util.concurrent.TimeUnit.SECONDS)).getAsJsonObject();if(!forbidden.get("type").getAsString().equals("error")||!forbidden.getAsJsonObject("data").get("code").getAsString().equals("FORBIDDEN"))throw new IllegalStateException("Private WS access leaked");socket.abort();
+            var forbidden=awaitMessage(received,"error");if(!forbidden.get("type").getAsString().equals("error")||!forbidden.getAsJsonObject("data").get("code").getAsString().equals("FORBIDDEN"))throw new IllegalStateException("Private WS access leaked");socket.abort();
             } finally { socket.abort(); }
         }
         System.out.println("RIVET_WEBSOCKET_NATIVE_OK authenticated=true request=true subscription=true");

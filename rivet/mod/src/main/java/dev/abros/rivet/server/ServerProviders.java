@@ -13,6 +13,17 @@ import java.util.*;
 public final class ServerProviders {
  private static volatile IntegrationRegistry registry;
  private static IntegrationApi reader;
+ // Minecraft asks command permissions before PlayerList insertion and during logout.
+ // Only the internal synchronous call supplies that exact actor; public UUID lookups stay strict.
+ private static final ThreadLocal<ServerPlayer> permissionActor=new ThreadLocal<>();
+ static <T> T withPermissionActor(ServerPlayer player,java.util.function.Supplier<T> query){
+  thread(player.server);var previous=permissionActor.get();permissionActor.set(player);
+  try{return query.get();}finally{if(previous==null)permissionActor.remove();else permissionActor.set(previous);}
+ }
+ private static ServerPlayer permissionPlayer(MinecraftServer server,UUID id){
+  thread(server);var player=permissionActor.get();
+  return player!=null&&player.server==server&&player.getUUID().equals(id)?player:live(server,id);
+ }
  public static void start(MinecraftServer server){
   stop();WaystonesAdapter.CAPABILITY.reset();registry=new IntegrationRegistry();reader=registry.owner("rivet");
   var identities=new ServerIdentityDirectory(server);
@@ -38,8 +49,8 @@ public final class ServerProviders {
   });
   owner("luckperms").register(IntegrationApi.PERMISSIONS,"luckperms",new IntegrationApi.Permissions(){
    public long revision(){return LuckPermsAdapter.revision();}
-   public IntegrationApi.Data profile(UUID id,boolean online){return data(online?LuckPermsAdapter.profile(live(server,id)):LuckPermsAdapter.profile(id));}
-   public boolean allowed(UUID id,String right){thread(server);return LuckPermsAdapter.allowed(live(server,id),right);}
+   public IntegrationApi.Data profile(UUID id,boolean online){return data(online?LuckPermsAdapter.profile(permissionPlayer(server,id)):LuckPermsAdapter.profile(id));}
+   public boolean allowed(UUID id,String right){thread(server);return LuckPermsAdapter.allowed(permissionPlayer(server,id),right);}
    public boolean offlineAllowed(UUID id,String right){if(server.isSameThread())throw new IllegalStateException("Offline permissions require a worker");return LuckPermsAdapter.offlineAllowed(id,right);}
    public List<IntegrationApi.Data> roles(){thread(server);var result=new ArrayList<IntegrationApi.Data>();LuckPermsAdapter.roles().forEach(e->result.add(data(e.getAsJsonObject())));return List.copyOf(result);}
   });

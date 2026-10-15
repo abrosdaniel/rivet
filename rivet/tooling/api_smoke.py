@@ -108,6 +108,7 @@ def main():
         verify(work / "server.log", "RIVET_CAVE_SAVED_OK")
     else:
         verify(work / "server.log", "RIVET_API_SMOKE_OK")
+        verify(work / "server.log", "RIVET_PERMISSION_LIFECYCLE_OK")
         verify(work / "server.log", "RIVET_API_KEYS_NATIVE_OK")
         verify(work / "server.log", "RIVET_EXTENDED_DOMAINS_NATIVE_OK")
         if args.luckperms:
