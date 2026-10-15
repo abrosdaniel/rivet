@@ -19,7 +19,6 @@ final class WorldMapScreen extends Screen {
     private MapMarkerPanel markerPanel;
     private List<MapMarker> markerSnapshot=List.of();
     private List<MapCategory> categorySnapshot=List.of();
-    private boolean terrainShown;
     private boolean centered,markerDrawer,dragged,canvasPressed;
     private int markerFilter;
     private String categoryFilter="*",appliedQuery="";
@@ -200,8 +199,8 @@ final class WorldMapScreen extends Screen {
         var regions=MapRegionTextures.viewKeys(MapCaves.layer(dimension),view,width,height,minecraft.getWindow().getGuiScale());
         WorldMapClient.visibleTiles(MapCaves.layer(dimension),view,width,height);
         MapRegionTextures.prepareView(regions);
-        terrainShown|=MapRegionTextures.restored(regions);
-        if(terrainShown)for(var key:regions){
+        // Existing pixels must remain visible while other pages or fallback levels load.
+        for(var key:regions){
             var texture=MapRegionTextures.texture(key,detail);
             float left=(float)view.screenX(key.x()*key.blocks(),midX()),top=(float)view.screenZ(key.z()*key.blocks(),midZ()),right=(float)view.screenX((key.x()+1)*key.blocks(),midX()),bottom=(float)view.screenZ((key.z()+1)*key.blocks(),midZ());
             if(texture==null||!texture.complete())MapRegionTextures.fallback(g,key,left,top,right,bottom);

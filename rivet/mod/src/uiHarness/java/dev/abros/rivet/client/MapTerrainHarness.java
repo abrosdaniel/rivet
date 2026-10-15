@@ -24,6 +24,7 @@ public final class MapTerrainHarness {
  private static final String RESTART_FILE=System.getenv("RIVET_TERRAIN_RESTART_FILE");
  private static volatile boolean previewsSaved;private static long previewStart;
  private static final java.util.concurrent.CountDownLatch holdColours=new java.util.concurrent.CountDownLatch(1),coloursHeld=new java.util.concurrent.CountDownLatch(1);
+ private static final java.util.concurrent.CountDownLatch holdTerrainIo=new java.util.concurrent.CountDownLatch(1);
  private static Object field(Class<?> type,String name)throws Exception{var f=type.getDeclaredField(name);f.setAccessible(true);return f.get(null);}
  private static void set(Class<?> type,String name,Object value)throws Exception{var f=type.getDeclaredField(name);f.setAccessible(true);f.set(null,value);}
  private static int height(int x,int z){return 80+Math.floorMod(x,32)/8+Math.floorMod(z,32)/8+(edited&&Math.floorDiv(x,16)==31&&Math.floorDiv(z,16)==31?9:0);}
@@ -70,10 +71,11 @@ public final class MapTerrainHarness {
    }else if(phase==4){check(settled(),"Reopening map lost terrain");for(var entry:retained.entrySet())check(MapRegionTextures.texture(entry.getKey(),3).texture()==entry.getValue().texture(),"Reopening discarded GPU cache");map.view.zoomAt(30,0,0,0,0);phase=5;ticks=0;
    }else if(phase==5){var key=new MapRegionTextures.Key(DIM,0,0);var texture=MapRegionTextures.texture(key,0);if(texture==null)return;var pixels=texture.texture().getPixels();for(int z=0;z<64;z++)for(int x=0;x<64;x++){int c=expected(x,z),rgba=c&0xff00ff00|(c&255)<<16|(c>>>16&255);if(pixels.getPixelRGBA(x,z)!=rgba)return;}check(pixels.getWidth()==64,"Detailed texture size wrong");map.view.zoomAt(-30,0,0,0,0);phase=6;}
    else if(phase==6){check(settled(),"Returning to overview lost pixels");edited=true;var tile=new MapTile();for(int z=0;z<16;z++)for(int x=0;x<16;x++)tile.set(x,z,color(496+x,496+z),height(496+x,496+z));var key=new WorldMapClient.TileKey(DIM,31,31);((Map<WorldMapClient.TileKey,MapTile>)field(WorldMapClient.class,"tiles")).put(key,tile);MapTerrainCache.changed(key);phase=7;ticks=0;}
-   else if(phase==7){if(!settled())return;check(true,"Overview update");if(!WorldMapClient.io(()->previewsSaved=true))return;phase=8;}
+   else if(phase==7){if(!settled())return;check(true,"Overview update");if(!WorldMapClient.previewIo(()->previewsSaved=true))return;phase=8;}
    else if(phase==8){if(!previewsSaved)return;
     if(RESTART_FILE!=null)java.nio.file.Files.writeString(java.nio.file.Path.of(RESTART_FILE),fixtureRoot+"\n"+fixtureWorld+"\n"+mc.player.getUUID()+"\n");
     if(!MapTerrainCache.work(()->{coloursHeld.countDown();try{holdColours.await();}catch(InterruptedException ex){Thread.currentThread().interrupt();}}))return;
+    if(!WorldMapClient.io(()->{try{holdTerrainIo.await();}catch(InterruptedException ex){Thread.currentThread().interrupt();}}))return;
     MapTerrainCache.reset();MapRegionTextures.reset();((Map<?,?>)field(WorldMapClient.class,"tiles")).clear();
     ((Map<?,?>)field(WorldMapClient.class,"known")).remove(MapLayer.surface(DIM));((Set<?>)field(WorldMapClient.class,"indexed")).remove(MapLayer.surface(DIM));
     mc.setScreen(null);map=new WorldMapScreen(null);mc.setScreen(map);var dim=WorldMapScreen.class.getDeclaredField("dimension");dim.setAccessible(true);dim.set(map,DIM);map.view.center(256,256);map.view.zoomAt(-30,0,0,0,0);phase=9;ticks=0;previewStart=System.nanoTime();
@@ -85,8 +87,8 @@ public final class MapTerrainHarness {
     MapRegionTextures.prepareView(visible);if(!MapRegionTextures.restored(visible)){if(ticks>100)throw new IllegalStateException("Whole saved view did not become ready");return;}
     check(((Map<?,?>)field(MapRegionTextures.class,"prepared")).size()<=512,"Preview preparation exceeded bound");
     check(((Map<?,?>)field(MapTerrainCache.class,"images")).isEmpty(),"Preview restoration depended on recomputing terrain");
-    holdColours.countDown();System.out.println("RIVET_TERRAIN_PREVIEW_MS="+(System.nanoTime()-previewStart)/1000000);System.out.println("RIVET_TERRAIN_OK checks="+checks+" disk=true eviction=true seams=true reopen=true lod=true borderUpdates=true sessionPreview=true indexIndependent=true");done=true;mc.stop();
+    holdColours.countDown();holdTerrainIo.countDown();System.out.println("RIVET_TERRAIN_PREVIEW_MS="+(System.nanoTime()-previewStart)/1000000);System.out.println("RIVET_TERRAIN_OK checks="+checks+" disk=true eviction=true seams=true reopen=true lod=true borderUpdates=true sessionPreview=true indexIndependent=true");done=true;mc.stop();
    }
-  }catch(Throwable ex){holdColours.countDown();done=true;System.out.println("RIVET_TERRAIN_FAILED phase="+phase);ex.printStackTrace();mc.stop();}
+  }catch(Throwable ex){holdColours.countDown();holdTerrainIo.countDown();done=true;System.out.println("RIVET_TERRAIN_FAILED phase="+phase);ex.printStackTrace();mc.stop();}
  }
 }

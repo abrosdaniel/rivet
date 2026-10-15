@@ -22,6 +22,8 @@ public final class WorldMapClient {
     // A new world cannot produce dirty tiles until its queued reads (after that snapshot) finish.
     private static final int IO_CAPACITY=256;
     private static final ThreadPoolExecutor IO=new ThreadPoolExecutor(1,1,30,TimeUnit.SECONDS,new ArrayBlockingQueue<>(IO_CAPACITY+1),r->{var t=new Thread(r,"Rivet map files");t.setDaemon(true);return t;});
+    // Saved pixels must not wait behind a full terrain index or thousands of tile reads.
+    private static final ThreadPoolExecutor PREVIEW_IO=new ThreadPoolExecutor(1,1,30,TimeUnit.SECONDS,new ArrayBlockingQueue<>(256),r->{var t=new Thread(r,"Rivet map previews");t.setDaemon(true);return t;});
     private static final Map<TileKey,MapTile> tiles=new LinkedHashMap<>(256,.75f,true);
     private static final Map<TileKey,Long> retries=new HashMap<>();
     private record WriteKey(java.nio.file.Path owner,Object part){}
@@ -68,7 +70,7 @@ public final class WorldMapClient {
     private static String error="";
     static void reload(){MapBlockColors.clear();resample();Minimap.reset();MapMobIcons.clear();}
     static void chunkLoaded(net.minecraft.client.multiplayer.ClientLevel level,net.minecraft.world.level.ChunkPos pos){scanned.keySet().removeIf(k->k.dimension().equals(level.dimension().location().toString())&&k.x()==pos.x&&k.z()==pos.z);idleTick=Integer.MIN_VALUE;}
-    static void shutdown(){flush(true);enqueue(()->writes.drain(System.currentTimeMillis(),16416,true,(key,ex)->com.mojang.logging.LogUtils.getLogger().warn("Map snapshot remains unsaved",ex)));IO.shutdown();try{if(!IO.awaitTermination(5,TimeUnit.SECONDS))com.mojang.logging.LogUtils.getLogger().warn("Rivet map saving did not finish before shutdown");}catch(InterruptedException ex){Thread.currentThread().interrupt();}}
+    static void shutdown(){flush(true);enqueue(()->writes.drain(System.currentTimeMillis(),16416,true,(key,ex)->com.mojang.logging.LogUtils.getLogger().warn("Map snapshot remains unsaved",ex)));PREVIEW_IO.shutdown();IO.shutdown();try{if(!PREVIEW_IO.awaitTermination(5,TimeUnit.SECONDS))com.mojang.logging.LogUtils.getLogger().warn("Rivet map previews did not finish before shutdown");if(!IO.awaitTermination(5,TimeUnit.SECONDS))com.mojang.logging.LogUtils.getLogger().warn("Rivet map saving did not finish before shutdown");}catch(InterruptedException ex){Thread.currentThread().interrupt();}}
     static boolean allowed() {
         var mc=Minecraft.getInstance();if(mc.player==null||mc.level==null)return false;
         if(mc.hasSingleplayerServer())return dev.abros.rivet.server.ServerMap.worldId()!=null;
@@ -80,6 +82,7 @@ public final class WorldMapClient {
     }
     static MapRepository ownRepository(){return repository;}
     static boolean io(Runnable work){return submit(work);}
+    static boolean previewIo(Runnable work){try{PREVIEW_IO.execute(work);return true;}catch(RejectedExecutionException ex){return false;}}
     static UUID worldId(){return world;}
     static boolean cavesAllowed(){var mc=Minecraft.getInstance();if(!allowed())return false;if(mc.hasSingleplayerServer())return dev.abros.rivet.server.ServerMap.cavesAllowed();var policy=ServerMenuClient.state.getAsJsonObject("map");return !policy.has("caves")||policy.get("caves").getAsBoolean();}
     static MapExport.Source exportSource(MapLayer layer){if(repository==null||!allowed())return null;var snapshot=new HashMap<MapRepository.Chunk,MapTile>();for(var e:tiles.entrySet())if(e.getKey().layer().equals(layer))snapshot.put(new MapRepository.Chunk(e.getKey().x(),e.getKey().z()),e.getValue().copy());return new MapExport.Source(repository,receivedRepository,Map.copyOf(snapshot));}

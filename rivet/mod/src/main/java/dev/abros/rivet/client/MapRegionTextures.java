@@ -22,9 +22,12 @@ final class MapRegionTextures {
     private static final Map<Key,Texture> textures=new LinkedHashMap<>(128,.75f,true);
     private static final Map<Key,Prepared> prepared=new LinkedHashMap<>();
     private static final Map<Key,Long> checked=new HashMap<>();
+    private static final Map<Key,Long> saved=new HashMap<>(),saveRetry=new HashMap<>();
     private static final Set<Key> pending=new HashSet<>();
     private static final Set<Key> previewReads=new LinkedHashSet<>(),previewPending=new HashSet<>();
     private static long generation;
+    private static Set<Key> visible=Set.of();
+    private static int textureLimit=2048;
     /** Geometric coverage is independent of the asynchronously loaded exploration index. */
     static Set<Key> viewKeys(dev.abros.rivet.core.map.MapLayer layer,dev.abros.rivet.core.map.MapViewport view,int width,int height,double scale){
         int level=dev.abros.rivet.core.map.MapDetail.level(view.zoom(),scale),blocks=64<<level;
@@ -39,7 +42,7 @@ final class MapRegionTextures {
         for(var key:keys)for(int level=key.level()+1;level<=4;level++){
             int scale=1<<(level-key.level());all.add(new Key(key.layer(),Math.floorDiv(key.x(),scale),Math.floorDiv(key.z(),scale),level));
         }
-        return all;
+        return all.stream().sorted(Comparator.comparingInt(Key::level).reversed()).collect(java.util.stream.Collectors.toCollection(LinkedHashSet::new));
     }
     /** Read a view in one IO job and publish its saved pixels together, ahead of terrain work. */
     static void warm(Set<Key> keys){
@@ -47,7 +50,7 @@ final class MapRegionTextures {
         int capacity=512-prepared.size()-previewPending.size();if(capacity<=0)return;
         var missing=coverage(keys).stream().filter(k->!textures.containsKey(k)&&!prepared.containsKey(k)&&!previewReads.contains(k)).limit(capacity).toList();
         if(missing.isEmpty())return;long owner=generation;
-        if(!WorldMapClient.io(()->{
+        if(!WorldMapClient.previewIo(()->{
             var read=new LinkedHashMap<Key,int[]>();
             for(var key:missing)try{repo.previews().read(key.layer(),key.x(),key.z(),key.level()).ifPresent(p->read.put(key,p));}catch(java.io.IOException ignored){}
             Minecraft.getInstance().execute(()->{
@@ -74,13 +77,16 @@ final class MapRegionTextures {
         return true;
     }
     static void prepareView(Set<Key> keys){
+        visible=coverage(keys);
+        // Retain a full high-resolution viewport; a 4K view can exceed 2048 small pages.
+        textureLimit=Math.clamp(visible.size()+256,2048,8192);
         warm(keys);
         for(var key:coverage(keys))if((keys.contains(key)&&previewReads.contains(key))||textures.containsKey(key)||prepared.containsKey(key))texture(key,key.level(),keys.contains(key));
     }
     private static boolean preview(Key key){
         var repo=WorldMapClient.ownRepository();if(repo==null||previewReads.contains(key))return previewPending.contains(key);
         long owner=generation;
-        if(!WorldMapClient.io(()->{
+        if(!WorldMapClient.previewIo(()->{
             int[] pixels=null;try{pixels=repo.previews().read(key.layer(),key.x(),key.z(),key.level()).orElse(null);}catch(java.io.IOException ignored){/* A disposable preview never blocks the original terrain. */}
             int[] read=pixels;Minecraft.getInstance().execute(()->{
                 if(owner!=generation)return;previewPending.remove(key);
@@ -93,9 +99,17 @@ final class MapRegionTextures {
         previewReads.add(key);previewPending.add(key);while(previewReads.size()>8192){var oldest=previewReads.iterator().next();previewReads.remove(oldest);}return true;
     }
     private static void persist(Key key,Texture texture){
-        var repo=WorldMapClient.ownRepository();if(repo==null||!texture.complete())return;
+        var repo=WorldMapClient.ownRepository();if(repo==null||!texture.complete()||Objects.equals(saved.get(key),texture.signature())||System.currentTimeMillis()<saveRetry.getOrDefault(key,0L))return;
         var image=texture.texture().getPixels();int[] pixels=new int[4096];for(int z=0;z<64;z++)for(int x=0;x<64;x++)pixels[z*64+x]=image.getPixelRGBA(x,z);
-        WorldMapClient.io(()->{try{repo.previews().writePyramid(key.layer(),key.x(),key.z(),key.level(),pixels);}catch(java.io.IOException ignored){/* Original tiles remain authoritative. */}});
+        long owner=generation,signature=texture.signature();
+        if(WorldMapClient.previewIo(()->{
+            try{repo.previews().writePyramid(key.layer(),key.x(),key.z(),key.level(),pixels);}
+            catch(java.io.IOException failure){Minecraft.getInstance().execute(()->{
+                if(owner!=generation||!Objects.equals(saved.get(key),signature))return;
+                saved.remove(key);saveRetry.put(key,System.currentTimeMillis()+5000);
+                com.mojang.logging.LogUtils.getLogger().warn("Could not save map preview; will retry",failure);
+            });}
+        }))saved.put(key,signature);
     }
     static Texture texture(Key key,int level){return texture(key,level,true);}
     private static Texture texture(Key key,int level,boolean compose){
@@ -110,8 +124,9 @@ final class MapRegionTextures {
             if(existing==null){var id=ResourceLocation.fromNamespaceAndPath("rivet","map/region/"+UUID.randomUUID());var dynamic=new DynamicTexture(ready.image());dynamic.setFilter(false,false);clamp(dynamic);Minecraft.getInstance().getTextureManager().register(id,dynamic);existing=new Texture(id,dynamic,ready.level(),ready.signature(),ready.complete());}
             else{existing.texture().setPixels(ready.image());existing.texture().upload();clamp(existing.texture());existing=new Texture(existing.id(),existing.texture(),ready.level(),ready.signature(),ready.complete());}
             MapTerrainCache.uploaded();textures.put(key,existing);persist(key,existing);
-    while(textures.size()>2048){var oldest=textures.keySet().iterator().next();var removed=textures.remove(oldest);checked.remove(oldest);Minecraft.getInstance().getTextureManager().release(removed.id());}
+    while(textures.size()>textureLimit){var oldest=textures.keySet().stream().filter(k->!visible.contains(k)).findFirst().orElseGet(()->textures.keySet().iterator().next());var removed=textures.remove(oldest);checked.remove(oldest);saved.remove(oldest);saveRetry.remove(oldest);Minecraft.getInstance().getTextureManager().release(removed.id());}
         }
+        if(existing!=null)persist(key,existing);
         if(!compose||pending.contains(key)||prepared.containsKey(key)||!WorldMapClient.indexed(key.layer()))return existing;
         long stamp=MapTerrainCache.stateRevision()+WorldMapClient.terrainIndexRevision();
         if(existing!=null&&Objects.equals(checked.get(key),stamp))return existing;
@@ -168,6 +183,6 @@ final class MapRegionTextures {
         var matrix=g.pose().last().pose();var vertices=com.mojang.blaze3d.vertex.Tesselator.getInstance().begin(com.mojang.blaze3d.vertex.VertexFormat.Mode.QUADS,com.mojang.blaze3d.vertex.DefaultVertexFormat.POSITION_TEX);
         vertices.addVertex(matrix,left,top,0).setUv(u0,v0);vertices.addVertex(matrix,left,bottom,0).setUv(u0,v1);vertices.addVertex(matrix,right,bottom,0).setUv(u1,v1);vertices.addVertex(matrix,right,top,0).setUv(u1,v0);com.mojang.blaze3d.vertex.BufferUploader.drawWithShader(vertices.buildOrThrow());com.mojang.blaze3d.systems.RenderSystem.disableBlend();
     }
-    static void reset(){generation++;for(var texture:textures.values())Minecraft.getInstance().getTextureManager().release(texture.id());textures.clear();for(var image:prepared.values())image.image().close();prepared.clear();pending.clear();checked.clear();previewReads.clear();previewPending.clear();}
+    static void reset(){generation++;visible=Set.of();textureLimit=2048;for(var texture:textures.values())Minecraft.getInstance().getTextureManager().release(texture.id());textures.clear();for(var image:prepared.values())image.image().close();prepared.clear();pending.clear();checked.clear();saved.clear();saveRetry.clear();previewReads.clear();previewPending.clear();}
     private MapRegionTextures(){}
 }
