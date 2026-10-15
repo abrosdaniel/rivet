@@ -28,3 +28,6 @@ rivet/deploy/.env
 
 # Generated isolated UI runtime
 **/build-ui-harness/
+
+# Documentation tooling environment (generated site is under build/)
+.venv-docs/

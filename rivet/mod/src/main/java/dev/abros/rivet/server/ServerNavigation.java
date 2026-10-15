@@ -29,7 +29,7 @@ final class ServerNavigation {
   if(!player.connection.getConnection().isConnected()||!AuthServer.authenticated(player)||!ServerDatabase.settings().flag("map.enabled"))return false;
   if(player.hasPermissions(2))return true;
   if(!ServerIntegration.luckPermsEnabled())return false;
-  return LuckPermsAdapter.allowed(player,"rivet.map.teleport");
+  return ServerPermissions.allowed(player,"rivet.map.teleport");
  }
  private static int teleport(com.mojang.brigadier.context.CommandContext<net.minecraft.commands.CommandSourceStack> c)throws com.mojang.brigadier.exceptions.CommandSyntaxException{
   var player=c.getSource().getPlayerOrException();

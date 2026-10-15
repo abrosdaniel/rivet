@@ -16,9 +16,11 @@ final class ServerMapPlayers {
  static boolean allowed(){return ServerDatabase.settings().flag("map.enabled")&&ServerDatabase.settings().flag("map.positions");}
  static void changed(MinecraftServer server){revision++;var j=new JsonObject();j.addProperty("kind","mapPositionsChanged");j.addProperty("revision",revision);for(var player:server.getPlayerList().getPlayers())if(AuthServer.authenticated(player)&&ServerIntegration.supports(player,"map-positions"))PacketDistributor.sendToPlayer(player,new Protocol.FeatureState(Json.GSON.toJson(j)));}
  static void prepare(ServerPlayer viewer,JsonObject in){long started=PerformanceMetrics.start();try{prepareSnapshot(viewer,in);}finally{PerformanceMetrics.end("map.positions.prepare",started);}}
- private static void prepareSnapshot(ServerPlayer viewer,JsonObject in){
+ static void prepareApi(ServerPlayer viewer,JsonObject in){prepareSnapshot(viewer,in,true);}
+ private static void prepareSnapshot(ServerPlayer viewer,JsonObject in){prepareSnapshot(viewer,in,ServerIntegration.supports(viewer,MapPositionPage.FEATURE));}
+ private static void prepareSnapshot(ServerPlayer viewer,JsonObject in,boolean compact){
   in.remove("positionCandidates");in.remove("positionEpoch");in.remove("positionNext");
-  boolean compact=ServerIntegration.supports(viewer,MapPositionPage.FEATURE);in.addProperty("positionCompact",compact);int limit=compact?MapPositionPage.SNAPSHOT_LIMIT:MapPositionPage.LEGACY_LIMIT;
+  in.addProperty("positionCompact",compact);int limit=compact?MapPositionPage.SNAPSHOT_LIMIT:MapPositionPage.LEGACY_LIMIT;
   String cursor=compact?"":Json.opt(in,"cursor","");if(!cursor.isEmpty())UUID.fromString(cursor);
   var online=viewer.server.getPlayerList().getPlayers().stream().filter(p->p!=viewer&&AuthServer.authenticated(p)&&!p.isSpectator()&&!p.isInvisibleTo(viewer)).map(p->p.getUUID().toString()).filter(id->id.compareTo(cursor)>0).sorted().limit(limit+1).toList();
   var ids=new JsonArray();online.stream().limit(limit).forEach(ids::add);in.add("positionCandidates",ids);in.addProperty("positionEpoch",revision);in.addProperty("positionNext",online.size()>limit?online.get(limit-1):"");

@@ -80,6 +80,11 @@ public final class AuthStore implements AutoCloseable {
         if(!valid||a==null||a.blocked||!a.type.equals("local")){throw new RejectedCredential(name,now,dev.abros.rivet.core.Messages.text("rivet.core.could_not_sign_in_check_your_e6c00cb7"));}
         identity(a,uuid);update("DELETE FROM auth_failures WHERE lower(name)=lower(?)",name);return a;
     });}
+    /** External login resolves the canonical UUID internally, never from an application's input. */
+    public Account apiLogin(String supplied,char[] pass,long now)throws Exception{
+        String name=name(supplied);
+        return run(name,()->{var account=account(name);var result=login(name,account==null?"":account.uuid(),pass,now);audit("api","api-password-login",result.name(),now);return result;});
+    }
     public String invite(String actor,String name,long now)throws Exception{return run(name,()->{
         var a=account(name);if(a==null||a.blocked)throw new IllegalArgumentException(dev.abros.rivet.core.Messages.text("rivet.core.invitations_are_only_available_for_local_5ef7eb06"));
         String token=AuthSecrets.token();return atomic(()->{update("INSERT INTO auth_resets VALUES(?,?,?) ON CONFLICT(name) DO UPDATE SET hash=excluded.hash,expires=excluded.expires",a.name,AuthSecrets.digest(token),now+900000);audit(actor,"reset-invitation",a.name,now);return token;});

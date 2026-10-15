@@ -1,0 +1,162 @@
+site_name: Rivet · Документация
+site_description: Всё для вашего сервера Minecraft — установка, сборки, сообщество, карты и API Rivet.
+site_url: https://abrosdaniel.github.io/rivet/
+repo_url: https://github.com/abrosdaniel/rivet
+repo_name: abrosdaniel/rivet
+edit_uri: ""
+docs_dir: docs
+site_dir: build/docs-site
+strict: true
+validation:
+  links:
+    anchors: warn
+    unrecognized_links: warn
+hooks:
+  - tooling/docs/hooks.py
+theme:
+  name: material
+  custom_dir: tooling/docs/theme
+  language: ru
+  font: false
+  logo: assets/icon.png
+  favicon: assets/icon.png
+  palette:
+    - media: '(prefers-color-scheme: light)'
+      scheme: default
+      primary: custom
+      accent: custom
+      toggle:
+        icon: material/weather-night
+        name: Тёмная тема
+    - media: '(prefers-color-scheme: dark)'
+      scheme: slate
+      primary: custom
+      accent: custom
+      toggle:
+        icon: material/weather-sunny
+        name: Светлая тема
+  features:
+    - navigation.tabs
+    - navigation.indexes
+    - navigation.top
+    - navigation.footer
+    - search.suggest
+    - search.highlight
+    - content.code.copy
+plugins:
+  - search:
+      lang: [ru, en]
+markdown_extensions:
+  - admonition
+  - attr_list
+  - def_list
+  - md_in_html
+  - tables
+  - toc:
+      permalink: false
+      slugify: !!python/name:tooling.docs.hooks.slugify
+  - pymdownx.highlight:
+      anchor_linenums: true
+  - pymdownx.superfences
+  - pymdownx.details
+extra:
+  generator: false
+extra_javascript:
+  - assets/javascripts/rivet.js
+extra_css:
+  - assets/stylesheets/rivet.css
+nav:
+  - Начало: README.md
+  - Игрокам:
+      - Начать играть: player-guide.md
+      - Основное:
+          - Управление: players/controls.md
+          - Установка сборки: players/modpack.md
+          - Меню и задачи: players/community.md
+          - Чат: players/chat.md
+          - Настройки и HUD: players/settings.md
+          - Обновление: players/updates.md
+          - Другие моды: players/integrations.md
+      - Карта:
+          - Карта мира: players/map.md
+          - Миникарта: players/minimap.md
+          - Вид и радар: players/map-appearance.md
+          - Пещеры: players/caves.md
+          - Слои и территории: players/territories.md
+          - Категории меток: players/markers.md
+          - Публикация: players/publishing.md
+          - Приватность: players/privacy.md
+          - Точки смерти: players/death-points.md
+          - Импорт: players/import.md
+          - Экспорт: players/export.md
+          - Слои других модов: players/custom-layers.md
+  - Сервер:
+      - Начать: server/index.md
+      - Установка: server/installation.md
+      - Настройка:
+          - Конфигурация: server/configuration.md
+          - Функции и меню: server/features.md
+          - Примеры: server/configuration-examples.md
+          - Вход и регистрация: server/authentication.md
+          - Команды и права: server/permissions.md
+          - Чат и TAB: server/chat.md
+          - Имена игроков: server/nameplates.md
+          - Голосования: server/votes.md
+          - Клиентская сборка: server/packs.md
+          - Карта и приватность: server/map.md
+          - Интеграции: server/integrations.md
+      - Обновление и копии: server/maintenance.md
+      - Доступ приложений:
+          - Ключи API: server/api.md
+          - HTTP: server/api-http.md
+          - Сессии игроков: server/api-sessions.md
+          - WebSocket: server/api-websocket.md
+          - HTTPS и WSS: server/reverse-proxy.md
+      - Рендер карты:
+          - Первый рендер: server/terrain.md
+          - Проекции и ресурсы: server/terrain-projections.md
+          - Очередь: server/terrain-queue.md
+          - Приватность: server/terrain-privacy.md
+  - API:
+      - Начать: api/index.md
+      - REST:
+          - Подключение: api/rest.md
+          - Авторизация: api/rest-auth.md
+          - Запросы и ошибки: api/rest-requests.md
+          - Ресурсы и действия: api/rest-resources.md
+          - Объединения и расписания: api/rest-community.md
+          - Управление сервером: api/rest-server.md
+          - Игроки на карте: api/rest-presence.md
+          - Тайлы и рендер: api/rest-terrain.md
+          - Приватные карты: api/rest-private-map.md
+          - Браузерные tickets: api/rest-tickets.md
+      - WebSocket:
+          - Сообщения и подписки: api/websocket.md
+          - Браузер: api/websocket-browser.md
+          - Тайлы карты: api/websocket-map.md
+      - Java:
+          - Подключение: api/java.md
+          - Статус и курсоры: api/java-status.md
+          - Работа с данными: api/java-domains.md
+          - Подписки: api/java-subscriptions.md
+          - Каталог операций: api/java-operations.md
+          - Свои слои карты: api/java-map-layers.md
+          - Рендер: api/java-terrain.md
+      - Материалы карты: api/terrain-materials.md
+  - Разработка:
+      - Начать: development/index.md
+      - Архитектура:
+          - Модули: development/modules.md
+          - Данные и синхронизация: development/data-flow.md
+          - Каталог серверов: development/server-catalog.md
+      - Интерфейс:
+          - UI Kit: development/ui-kit.md
+          - Компоновка: development/ui-layout.md
+          - Состояния: development/ui-feedback.md
+          - Карта и HUD: development/ui-map.md
+      - Проверки:
+          - Производительность: development/performance.md
+          - Клиент: development/performance-client.md
+          - Позиции игроков: development/performance-positions.md
+          - Большие списки: development/performance-data.md
+          - API и браузер: development/api-testing.md

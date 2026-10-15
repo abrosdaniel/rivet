@@ -1,0 +1,27 @@
+<header class="md-header" data-md-component="header">
+  <nav class="md-header__inner" aria-label="Основная навигация">
+    <a class="rivet-brand" href="{{ nav.homepage.url | url }}" aria-label="Rivet — главная">
+      <img src="{{ config.theme.logo | url }}" alt="" width="30" height="30"><strong>Rivet</strong>
+    </a>
+    <div class="rivet-search-slot">
+      <label class="rivet-search-trigger" for="__search" tabindex="0" role="button" aria-label="Поиск">{% include '.icons/material/magnify.svg' %}<span>Поиск</span><kbd>⌘ K</kbd></label>
+      {% include 'partials/search.html' %}
+    </div>
+    <div class="rivet-header-links">
+      {% for item in nav.items if not item.is_homepage %}
+        {% set destination = item.children[0].url if item.children else item.url %}
+        <a href="{{ destination | url }}" {% if item.active %}aria-current="page"{% endif %}>{{ item.title }}</a>
+      {% endfor %}
+    </div>
+    {% include 'partials/palette.html' %}
+    {% include 'partials/javascripts/palette.html' %}
+    <a class="rivet-github md-icon" href="{{ config.repo_url }}" aria-label="Rivet на GitHub">{% include '.icons/fontawesome/brands/github.svg' %}</a>
+    <details class="rivet-mobile-links">
+      <summary aria-label="Основное меню">{% include '.icons/material/menu.svg' %}</summary>
+      <nav aria-label="Разделы сайта">
+        {% for item in nav.items if not item.is_homepage %}<a href="{{ item.children[0].url | url }}">{{ item.title }}</a>{% endfor %}
+        <a href="{{ config.repo_url }}">GitHub</a>
+      </nav>
+    </details>
+  </nav>
+</header>

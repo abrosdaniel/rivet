@@ -16,7 +16,7 @@ tasks.named('jar') {
 
 // Catch packaging regressions before publishing a bundle that launchers cannot identify.
 tasks.register('verifyBundle') {
-    dependsOn tasks.named('jar')
+    dependsOn tasks.named('jar'), ':api:jar'
     doLast {
         def bundle = tasks.named('jar').get().archiveFile.get().asFile
         assert bundle.name == "rivet-${project.version}-mc1.21.1-neoforge.jar"
@@ -34,6 +34,17 @@ tasks.register('verifyBundle') {
             }
             assert !innerEntries.keySet().any { it.startsWith('org/sqlite/') || it.startsWith('org/bouncycastle/') }
             assert innerEntries.containsKey('dev/abros/rivet/core/auth/AuthTls.class')
+            assert innerEntries.containsKey('dev/abros/rivet/api/RivetApi.class')
+            new java.util.zip.ZipFile(project(':api').tasks.named('jar').get().archiveFile.get().asFile).withCloseable { api ->
+                def classes = api.entries().toList().findAll { it.name.endsWith('.class') }
+                assert !classes.empty
+                classes.each { entry ->
+                    assert entry.name.startsWith('dev/abros/rivet/api/')
+                    assert innerEntries[entry.name] == api.getInputStream(entry).bytes
+                }
+                assert api.getEntry('META-INF/services/dev.abros.rivet.api.RivetApiProvider') == null
+            }
+            assert new String(innerEntries['META-INF/services/dev.abros.rivet.api.RivetApiProvider'], 'UTF-8').trim() == 'dev.abros.rivet.server.ServerApi'
             assert innerEntries.containsKey('dev/abros/rivet/compat/voice/SimpleVoicePlugin.class')
             assert !innerEntries.keySet().any { it.startsWith('de/maxhenkel/voicechat/') }
             assert innerEntries.containsKey('assets/rivet/lang/ru_ru.json')
@@ -53,7 +64,7 @@ tasks.register('verifyBundle') {
                 }
                 libraries[dependency.identifier.artifact] = entries
             }
-            assert libraries.keySet() == ['postgresql', 'HikariCP', 'bcprov-jdk18on', 'bcutil-jdk18on', 'bcpkix-jdk18on', 'httpclient5', 'httpcore5', 'httpcore5-h2'] as Set
+            assert libraries.keySet() == ['postgresql', 'HikariCP', 'bcprov-jdk18on', 'bcutil-jdk18on', 'bcpkix-jdk18on', 'httpclient5', 'httpcore5', 'httpcore5-h2', 'Java-WebSocket'] as Set
             assert libraries['postgresql'].contains('org/postgresql/Driver.class')
             assert libraries['HikariCP'].contains('com/zaxxer/hikari/HikariDataSource.class')
             assert !innerEntries.keySet().any { it.contains('sqlite') }

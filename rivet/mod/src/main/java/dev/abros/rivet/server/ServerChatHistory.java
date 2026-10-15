@@ -15,7 +15,7 @@ final class ServerChatHistory {
  private static ExecutorService worker;private static ChatHistory store;
  private static final class Replay {final long before=System.currentTimeMillis();long cursor=Long.MAX_VALUE,next;int left;boolean pending;Replay(int count){left=count;}}
  private static final Map<ServerPlayer,Replay> joined=new IdentityHashMap<>();
- static void start(){var s=ServerDatabase.settings();store=new ChatHistory(ServerDatabase.get(),s.number("chat.history"),s.number("chat.historyDays"));worker=new ThreadPoolExecutor(1,1,0,TimeUnit.SECONDS,new ArrayBlockingQueue<>(256),r->{var t=new Thread(r,"Rivet chat history");t.setDaemon(true);return t;},new ThreadPoolExecutor.AbortPolicy());joined.clear();nextReplayPlayer=0;}
+ static void start(){var s=ServerDatabase.settings();store=new ChatHistory(ServerDatabase.get(),s.number("chat.history"),s.number("chat.historyDays"));worker=new ThreadPoolExecutor(1,1,0,TimeUnit.SECONDS,new ArrayBlockingQueue<>(256),r->{var t=new Thread(r,"Rivet chat history");t.setDaemon(true);return t;},new ThreadPoolExecutor.AbortPolicy());joined.clear();nextReplayPlayer=0;nextApiDelivery=0;apiRevision=-1;apiDeliveryPending=false;}
  static void stop(){var pool=worker;worker=null;store=null;joined.clear();ModuleWorkers.stop(pool);}
  static void joined(ServerPlayer player){if(store==null)return;joined.put(player,new Replay(ServerDatabase.settings().number("chat.history")));}
  static void left(ServerPlayer player){joined.remove(player);}
@@ -24,10 +24,11 @@ final class ServerChatHistory {
   String json=Component.Serializer.toJson(message,sender.registryAccess());long at=System.currentTimeMillis();var ids=audience.stream().map(p->p.getUUID().toString()).toList();
   try{pool.execute(()->{try{current.append(channel,at,json,ids);}catch(Exception ex){com.mojang.logging.LogUtils.getLogger().warn("Cannot persist chat history ({})",ex.getClass().getSimpleName());}});}catch(RejectedExecutionException ex){com.mojang.logging.LogUtils.getLogger().warn("Chat history queue is full");}
  }
- private static int nextReplayPlayer;
+ private static int nextReplayPlayer;private static long nextApiDelivery;private static volatile long apiRevision=-1;private static volatile boolean apiDeliveryPending;
  private record ReplayTarget(ServerPlayer player,Replay replay,ChatHistory.ReplayRequest request){}
  static void tick(MinecraftServer server){
   var current=store;var pool=worker;if(current==null||pool==null)return;
+  if(!apiDeliveryPending&&ServerDatabase.get().communityRevision()!=apiRevision&&System.currentTimeMillis()>=nextApiDelivery){apiDeliveryPending=true;nextApiDelivery=System.currentTimeMillis()+1000;try{pool.execute(()->{try{long revision=ServerDatabase.get().communityRevision();new dev.abros.rivet.core.api.ApiChat(ServerDatabase.get(),ServerFeatures.communityStore(),ServerDatabase.settings(),ServerDomainAccess::local).drain((channel,sender,text,recipients)->BoundedDelivery.run(server,()->{if(store!=current)return;for(var player:server.getPlayerList().getPlayers())if(AuthServer.authenticated(player)&&(channel.equals("global")||recipients.contains(player.getUUID().toString())))player.sendSystemMessage(Component.literal(text));},3000));if(store==current)apiRevision=revision;}catch(Exception failure){com.mojang.logging.LogUtils.getLogger().warn("API chat delivery postponed ({})",failure.getClass().getSimpleName());}finally{if(store==current)apiDeliveryPending=false;}});}catch(RejectedExecutionException busy){apiDeliveryPending=false;}}
   var players=server.getPlayerList().getPlayers();if(players.isEmpty())return;
   var settings=ServerDatabase.settings();boolean local=settings.flag("chat.local"),groups=settings.flag("chat.group")&&settings.modules().enabled("groups");
   long now=System.currentTimeMillis();int start=Math.floorMod(nextReplayPlayer,players.size());var targets=new ArrayList<ReplayTarget>();

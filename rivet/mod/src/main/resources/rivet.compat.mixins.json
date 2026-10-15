@@ -6,9 +6,13 @@
   "compatibilityLevel": "JAVA_21",
   "client": [
     "AccessDeniedScreenMixin",
-    "AccessDeniedProfileMixin"
+    "AccessDeniedProfileMixin",
+    "NumismaticsClientIdentityMixin"
   ],
   "injectors": {
     "defaultRequire": 0
-  }
+  },
+  "mixins": [
+    "NumismaticsIdentityMixin"
+  ]
 }

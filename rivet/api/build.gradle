@@ -1,0 +1,5 @@
+base { archivesName = 'rivet-api' }
+java { withSourcesJar(); withJavadocJar() }
+tasks.withType(Javadoc).configureEach { options.encoding = 'UTF-8' }
+// Consumers compile against this artifact; Rivet supplies the runtime classes.
+// Deliberately no Minecraft, JSON, database or transport dependencies.

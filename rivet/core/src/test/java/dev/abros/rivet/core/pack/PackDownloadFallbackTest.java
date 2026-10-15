@@ -26,7 +26,7 @@ class PackDownloadFallbackTest {
  @Test void unavailableCorruptAndIncompleteSourcesFallBackToOriginalPublication()throws Exception{
   for(int mode=0;mode<4;mode++){int failure=mode;var folder=root.resolve("cache"+mode);var object=folder.resolve(file.hash());Files.createDirectories(folder);Files.writeString(object.resolveSibling(file.hash()+".pack.part"),"abc");var progress=new ArrayList<String>();
    try(var server=new PackServer(publisher,root.resolve("identity"),"127.0.0.1",0,true,0,0,0);var client=new PackClient("127.0.0.1",server.port(),server.fingerprint(),(url,target,size,cancel)->{switch(failure){case 0->throw new IOException("HTTP 503");case 1->Files.writeString(target,"12345678");case 2->Files.writeString(target,"abc");default->Files.writeString(target,"abcdefgh-extra");}})){
-    client.download(manifest.hash(),file,object,new AtomicBoolean(),progress::add);assertEquals("abcdefgh",Files.readString(object));assertTrue(progress.stream().anyMatch(s->s.contains("Загрузка с сервера")));assertFalse(Files.exists(object.resolveSibling(file.hash()+".source.part")));
+    var positions=new java.util.ArrayList<Long>();client.download(manifest.hash(),file,object,new AtomicBoolean(),progress::add,(position,received)->positions.add(position));assertEquals(8L,positions.getLast());assertEquals("abcdefgh",Files.readString(object));assertTrue(progress.stream().anyMatch(s->s.contains("Загрузка с сервера")));assertFalse(Files.exists(object.resolveSibling(file.hash()+".source.part")));
    }
   }
  }

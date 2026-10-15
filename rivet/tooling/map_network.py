@@ -14,6 +14,8 @@ from module_smoke import configuration
 LP_URL = "https://cdn.modrinth.com/data/Vebnzrzj/versions/dKAPoPGd/LuckPerms-NeoForge-5.4.150.jar"
 LP_SHA = "26de0e74d87b91acf3b71050ed1880a50ffd1809b3a1309a2e24bee5413193f27a5056e13b69d8f39085e28711244c02bc5fc329be13174abb520008a0ca9682"
 SCENARIOS = (
+    ("integrations", "RIVET_MAP_INTEGRATION_ADDRESS", "RivetMapTest", "RIVET_MAP_INTEGRATION_OK", 180),
+    ("notifications", "RIVET_NOTIFICATION_ADDRESS", "RivetMapTest", "RIVET_NOTIFICATIONS_OK", 240),
     ("terrain", "RIVET_MAP_TERRAIN_ADDRESS", "RivetMapTest", "RIVET_TERRAIN_OK", 300),
     ("ingress", "RIVET_INGRESS_TEST_ADDRESS", "RivetMapGuest", "RIVET_INGRESS_OK", 180),
     ("publication", "RIVET_MAP_PUBLICATION_ADDRESS", "RivetMapTest", "RIVET_MAP_PUBLICATIONS_OK", 600),
@@ -72,7 +74,7 @@ def prepare(root, work, db_port, db_name, game_port):
 gradle.projectsEvaluated {
  def mod = gradle.rootProject.project(':mod')
  mod.neoForge.runs.configureEach { run ->
-  ['org.apache.httpcomponents.client5:httpclient5:5.6.4','org.apache.httpcomponents.core5:httpcore5:5.4.3','org.apache.httpcomponents.core5:httpcore5-h2:5.4.3','com.zaxxer:HikariCP:6.3.3','org.postgresql:postgresql:42.7.14','org.bouncycastle:bcprov-jdk18on:1.85','org.bouncycastle:bcutil-jdk18on:1.85','org.bouncycastle:bcpkix-jdk18on:1.85'].each { dep -> mod.dependencies.add(run.additionalRuntimeClasspathConfiguration.name,dep) }
+  ['org.java-websocket:Java-WebSocket:1.6.0','org.apache.httpcomponents.client5:httpclient5:5.6.4','org.apache.httpcomponents.core5:httpcore5:5.4.3','org.apache.httpcomponents.core5:httpcore5-h2:5.4.3','com.zaxxer:HikariCP:6.3.3','org.postgresql:postgresql:42.7.14','org.bouncycastle:bcprov-jdk18on:1.85','org.bouncycastle:bcutil-jdk18on:1.85','org.bouncycastle:bcpkix-jdk18on:1.85'].each { dep -> mod.dependencies.add(run.additionalRuntimeClasspathConfiguration.name,dep) }
  }
 }
 """)
@@ -105,11 +107,11 @@ def main():
         subprocess.run([str(root / "gradlew"), "-I", str(init), "--project-cache-dir", str(work / "gradle"), "-PrivetUiHarness", ":mod:classes", ":mod:compileUiHarnessJava", ":mod:prepareClientRun", ":mod:prepareServerRun", "--no-daemon", "--console=plain"], cwd=root, stdout=log, stderr=subprocess.STDOUT, check=True, timeout=900)
     download_lp(work / "server/mods/LuckPerms-NeoForge-5.4.150.jar")
     env = os.environ.copy()
-    env["MOD_CLASSES"] = os.pathsep.join("rivet%%" + str(work / "build" / part) for part in ("mod/classes/java/main", "mod/resources/main", "mod/classes/java/uiHarness", "core/classes/java/main", "core/resources/main"))
+    env["MOD_CLASSES"] = os.pathsep.join("rivet%%" + str(work / "build" / part) for part in ("mod/classes/java/main", "mod/resources/main", "mod/classes/java/uiHarness", "core/classes/java/main", "core/resources/main", "api/classes/java/main"))
     java = str(Path(env["JAVA_HOME"]) / "bin/java") if "JAVA_HOME" in env else "java"
     address = "127.0.0.1:" + str(args.game_port)
     with (work / "server.log").open("w") as log:
-        server = subprocess.Popen(command(work, java, "server"), cwd=work / "server", env=dict(env, RIVET_MAP_PERMISSION_FIXTURE="true"), stdout=log, stderr=subprocess.STDOUT)
+        server = subprocess.Popen(command(work, java, "server"), cwd=work / "server", env=dict(env, RIVET_MAP_PERMISSION_FIXTURE="true", RIVET_MAP_INTEGRATION_FIXTURE="true" if not args.scenario or "integrations" in args.scenario else "false"), stdout=log, stderr=subprocess.STDOUT)
         try:
             deadline = time.monotonic() + 120
             while "Done (" not in (work / "server.log").read_text(errors="replace"):

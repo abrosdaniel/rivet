@@ -39,7 +39,7 @@ final class CommunityPlus {
   String op=Json.str(in,"op"),id=Json.opt(in,"id","");var out=new JsonObject();out.addProperty("kind","community");out.addProperty("section",section);out.addProperty("request",Json.opt(in,"request",""));
   if(op.equals("plusProfile")||op.equals("plusProfileSave")){
    String target=id.isEmpty()?a.id():id;UUID.fromString(target);
-   if(op.endsWith("Save")){require(target.equals(a.id()));try(var q=db.connection().prepareStatement("INSERT INTO community_profile VALUES(?,?,?) ON CONFLICT(player) DO UPDATE SET about=excluded.about,interests=excluded.interests")){q.setString(1,target);q.setString(2,text(in,"about",300));q.setString(3,text(in,"interests",100));q.executeUpdate();}CommunityOutbox.add(db,"players",target,"");}
+   if(op.endsWith("Save")){require(target.equals(a.id()));db.lock("profile:"+target);try(var q=db.connection().prepareStatement("INSERT INTO community_profile VALUES(?,?,?) ON CONFLICT(player) DO UPDATE SET about=excluded.about,interests=excluded.interests")){q.setString(1,target);q.setString(2,text(in,"about",300));q.setString(3,text(in,"interests",100));q.executeUpdate();}CommunityOutbox.add(db,"players",target,"");}
    var profile=new JsonObject();profile.addProperty("about","");profile.addProperty("interests","");try(var q=db.connection().prepareStatement("SELECT about,interests FROM community_profile WHERE player=?")){q.setString(1,target);try(var rows=q.executeQuery()){if(rows.next()){profile.addProperty("about",rows.getString(1));profile.addProperty("interests",rows.getString(2));}}}if(!new CommunityPlayerTools(db,store).visible(target,a.id())){profile.addProperty("about","");profile.addProperty("interests","");}out.add("profile",profile);return out;
   }
   if(op.equals("plusIgnore")||op.equals("plusIgnores")){
@@ -69,9 +69,9 @@ final class CommunityPlus {
      else{require(in.has("location")&&!in.get("location").isJsonNull());var location=CommunityLocation.read(in.getAsJsonObject("location"));body.add("location",new CommunityLocation(location.name(),location.dimension(),location.x(),location.y(),location.z(),true).json());}
      if(item.isEmpty()){try(var q=db.connection().prepareStatement("SELECT count(*) FROM community_group_items WHERE group_id=?")){q.setString(1,id);try(var rows=q.executeQuery()){rows.next();require(rows.getInt(1)<200);}}item=UUID.randomUUID().toString();}saveItem(item,id,body,revision+1);
     }
-   }store.put(j);CommunityOutbox.add(db,"home",id,"");
+   }out.addProperty("changedId",item);out.addProperty("changedRevision",revision+1);store.put(j);CommunityOutbox.add(db,"home",id,"");
   }else throw new IllegalArgumentException(dev.abros.rivet.core.Messages.text("rivet.core.unknown_action_ea069893"));
-  var read=in.deepCopy();read.addProperty("op","detail");read.remove("cursor");return store.execute(a,read,"detail",section);
+  var read=in.deepCopy();read.addProperty("op","detail");read.remove("cursor");var result=store.execute(a,read,"detail",section);for(var entry:out.entrySet())if(entry.getKey().startsWith("changed"))result.add(entry.getKey(),entry.getValue());return result;
  }
  private void saveItem(String id,String group,JsonObject body,long revision)throws Exception{try(var q=db.connection().prepareStatement("INSERT INTO community_group_items(id,group_id,kind,body,revision) VALUES(?,?,?,?::jsonb,?) ON CONFLICT(id) DO UPDATE SET body=excluded.body,revision=excluded.revision")){q.setString(1,id);q.setString(2,group);q.setString(3,Json.str(body,"kind"));q.setString(4,body.toString());q.setLong(5,revision);q.executeUpdate();}if(Json.str(body,"kind").equals("task"))new CommunityTasks(db,store).code(id);}
  void enrich(CommunityStore.Actor a,JsonObject source,JsonObject detail,int page)throws Exception{

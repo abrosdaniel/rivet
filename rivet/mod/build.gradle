@@ -3,7 +3,7 @@ base { archivesName = 'rivet' }
 neoForge {
     version = rootProject.property('neoVersion')
     runs { client { client() }; server { server(); programArgument '--nogui' } }
-    if (!project.hasProperty('rivetPackaged')) { mods { rivet { sourceSet sourceSets.main; sourceSet project(':core').sourceSets.main } } }
+    if (!project.hasProperty('rivetPackaged')) { mods { rivet { sourceSet sourceSets.main; sourceSet project(':core').sourceSets.main; sourceSet project(':api').sourceSets.main } } }
 }
 dependencies { implementation project(':core') }
 tasks.named('processResources') {
@@ -13,7 +13,7 @@ tasks.named('processResources') {
     dependsOn ':helper:standaloneJar'
     from(project(':helper').tasks.named('standaloneJar')) { into 'rivet'; rename { 'helper.jar' } }
 }
-tasks.named('jar') { exclude 'dev/abros/rivet/compattests/**', 'dev/abros/rivet/client/*Harness*.class', 'dev/abros/rivet/client/UiKitPreview*.class'; from project(':core').sourceSets.main.output; archiveClassifier = 'game-module'; destinationDirectory = layout.buildDirectory.dir('internal') }
+tasks.named('jar') { exclude 'dev/abros/rivet/compattests/**', 'dev/abros/rivet/client/*Harness*.class', 'dev/abros/rivet/client/UiKitPreview*.class'; from project(':core').sourceSets.main.output; from project(':api').sourceSets.main.output; archiveClassifier = 'game-module'; destinationDirectory = layout.buildDirectory.dir('internal') }
 
 tasks.named('processResources') {
     from(rootProject.file('rivet/icon_256x256.png')) { into ''; rename { 'icon.png' } }
@@ -42,6 +42,7 @@ dependencies {
         def parts = coordinate.split(':')
         jarJar(implementation("${parts[0]}:${parts[1]}") { version { strictly "[${parts[2]},6.0)"; prefer parts[2] }; transitive = false })
     }
+    jarJar(implementation('org.java-websocket:Java-WebSocket') { version { strictly '[1.6.0,1.7)'; prefer '1.6.0' }; transitive = false })
     jarJar(implementation('org.postgresql:postgresql') {
         version { strictly '[42.7.14,43.0)'; prefer '42.7.14' }
         transitive = false
@@ -167,7 +168,7 @@ tasks.register('checkModuleComposition') {
             'ServerChat': 'ServerModules.java', 'ServerNavigation': 'ServerModules.java',
             'ServerPlayerStatistics': 'ServerModules.java', 'ServerModerationVotes': 'ServerModules.java',
             'ServerTaskStocks': 'ServerModules.java', 'ServerReportsModule': 'ServerModules.java',
-            'ServerManagement': 'ServerModules.java', 'ServerPack': 'ServerModules.java'
+            'ServerTerrain': 'ServerModules.java', 'ServerApiKeys': 'ServerModules.java', 'ServerApi': 'ServerModules.java', 'ServerManagement': 'ServerModules.java', 'ServerPack': 'ServerModules.java'
         ]
         def violations = []
         sources.each { source ->

@@ -1,4 +1,13 @@
 {
+  "rivet.api.keys.cleanup": "Изменение сохранено. Не удалось удалить старый файл выдачи %s.secret; удалите его вручную.",
+  "rivet.api.keys.issued": "API: ключ=%s, приложение=%s. Секрет в файле rivet/api-keys/%s.secret. Прочитайте локально и удалите файл.",
+  "rivet.api.keys.scopes": "Права API: %s",
+  "rivet.api.keys.empty": "Ключей API пока нет.",
+  "rivet.api.keys.limit": "Общий лимит запросов приложения обновлён.",
+  "rivet.api.keys.error": "API: %s. Секрет не выводится в журнал.",
+  "rivet.api.keys.revoke": "Ключ API отозван: %s",
+  "rivet.api.keys.disable": "Ключ API отключён: %s",
+  "rivet.api.keys.enable": "Ключ API включён: %s",
   "rivet.core.pack_component_counts": "файлов: %s; компонентов: %s (обязательных: %s, необязательных: %s)",
   "rivet.ui.appearance_custom": "Свои настройки",
   "rivet.map.compass.north": "С",
@@ -2727,5 +2736,14 @@
   "rivet.map.saveAndPublish": "Сохранить и отправить на проверку…",
   "rivet.map.publicationCancelHint": "Заявка будет отменена. Личный объект останется у вас и не появится у других игроков.",
   "rivet.map.publicationModeration": "Публикации игроков",
-  "rivet.map.myPublications": "Мои публикации"
+  "rivet.map.myPublications": "Мои публикации",
+  "rivet.api.link.confirmed": "Приложение привязано. Для отзыва доступа: /rivet unlink",
+  "rivet.api.link.failed": "Привязка недоступна: проверьте код, приложение и срок действия.",
+  "rivet.api.link.revoked": "Все внешние сессии отозваны.",
+  "rivet.progress.checking": "Проверка файлов",
+  "rivet.progress.downloading": "Загрузка файлов",
+  "rivet.progress.verifying": "Проверка совместимости",
+  "rivet.progress.preparing": "Подготовка установки",
+  "rivet.progress.wait": "Пожалуйста, подождите…",
+  "rivet.progress.files": "файлов"
 }

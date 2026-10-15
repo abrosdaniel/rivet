@@ -53,15 +53,15 @@ public final class ServerPackClient {
      mc.execute(()->{if(!cancel.get())mc.setScreen(new TextScreen(parent,Client.tr("ui.server_pack_88518674"),Client.text("ui.component_selection_saved_the_pack_files_15d12937")));});
     }catch(Exception ex){fail(ex);}});return;
    }
-   mc.setScreen(loading);background(()->{String id="";try(var client=new PackClient(endpoint.host(),endpoint.port(),endpoint.fingerprint())){active=client;id=installer.stage(review,client,cancel,text->loading.message=text);if(cancel.get()){new Transactions(Client.hub.game).abortReady(id);return;}Client.hub.startHelper(id);Client.pending=id;String ready=id;mc.execute(()->{if(!cancel.get())mc.setScreen(new RestartScreen(parent,ready));});}catch(Exception ex){if(!id.isEmpty())try{new Transactions(Client.hub.game).abortReady(id);}catch(Exception ignored){}fail(ex);}finally{active=null;}});}
+   mc.setScreen(loading);background(()->{String id="";try(var client=new PackClient(endpoint.host(),endpoint.port(),endpoint.fingerprint())){active=client;id=installer.stage(review,client,cancel,text->loading.message=text,event->loading.progress=event);if(cancel.get()){new Transactions(Client.hub.game).abortReady(id);return;}Client.hub.startHelper(id);Client.pending=id;String ready=id;mc.execute(()->{if(!cancel.get())mc.setScreen(new RestartScreen(parent,ready));});}catch(Exception ex){if(!id.isEmpty())try{new Transactions(Client.hub.game).abortReady(id);}catch(Exception ignored){}fail(ex);}finally{active=null;}});}
   void resume(){mc.execute(()->{if(cancel.get())return;resuming=true;try{ConnectScreen.startConnecting(parent,mc,address,data,quick,transfer);}finally{resuming=false;}});}
  }
  private static final class PackLoadingScreen extends Screen {
-  final Screen parent;final Runnable cancel;volatile String message=Client.text("ui.checking_server_pack_f3bfd987");UiDialog dialog;
+  final Screen parent;final Runnable cancel;volatile dev.abros.rivet.core.InstallProgress progress=dev.abros.rivet.core.InstallProgress.phase("checking");volatile String message=Client.text("ui.checking_server_pack_f3bfd987");UiDialog dialog;
   PackLoadingScreen(Screen parent,Runnable cancel){super(Client.tr("ui.server_pack_88518674"));this.parent=parent;this.cancel=cancel;}
   protected void init(){dialog=UiDialog.fit(width,height,360,180);var f=dialog.footer();addRenderableWidget(UiActions.button(Client.tr("cancel"),UiActions.Tone.NORMAL,"",b->cancel.run()).bounds(f.x(),f.bottom()-20,f.width(),20).build());}
   public void renderBackground(net.minecraft.client.gui.GuiGraphics g,int x,int y,float d){var f=dialog.frame();UiDialog.surface(g,f.x(),f.y(),f.width(),f.height());}
-  public void render(net.minecraft.client.gui.GuiGraphics g,int x,int y,float d){UiDialog.render(parent,this,g,d,()->{super.render(g,x,y,d);var h=dialog.header();UiHeading.dialog(g,font,title,h.x(),dialog.frame().y(),h.width());var b=dialog.body();g.drawWordWrap(font,Component.literal(message),b.x(),b.y(),b.width(),UiPalette.color(0xEEEEEE));});}
+  public void render(net.minecraft.client.gui.GuiGraphics g,int x,int y,float d){UiDialog.render(parent,this,g,d,()->{super.render(g,x,y,d);var h=dialog.header();UiHeading.dialog(g,font,title,h.x(),dialog.frame().y(),h.width());var b=dialog.body();var lines=font.split(Component.literal(message),b.width());for(int i=0;i<Math.min(2,lines.size());i++)g.drawString(font,lines.get(i),b.x(),b.y()+i*font.lineHeight,UiKit.muted(),false);UiProgress.draw(g,font,b.x(),b.bottom()-40,b.width(),progress);});}
   public void onClose(){cancel.run();}public boolean isPauseScreen(){return false;}
  }
 }

@@ -48,11 +48,12 @@ public final class CompatibilityClient {
  private static void message(String text){var mc=Minecraft.getInstance();if(mc.player!=null)mc.player.displayClientMessage(Component.literal(text),false);}
  private static void remember(JsonObject reply){if(profiles.size()>=512)profiles.clear();var id=UUID.fromString(Json.str(reply,"uuid"));profiles.put(id,new GameProfile(id,Json.str(reply,"name")));}
  /** Rendering must never block on an HTTP lookup. Unknown UUIDs retry with backoff. */
- public static GameProfile profile(UUID id){
-  var current=Minecraft.getInstance();if(!current.isSameThread()){current.execute(()->profile(id));return new GameProfile(id,id.toString());}
+ public static GameProfile profile(UUID id){return profile(id,AccessDeniedBindings.ID);}
+ public static GameProfile profile(UUID id,String adapter){
+  var current=Minecraft.getInstance();if(!current.isSameThread()){current.execute(()->profile(id,adapter));return new GameProfile(id,id.toString());}
   tick();
-  var p=profiles.get(id);if(p!=null)return p;var mc=Minecraft.getInstance();var online=mc.getConnection().getPlayerInfo(id);if(online!=null)return online.getProfile();
-  long now=System.currentTimeMillis();if(loading.size()<12&&now>=retryAfter.getOrDefault(id,0L)&&loading.add(id)){var j=new JsonObject();j.addProperty("op","lookup");j.addProperty("uuid",id.toString());request(AccessDeniedBindings.ID,j).whenComplete((reply,error)->{loading.remove(id);if(error==null)remember(reply);else{if(retryAfter.size()>=512)retryAfter.clear();retryAfter.put(id,System.currentTimeMillis()+30000);}});}
+  var p=profiles.get(id);if(p!=null)return p;var mc=Minecraft.getInstance();if(mc.getConnection()==null)return new GameProfile(id,id.toString());var online=mc.getConnection().getPlayerInfo(id);if(online!=null)return online.getProfile();
+  long now=System.currentTimeMillis();if(loading.size()<12&&now>=retryAfter.getOrDefault(id,0L)&&loading.add(id)){var j=new JsonObject();j.addProperty("op","lookup");j.addProperty("uuid",id.toString());request(adapter,j).whenComplete((reply,error)->{loading.remove(id);if(error==null)remember(reply);else{if(retryAfter.size()>=512)retryAfter.clear();retryAfter.put(id,System.currentTimeMillis()+30000);}});}
   return new GameProfile(id,id.toString());
  }
 }

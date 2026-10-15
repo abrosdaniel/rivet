@@ -60,7 +60,7 @@ public final class SparkAdapter implements CompatibilityAdapter {
         String input=event.getParseResults().getReader().getString().replaceFirst("^/","");
         if(input.matches("(?i)(?:spark|spark:spark) (?:profiler|sampler) (?:start|stop|cancel)(?: .*|$)")){lease=new Object();owner=null;ownerName="";until=0;profiler="unknown";busy=false;notice=dev.abros.rivet.core.Messages.text("rivet.core.recording_is_managed_outside_rivet_check_c0f4c8e0");}
     }
-    @Override public JsonObject execute(ServerPlayer actor,JsonObject request,ServerIdentityDirectory identities)throws Exception{
+    @Override public JsonObject execute(ServerPlayer actor,JsonObject request,dev.abros.rivet.api.IntegrationApi.Identity identities)throws Exception{
         if(!ServerFeatures.mayDiagnose(actor))throw new IllegalArgumentException(dev.abros.rivet.core.Messages.text("rivet.core.missing_rivet_diagnostics_permission_6fb4f97b"));
         String op=Json.opt(request,"op","snapshot");long now=System.currentTimeMillis();
         if(op.equals("alerts")){if(request.has("enabled")&&request.get("enabled").getAsBoolean())muted.remove(actor.getUUID());else muted.add(actor.getUUID());return snapshot(actor);}

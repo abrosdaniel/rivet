@@ -4,7 +4,7 @@ import java.util.*;
 
 /** Server-owned unsigned replay. Local audiences are frozen; group membership is checked on reads. */
 public final class ChatHistory {
- public record Message(long id,long at,String body){}
+ public record Message(long id,long at,String body,String channel){public Message(long id,long at,String body){this(id,at,body,"");}}
  private final PgDatabase db;private final int limit,days;
  public ChatHistory(PgDatabase db,int limit,int days){if(limit<0||limit>1000||days<1||days>365)throw new IllegalArgumentException();this.db=db;this.limit=limit;this.days=days;}
  public void append(String channel,long at,String body,Collection<String> recipients)throws Exception{
@@ -13,7 +13,7 @@ public final class ChatHistory {
   db.communityTransaction(()->{
    db.lock("chat-history");
    try(var q=db.connection().prepareStatement("INSERT INTO chat_history(channel,at,body,recipients) VALUES(?,?,?,?)")){
-    q.setString(1,channel);q.setLong(2,at);q.setString(3,body);var array=db.connection().createArrayOf("text",recipients.toArray(String[]::new));try{q.setArray(4,array);q.executeUpdate();}finally{array.free();}
+    q.setString(1,channel);q.setLong(2,at);q.setString(3,body);var array=db.connection().createArrayOf("text",recipients.toArray(String[]::new));try{q.setArray(4,array);q.executeUpdate();db.communityChanged();}finally{array.free();}
    }
    try(var q=db.connection().prepareStatement("DELETE FROM chat_history WHERE channel=? AND id NOT IN (SELECT id FROM chat_history WHERE channel=? ORDER BY id DESC LIMIT ?)")){q.setString(1,channel);q.setString(2,channel);q.setInt(3,limit);q.executeUpdate();}
    return null;
@@ -21,7 +21,7 @@ public final class ChatHistory {
  }
  /** Bounded maintenance, independent of new messages and history being enabled. */
  public int cleanup(long now)throws Exception{
-  return db.communityTransaction(()->{try(var q=db.connection().prepareStatement("DELETE FROM chat_history WHERE id IN (SELECT id FROM chat_history WHERE at<? ORDER BY at LIMIT 256 FOR UPDATE SKIP LOCKED)")){q.setLong(1,now-days*86400000L);return q.executeUpdate();}});
+  return db.communityTransaction(()->{try(var q=db.connection().prepareStatement("DELETE FROM chat_history WHERE id IN (SELECT id FROM chat_history WHERE at<? ORDER BY at LIMIT 256 FOR UPDATE SKIP LOCKED)")){q.setLong(1,now-days*86400000L);int removed=q.executeUpdate();if(removed>0)db.communityChanged();return removed;}});
  }
  @FunctionalInterface public interface Delivery {void send(List<Message> messages)throws Exception;}
  public record ReplayRequest(String player,long before,boolean local,boolean groups,long cursor,int count){}
@@ -57,8 +57,8 @@ public final class ChatHistory {
   if(limit==0)return List.of();UUID.fromString(player);
   return db.communityTransaction(()->{
    var out=new ArrayList<Message>();
-   String sql="SELECT h.id,h.at,h.body FROM chat_history h WHERE h.id<? AND h.at<? AND h.at>=? AND (h.channel='global' OR (h.channel='local' AND ? AND ?=ANY(h.recipients)) OR (? AND EXISTS(SELECT 1 FROM documents d JOIN community_relations r ON r.document=d.id AND r.kind='members' AND r.actor=? WHERE d.id=h.channel AND d.section='groups' AND d.body->>'status'='open'))) ORDER BY h.id DESC LIMIT ?";
-   try(var q=db.connection().prepareStatement(sql)){q.setLong(1,cursor);q.setLong(2,before);q.setLong(3,System.currentTimeMillis()-days*86400000L);q.setBoolean(4,local);q.setString(5,player);q.setBoolean(6,groups);q.setString(7,player);q.setInt(8,Math.clamp(pageSize,1,limit));try(var r=q.executeQuery()){while(r.next())out.add(new Message(r.getLong(1),r.getLong(2),r.getString(3)));}}
+   String sql="SELECT h.id,h.at,h.body,h.channel FROM chat_history h WHERE h.id<? AND h.at<? AND h.at>=? AND (h.channel='global' OR (h.channel='local' AND ? AND ?=ANY(h.recipients)) OR (? AND EXISTS(SELECT 1 FROM documents d JOIN community_relations r ON r.document=d.id AND r.kind='members' AND r.actor=? WHERE d.id=h.channel AND d.section='groups' AND d.body->>'status'='open'))) ORDER BY h.id DESC LIMIT ?";
+   try(var q=db.connection().prepareStatement(sql)){q.setLong(1,cursor);q.setLong(2,before);q.setLong(3,System.currentTimeMillis()-days*86400000L);q.setBoolean(4,local);q.setString(5,player);q.setBoolean(6,groups);q.setString(7,player);q.setInt(8,Math.clamp(pageSize,1,limit));try(var r=q.executeQuery()){while(r.next())out.add(new Message(r.getLong(1),r.getLong(2),r.getString(3),r.getString(4)));}}
    return List.copyOf(out);
   });
  }

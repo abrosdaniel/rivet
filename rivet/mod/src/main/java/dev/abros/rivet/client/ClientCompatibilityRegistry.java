@@ -6,7 +6,7 @@ final class ClientCompatibilityRegistry {
  private static OptionalIntegration capability(String mod,String feature,OptionalIntegration.Operation<String> probe){return dev.abros.rivet.compat.IntegrationSupport.capability(mod,feature,probe);}
  private static final OptionalIntegration VOICE=capability("plasmovoice","diagnostics",PlasmoVoiceClientAdapter::probe);
  private static final OptionalIntegration SIMPLE_VOICE=capability("voicechat","diagnostics",SimpleVoiceChatClientAdapter::probe);
- private static final java.util.List<OptionalIntegration> ALL=java.util.List.of(VOICE,SIMPLE_VOICE);
+ private static final java.util.List<OptionalIntegration> ALL=java.util.List.of(VOICE,SIMPLE_VOICE,dev.abros.rivet.compat.NumismaticsBindings.CAPABILITY);
  static void reset(){ALL.forEach(OptionalIntegration::reset);}
  static boolean voiceAvailable(){return VOICE.available()||SIMPLE_VOICE.available();}
  static java.util.List<String> voice(){var lines=new java.util.ArrayList<String>();

@@ -26,5 +26,5 @@ public final class SimpleVoiceChatAdapter implements dev.abros.rivet.server.comp
  public String status(){return LIFECYCLE.available()&&!available()&&LIFECYCLE.diagnostics().get("failures").getAsInt()==0?Messages.text("rivet.core.loading_72005dc8"):LIFECYCLE.status();}
  public com.google.gson.JsonObject diagnostics(){var row=LIFECYCLE.diagnostics();row.addProperty("id",id());row.addProperty("available",available());row.addProperty("status",status());row.add("capabilities",Json.GSON.toJsonTree(java.util.List.of("voice-mute")));return row;}
  public void clear(){SimpleVoiceBridge.mutes=null;LIFECYCLE.reset();}
- public com.google.gson.JsonObject execute(net.minecraft.server.level.ServerPlayer actor,com.google.gson.JsonObject request,dev.abros.rivet.server.compat.ServerIdentityDirectory identities){throw new IllegalArgumentException(Messages.text("rivet.voice.use_vote"));}
+ public com.google.gson.JsonObject execute(net.minecraft.server.level.ServerPlayer actor,com.google.gson.JsonObject request,dev.abros.rivet.api.IntegrationApi.Identity identities){throw new IllegalArgumentException(Messages.text("rivet.voice.use_vote"));}
 }

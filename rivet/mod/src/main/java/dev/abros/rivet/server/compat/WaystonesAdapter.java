@@ -21,6 +21,7 @@ public final class WaystonesAdapter {
   uid=stone.getMethod("getWaystoneUid");name=stone.getMethod("getEffectiveName");dimension=stone.getMethod("getDimension");pos=stone.getMethod("getPos");valid=stone.getMethod("isValid");transientStone=stone.getMethod("isTransient");type=stone.getMethod("getWaystoneType");
   return "player targets + Waystone getters (21.1.46)";
  }
+ public static List<Stone> apiPoints(ServerPlayer player)throws Exception{return CAPABILITY.required(()->read(player));}
  public static List<Stone> points(ServerPlayer player){return CAPABILITY.call(()->read(player),List::of);}
  private static List<Stone> read(ServerPlayer player)throws Exception{
   var result=new LinkedHashMap<UUID,Stone>();

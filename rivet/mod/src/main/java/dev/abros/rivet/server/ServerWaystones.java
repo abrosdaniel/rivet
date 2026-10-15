@@ -2,7 +2,6 @@ package dev.abros.rivet.server;
 
 import java.util.*;
 import dev.abros.rivet.network.WaystonesWire;
-import dev.abros.rivet.server.compat.WaystonesAdapter;
 import net.minecraft.server.level.ServerPlayer;
 import net.neoforged.neoforge.network.PacketDistributor;
 
@@ -13,10 +12,13 @@ public final class ServerWaystones {
   if(!player.connection.hasChannel(WaystonesWire.Snapshot.TYPE))return;
   long now=System.currentTimeMillis();if(now<next.getOrDefault(player,0L))return;next.put(player,now+1000);
   boolean permitted=ServerMap.worldId()!=null&&ServerDatabase.settings().flag("map.enabled")&&(!player.server.isDedicatedServer()||AuthServer.authenticated(player));
-  var points=permitted?WaystonesAdapter.points(player):List.<WaystonesWire.Stone>of();
+  var points=permitted?points(player):List.<WaystonesWire.Stone>of();
   int parts=Math.max(1,(points.size()+127)/128);
   for(int part=0;part<parts;part++)PacketDistributor.sendToPlayer(player,new WaystonesWire.Snapshot(sequence,part,parts,points.subList(part*128,Math.min(points.size(),(part+1)*128))));
  }
- public static void reset(){next.clear();WaystonesAdapter.CAPABILITY.reset();}
+ public static void reset(){next.clear();}
+ public static boolean available(){return ServerProviders.find(dev.abros.rivet.api.IntegrationApi.WAYSTONES,"waystones").map(dev.abros.rivet.api.IntegrationApi.Waystones::available).orElse(false);}
+ public static List<WaystonesWire.Stone> apiPoints(ServerPlayer player)throws Exception{return ServerProviders.find(dev.abros.rivet.api.IntegrationApi.WAYSTONES,"waystones").orElseThrow().points(player.getUUID()).stream().map(s->new WaystonesWire.Stone(s.uuid(),s.name(),s.dimension(),s.x(),s.y(),s.z())).toList();}
+ private static List<WaystonesWire.Stone> points(ServerPlayer player){try{return apiPoints(player);}catch(Exception unavailable){return List.of();}}
  private ServerWaystones(){}
 }

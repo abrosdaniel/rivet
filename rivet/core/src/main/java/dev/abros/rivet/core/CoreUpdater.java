@@ -80,11 +80,16 @@ public final class CoreUpdater {
         return actual.length==3&&required.length==3&&actual[0].equals(required[0])&&actual[1].equals(required[1])&&Versions.compare(installed,minimum)>=0;
     }
     public String stage(Path game,Path loadedJar,Update update,Cache cache,JsonObject currentState)throws Exception{
-        Path root=game.toRealPath(),jar=loadedJar.toRealPath();if(!jar.startsWith(root.resolve("mods"))||!Files.isRegularFile(jar))throw new IllegalArgumentException(dev.abros.rivet.core.Messages.text("rivet.message.error_4069e968e817"));
+        return stage(game,loadedJar,update,cache,currentState,event->{});
+    }
+    public String stage(Path game,Path loadedJar,Update update,Cache cache,JsonObject currentState,java.util.function.Consumer<InstallProgress> progress)throws Exception{
+        progress.accept(InstallProgress.phase("checking"));Path root=game.toRealPath(),jar=loadedJar.toRealPath();if(!jar.startsWith(root.resolve("mods"))||!Files.isRegularFile(jar))throw new IllegalArgumentException(dev.abros.rivet.core.Messages.text("rivet.message.error_4069e968e817"));
         String relative=root.relativize(jar).toString().replace('\\','/');SafePaths.validate(relative);
         String destination=update.artifact().path();
         if(!relative.equals(destination)&&Files.exists(SafePaths.resolve(root,destination)))throw new IllegalArgumentException(dev.abros.rivet.core.Messages.text("rivet.core.the_selected_version_is_already_in_ae7767c6"));
-        cache.obtain(update.artifact(),new AtomicBoolean());
+        progress.accept(new InstallProgress("downloading",update.artifact().path(),0,update.artifact().size(),0,1));
+        cache.obtain(update.artifact(),new AtomicBoolean(),index->{},(position,received)->progress.accept(new InstallProgress("downloading",update.artifact().path(),position,update.artifact().size(),0,1)));
+        progress.accept(InstallProgress.phase("preparing"));
         var changes=new ArrayList<Planner.Change>();
         if(relative.equals(destination))changes.add(new Planner.Change(relative,Hashes.sha256(jar),update.artifact().sha256()));
         else {changes.add(new Planner.Change(relative,Hashes.sha256(jar),null));changes.add(new Planner.Change(destination,null,update.artifact().sha256()));}

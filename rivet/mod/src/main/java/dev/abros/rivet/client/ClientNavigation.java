@@ -10,9 +10,9 @@ final class ClientNavigation {
  static void tick(){
   var current=Minecraft.getInstance().getConnection();
   if(connection!=current){connection=current;reset();}
-  if(!WorldMapClient.allowed()){reset();}else {MapLayerClient.tick();MapActivities.tick();MapGroupClient.tick();MapPositions.tick();MapPublications.tick();}
+  if(!WorldMapClient.allowed()){reset();}else {MapLayerClient.tick();MapActivities.tick();MapGroupClient.tick();MapPositions.tick();MapPublications.tick();MapIntegrationLayers.tick();}
  }
- static void reset(){DirectionCue.clear();MapLayerClient.reset();MapActivities.reset();MapGroupClient.reset();MapPositions.reset();MapPublications.reset();}
+ static void reset(){DirectionCue.clear();MapLayerClient.reset();MapActivities.reset();MapGroupClient.reset();MapPositions.reset();MapPublications.reset();MapIntegrationLayers.reset();}
  static boolean receive(JsonObject packet){
   if(Json.opt(packet,"kind","").equals("mapMarkerLink")){
    if(WorldMapClient.markersReady()&&WorldMapClient.allowed())try{
@@ -22,6 +22,6 @@ final class ClientNavigation {
   }
 
   if(Json.opt(packet,"kind","").equals("socialDirection")){DirectionCue.receive(packet);return true;}
-  return MapPublications.receive(packet)||MapPositions.receive(packet)||MapLayerClient.receive(packet)||MapActivities.receive(packet)||MapGroupClient.receive(packet);
+  return MapIntegrationLayers.receive(packet)||MapPublications.receive(packet)||MapPositions.receive(packet)||MapLayerClient.receive(packet)||MapActivities.receive(packet)||MapGroupClient.receive(packet);
  }
 }

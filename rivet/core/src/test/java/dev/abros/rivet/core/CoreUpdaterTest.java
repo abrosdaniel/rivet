@@ -19,6 +19,7 @@ class CoreUpdaterTest {
             if(!data.containsKey(url))throw new Remote.Unavailable("offline");return data.get(url);
         }
         @Override public void download(String url,Path to,long limit,AtomicBoolean cancel)throws IOException{Files.write(to,bytes(url,(int)limit));}
+        @Override public void download(String url,Path to,long limit,AtomicBoolean cancel,Remote.Progress progress)throws IOException{progress.accept(0,0);download(url,to,limit,cancel);progress.accept(Files.size(to),Files.size(to));}
     }
     Source source(){
         var remote=new Source();var releases=new JsonArray();
@@ -79,7 +80,10 @@ class CoreUpdaterTest {
     @Test void validUpdateStagesThenAppliesAndKeepsBackup()throws Exception{
         var remote=source();var updater=new CoreUpdater(remote);var update=updater.check("1.0.0","1.21.1","21.1.250").orElseThrow();
         Path jar=game.resolve("mods/rivet.jar");Files.createDirectories(jar.getParent());Files.writeString(jar,"old");remote.data.put(update.artifact().urls().get(0),"new".getBytes());
-        String id=updater.stage(game,jar,update,new Cache(game,remote),new JsonObject());
+        var progress=new java.util.ArrayList<InstallProgress>();
+        String id=updater.stage(game,jar,update,new Cache(game,remote),new JsonObject(),progress::add);
+        assertTrue(progress.stream().anyMatch(p->p.phase().equals("downloading")&&p.bytes()==update.artifact().size()));
+        assertEquals("preparing",progress.getLast().phase());
         assertEquals("old",Files.readString(jar));var transactions=new Transactions(game);transactions.apply(id);
         assertFalse(Files.exists(jar));assertEquals("new",Files.readString(game.resolve("mods/rivet-1.1.0-mc1.21.1-neoforge.jar")));assertFalse(Files.exists(game.resolve("rivet/pending.json")));
         assertEquals("1.1.0",Json.str(Json.read(game.resolve("rivet/state.json")),"coreVersion"));

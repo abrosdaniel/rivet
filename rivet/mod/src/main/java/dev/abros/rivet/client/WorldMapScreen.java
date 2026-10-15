@@ -13,12 +13,13 @@ import java.util.*;
 /** The map owns the whole viewport. Controls are floating layers, never canvas columns. */
 final class WorldMapScreen extends Screen {
     private final Screen parent;
-    private static double lastZoom=Math.pow(1.25,3);
+    static double lastZoom=Math.pow(1.25,3);
     final MapViewport view=new MapViewport();
     private String dimension="",query="";
     private MapMarkerPanel markerPanel;
     private List<MapMarker> markerSnapshot=List.of();
     private List<MapCategory> categorySnapshot=List.of();
+    private boolean terrainShown;
     private boolean centered,markerDrawer,dragged,canvasPressed;
     private int markerFilter;
     private String categoryFilter="*",appliedQuery="";
@@ -196,9 +197,11 @@ final class WorldMapScreen extends Screen {
         g.enableScissor(0,0,width,height);
         long terrainTiming=dev.abros.rivet.core.PerformanceMetrics.start();
         int detail=MapDetail.level(view.zoom(),minecraft.getWindow().getGuiScale()),chunks=4<<detail;
-        var regions=new LinkedHashSet<MapRegionTextures.Key>();
-        for(var key:WorldMapClient.visibleTiles(MapCaves.layer(dimension),view,width,height))regions.add(new MapRegionTextures.Key(key.layer(),Math.floorDiv(key.x(),chunks),Math.floorDiv(key.z(),chunks),detail));
-        for(var key:regions){
+        var regions=MapRegionTextures.viewKeys(MapCaves.layer(dimension),view,width,height,minecraft.getWindow().getGuiScale());
+        WorldMapClient.visibleTiles(MapCaves.layer(dimension),view,width,height);
+        MapRegionTextures.prepareView(regions);
+        terrainShown|=MapRegionTextures.restored(regions);
+        if(terrainShown)for(var key:regions){
             var texture=MapRegionTextures.texture(key,detail);
             float left=(float)view.screenX(key.x()*key.blocks(),midX()),top=(float)view.screenZ(key.z()*key.blocks(),midZ()),right=(float)view.screenX((key.x()+1)*key.blocks(),midX()),bottom=(float)view.screenZ((key.z()+1)*key.blocks(),midZ());
             if(texture==null||!texture.complete())MapRegionTextures.fallback(g,key,left,top,right,bottom);
@@ -206,6 +209,7 @@ final class WorldMapScreen extends Screen {
         }
         dev.abros.rivet.core.PerformanceMetrics.end("client.worldmap.terrain",terrainTiming);
         MapTerritories.world(g,dimension,view,width,height,territoryDraft);
+        MapIntegrationLayers.worldAreas(g,dimension,view,width,height);
         MapRadar.world(g,dimension,view,width,height);
         long prepareTiming=dev.abros.rivet.core.PerformanceMetrics.start();
         var markers=visibleMarkers();var occupied=new dev.abros.rivet.core.BoxIntersectionIndex(new NativeLayout.Box(-64,-64,width+128,height+128));
@@ -213,6 +217,7 @@ final class WorldMapScreen extends Screen {
         var deathLabels=markers.stream().filter(MapMarker::death).map(m->{int x=(int)view.screenX(m.x()+.5,midX()),y=(int)view.screenZ(m.z()+.5,midZ()),w=font.width(dev.abros.rivet.core.map.MapDeathLifecycle.countdown(m,System.currentTimeMillis()))+10;return new NativeLayout.Box(x-w/2,y+markerSize()/2+2,w,14);}).toList();
         dev.abros.rivet.core.PerformanceMetrics.end("client.worldmap.prepare",prepareTiming);
         long markersTiming=dev.abros.rivet.core.PerformanceMetrics.start();
+        MapIntegrationLayers.world(g,dimension,view,width,height,occupied,deathLabels);
         MapSharedOverlay.world(g,dimension,view,width,height,occupied,deathLabels);
         var draft=draftMarker();for(var m:markers)if(draft==null||!m.id().equals(draft.id()))drawMarker(g,m,occupied,deathLabels);
         dev.abros.rivet.core.PerformanceMetrics.end("client.worldmap.markers",markersTiming);

@@ -33,7 +33,7 @@ final class MapTerritories {
   all();double radius=Math.sqrt(2)*side/(2*projection.zoom());
   for(var t:index.visible(dimension,projection.x()-radius,projection.z()-radius,projection.x()+radius,projection.z()+radius))if(t.dimension().equals(dimension))draw(g,t.points(),t.color(),"",p->new double[]{x+side/2d+projection.screenX(p.x(),p.z()),y+side/2d+projection.screenY(p.x(),p.z())},x,y,side,side,round,true);
  }
- private static void draw(GuiGraphics g,List<MapTerritory.Point> vertices,int color,String name,java.util.function.Function<MapTerritory.Point,double[]> project,int left,int top,int width,int height,boolean round,boolean closed){
+ static void draw(GuiGraphics g,List<MapTerritory.Point> vertices,int color,String name,java.util.function.Function<MapTerritory.Point,double[]> project,int left,int top,int width,int height,boolean round,boolean closed){
   if(vertices.isEmpty())return;var points=vertices.stream().map(project).toList();
   double minX=Double.POSITIVE_INFINITY,minY=minX,maxX=Double.NEGATIVE_INFINITY,maxY=maxX;
   for(var p:points){minX=Math.min(minX,p[0]);maxX=Math.max(maxX,p[0]);minY=Math.min(minY,p[1]);maxY=Math.max(maxY,p[1]);}

@@ -8,14 +8,19 @@ import java.util.function.Consumer;
 
 /** Public provider download, isolated from resumable server transfers. */
 final class PackDownloads {
- @FunctionalInterface interface Source {void download(String url,Path target,long size,AtomicBoolean cancel)throws IOException,InterruptedException;}
+ @FunctionalInterface interface Source {void download(String url,Path target,long size,AtomicBoolean cancel)throws IOException,InterruptedException;
+  default void download(String url,Path target,long size,AtomicBoolean cancel,Remote.Progress progress)throws IOException,InterruptedException{download(url,target,size,cancel);progress.accept(size,size);}
+ }
  static boolean source(PackManifest.Entry file,Path object,AtomicBoolean cancel,Consumer<String> progress,Source source)throws IOException{
+  return source(file,object,cancel,progress,source,(position,received)->{});
+ }
+ static boolean source(PackManifest.Entry file,Path object,AtomicBoolean cancel,Consumer<String> progress,Source source,Remote.Progress bytes)throws IOException{
   cancelled(cancel);if(file.url().isEmpty())return false;
   Path part=object.resolveSibling(object.getFileName()+".source.part");PackPublisher.safe(part);
   Path etag=part.resolveSibling(part.getFileName()+".etag");PackPublisher.safe(etag);
   try{
    progress.accept(dev.abros.rivet.core.Messages.text("rivet.core.downloading_from_source_dc4ffc8e")+file.path());
-   source.download(PackSources.publicDownload(file.url()),part,file.size(),cancel);cancelled(cancel);
+   source.download(PackSources.publicDownload(file.url()),part,file.size(),cancel,bytes);cancelled(cancel);
    if(Files.size(part)!=file.size()||!Hashes.sha256(part).equals(file.hash()))throw new IOException(dev.abros.rivet.core.Messages.text("rivet.core.source_returned_a_different_file_97833ee3"));
    Json.move(part,object);return true;
   }catch(InterruptedException e){Thread.currentThread().interrupt();throw new InterruptedIOException(dev.abros.rivet.core.Messages.text("rivet.core.upload_cancelled_13f622b6"));}

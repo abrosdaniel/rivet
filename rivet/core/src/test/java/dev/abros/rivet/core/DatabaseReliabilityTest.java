@@ -73,7 +73,7 @@ class DatabaseReliabilityTest {
             DatabaseMigrations.apply(db);return null;
         }));
         db.transaction(()->{DatabaseMigrations.apply(db);return null;});
-        assertEquals(8,scalar("SELECT count(*) FROM schema_versions"));
+        assertEquals(9,scalar("SELECT count(*) FROM schema_versions"));
     }
     @Test void newerDatabaseIsRejectedAndTransactionIsCleanedUp() throws Exception {
         assertThrows(IllegalStateException.class,()->db.transaction(()->{
@@ -82,7 +82,7 @@ class DatabaseReliabilityTest {
             }
             DatabaseMigrations.apply(db);return null;
         }));
-        assertEquals(8,scalar("SELECT max(version) FROM schema_versions"));
+        assertEquals(9,scalar("SELECT max(version) FROM schema_versions"));
     }
     @Test void migrationSqlFailureRollsBackEarlierDdl() throws Exception {
         assertThrows(SQLException.class,()->db.transaction(()->{
@@ -94,7 +94,7 @@ class DatabaseReliabilityTest {
             DatabaseMigrations.apply(db);return null;
         }));
         assertEquals(0,scalar("SELECT count(*) FROM pg_tables WHERE schemaname='rivet' AND tablename='migration_rollback_probe'"));
-        assertEquals(8,scalar("SELECT count(*) FROM schema_versions"));
+        assertEquals(9,scalar("SELECT count(*) FROM schema_versions"));
         db.transaction(()->{DatabaseMigrations.apply(db);return null;});
     }
     @Test void menuLoadLeavesConnectionsForAuth() throws Exception {
@@ -127,7 +127,7 @@ class DatabaseReliabilityTest {
     @Test void taskSearchProjectionMigratesAndTracksEveryBodyUpdate()throws Exception{
         db.transaction(()->{try(var q=db.connection().createStatement()){
             q.execute("INSERT INTO community_group_items(id,kind,owner,body) VALUES('projection-task','task','reader','{\"title\":\"Мост\",\"description\":\"100% _готово\",\"status\":\"open\",\"comments\":[\"Keep\"]}')");
-            q.execute("ALTER TABLE community_group_items DROP COLUMN task_status,DROP COLUMN task_archived,DROP COLUMN task_search");q.execute("DELETE FROM schema_versions WHERE version>=7");q.execute("DROP TABLE chat_history");
+            q.execute("ALTER TABLE community_group_items DROP COLUMN task_status,DROP COLUMN task_archived,DROP COLUMN task_search");q.execute("DELETE FROM schema_versions WHERE version>=7");q.execute("DROP TABLE api_key_audit,api_keys,api_apps,chat_history");
         }DatabaseMigrations.apply(db);DatabaseMigrations.apply(db);
         try(var q=db.connection().createStatement();var r=q.executeQuery("SELECT task_search,task_status,task_archived,body->'comments',revision FROM community_group_items WHERE id='projection-task'")){assertTrue(r.next());assertEquals("Мост 100% _готово",r.getString(1));assertEquals("open",r.getString(2));assertNull(r.getString(3));assertEquals("[\"Keep\"]",r.getString(4));assertEquals(1,r.getLong(5));}
         try(var q=db.connection().createStatement()){q.execute("UPDATE community_group_items SET body=jsonb_build_object('title','Новый','status','done','archived',true) WHERE id='projection-task'");}
@@ -135,8 +135,8 @@ class DatabaseReliabilityTest {
         return null;});
     }
     @Test void v5FixtureMigratesWithIdentityActiveSkinAndOrderingPreserved()throws Exception{
-        db.transaction(()->{try(var q=db.connection().createStatement()){q.execute("ALTER TABLE skin_library DROP COLUMN position CASCADE");q.execute("ALTER TABLE community_group_items DROP COLUMN task_status,DROP COLUMN task_archived,DROP COLUMN task_search");q.execute("DELETE FROM schema_versions WHERE version>=6");q.execute("DROP TABLE chat_history");try(var input=getClass().getResourceAsStream("/fixtures/skins-v5.sql")){q.execute(new String(input.readAllBytes(),java.nio.charset.StandardCharsets.UTF_8));}}DatabaseMigrations.apply(db);return null;});
+        db.transaction(()->{try(var q=db.connection().createStatement()){q.execute("ALTER TABLE skin_library DROP COLUMN position CASCADE");q.execute("ALTER TABLE community_group_items DROP COLUMN task_status,DROP COLUMN task_archived,DROP COLUMN task_search");q.execute("DELETE FROM schema_versions WHERE version>=6");q.execute("DROP TABLE api_key_audit,api_keys,api_apps,chat_history");try(var input=getClass().getResourceAsStream("/fixtures/skins-v5.sql")){q.execute(new String(input.readAllBytes(),java.nio.charset.StandardCharsets.UTF_8));}}DatabaseMigrations.apply(db);return null;});
         db.transaction(()->{try(var q=db.connection().createStatement();var rows=q.executeQuery("SELECT name,position,owner::text FROM skin_library ORDER BY position")){assertTrue(rows.next());assertEquals("Builder",rows.getString(1));assertEquals(0,rows.getInt(2));assertEquals("10000000-0000-0000-0000-000000000001",rows.getString(3));assertTrue(rows.next());assertEquals("Explorer",rows.getString(1));assertEquals(1,rows.getInt(2));assertFalse(rows.next());}try(var q=db.connection().createStatement();var rows=q.executeQuery("SELECT active::text,slim FROM skin_profiles")){assertTrue(rows.next());assertEquals("00000000-0000-0000-0000-000000000002",rows.getString(1));assertTrue(rows.getBoolean(2));}return null;});
-        db.transaction(()->{DatabaseMigrations.apply(db);return null;});assertEquals(8,scalar("SELECT count(*) FROM schema_versions"));
+        db.transaction(()->{DatabaseMigrations.apply(db);return null;});assertEquals(9,scalar("SELECT count(*) FROM schema_versions"));
     }
 }

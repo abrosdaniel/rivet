@@ -14,10 +14,11 @@ public final class ReleaseCorrectionsHarness {
  private static void check(boolean condition,String message){if(!condition)throw new IllegalStateException(message);checks++;}
  private static Button button(String prefix){return Minecraft.getInstance().screen.children().stream().filter(c->c instanceof Button b&&b.getMessage().getString().startsWith(prefix)).map(c->(Button)c).findFirst().orElseThrow();}
  @SubscribeEvent public static void render(net.neoforged.neoforge.client.event.ScreenEvent.Render.Post event){if(System.getenv("RIVET_RELEASE_CORRECTIONS")==null||done)return;var mc=Minecraft.getInstance();try{
-  if(frames==null){if(!(mc.screen instanceof TitleScreen))return;frames=VisualMatrixHarness.samples(3,0,2);check(MapSettings.INSTANCE.size==96,"Fresh minimap default: expected 96, got "+MapSettings.INSTANCE.size);}
+  if(frames==null){if(!(mc.screen instanceof TitleScreen))return;frames=VisualMatrixHarness.samples(5,0,2);check(MapSettings.INSTANCE.size==96,"Fresh minimap default: expected 96, got "+MapSettings.INSTANCE.size);}
   if(System.currentTimeMillis()<next)return;next=System.currentTimeMillis()+140;
   if(frame>0)UiGeometryHarness.verify(mc.screen);
   if(frame==5){var output=new java.io.File(System.getenv("RIVET_RELEASE_CORRECTIONS"));output.mkdirs();UiCaptureHarness.grab(output,"required-components.png",mc.getMainRenderTarget(),message->{});}
+  if(frame>0&&frames.get(frame-1).scene()>=3){var output=new java.io.File(System.getenv("RIVET_RELEASE_CORRECTIONS"));output.mkdirs();UiCaptureHarness.grab(output,"progress-"+frame+".png",mc.getMainRenderTarget(),message->{});}
   if(frame==frames.size()){System.out.println("RIVET_RELEASE_CORRECTIONS_OK: frames="+frame+" checks="+checks);done=true;mc.stop();return;}
   var f=frames.get(frame++);f.apply();
   if(f.scene()<2){
@@ -28,6 +29,18 @@ public final class ReleaseCorrectionsHarness {
    button("Component 0").onPress();button(Client.text("ui.review_changes_f5459a86")).onPress();
    if(f.scene()==1){screen.revealRow(100);screen.rebuildWidgets();check(screen.firstRow>0,"Component scrolling");check(!button("Shared Library").active,"Required component cannot be disabled");}
    var rows=screen.children().stream().filter(c->c instanceof UiChoiceRow).map(c->(UiChoiceRow)c).toList();check(!rows.isEmpty(),"Visible rows");if(rows.size()>1)check(rows.get(1).getY()-rows.get(0).getY()>=42,"Description space");
+  }else if(f.scene()>=3){
+   check(!Client.text("progress.downloading").equals("rivet.progress.downloading"),"Progress translation missing");
+   var progress=new dev.abros.rivet.core.InstallProgress("downloading","mods/large-file.jar",5242880,10485760,1,3);
+   if(f.scene()==3){
+    var popup=new CoreVersionsPopup(null);for(String name:List.of("started","installing")){var field=CoreVersionsPopup.class.getDeclaredField(name);field.setAccessible(true);field.setBoolean(popup,true);}
+    var versions=CoreVersionsPopup.class.getDeclaredField("versions");versions.setAccessible(true);versions.set(popup,List.of(new dev.abros.rivet.core.CoreUpdater.Update("2.3.0",new dev.abros.rivet.core.Cache.Artifact("mods/rivet.jar",List.of(),"0".repeat(64),10485760),true)));
+    var field=CoreVersionsPopup.class.getDeclaredField("progress");field.setAccessible(true);field.set(popup,progress);mc.setScreen(popup);
+    var bottom=CoreVersionsPopup.class.getDeclaredMethod("bottom");bottom.setAccessible(true);check(popup.scrollLayout().viewport().bottom()<=(int)bottom.invoke(popup)-78,"Progress overlaps version list");
+   }else{
+    var type=Class.forName("dev.abros.rivet.client.ServerPackClient$PackLoadingScreen");var constructor=type.getDeclaredConstructor(Screen.class,Runnable.class);constructor.setAccessible(true);var popup=(Screen)constructor.newInstance(null,(Runnable)()->{});
+    var field=type.getDeclaredField("progress");field.setAccessible(true);field.set(popup,progress);var message=type.getDeclaredField("message");message.setAccessible(true);message.set(popup,"mods/large-file.jar");mc.setScreen(popup);
+   }
   }else{
    for(int p=0;p<3;p++){UiPresentationProfiles.apply(p);check(UiPresentationProfiles.current()==p,"Profile identification "+p);}
    SocialSettings.INSTANCE.heads=false;check(UiPresentationProfiles.current()==-1,"Manual changes must show Custom");

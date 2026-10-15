@@ -5,6 +5,34 @@ import java.nio.file.*;
 import static org.junit.jupiter.api.Assertions.*;
 class ServerSettingsTest {
  @TempDir Path root;
+ @Test void browserTicketLimitsAndUpgrade()throws Exception{
+  String template=ServerSettings.template();
+  Path file=root.resolve("config/rivet-server.toml");Files.createDirectories(file.getParent());
+  Files.writeString(file,template.replace("ticketSeconds = 30", "").replace("ticketLimit = 1024", "").replace("ticketsPerKey = 16", ""));
+  var settings=ServerSettings.load(root);assertEquals(30,settings.number("api.websocket.ticketSeconds"));assertEquals(1024,settings.number("api.websocket.ticketLimit"));assertEquals(16,settings.number("api.websocket.ticketsPerKey"));
+  assertTrue(Files.readString(file).contains("ticketSeconds = 30"));
+  for(String invalid:new String[]{template.replace("ticketSeconds = 30","ticketSeconds = 4"),template.replace("ticketSeconds = 30","ticketSeconds = 121"),template.replace("ticketLimit = 1024","ticketLimit = 0"),template.replace("ticketsPerKey = 16","ticketsPerKey = 1025")})assertThrows(IllegalArgumentException.class,()->ServerSettings.parse(invalid));
+ }
+ @Test void terrainDefaultsAndMaskValidation()throws Exception{
+  var defaults=ServerSettings.parse(ServerSettings.template());assertFalse(defaults.flag("api.terrain.enabled"));assertFalse(defaults.flag("api.terrain.isometric"));assertEquals(4096,defaults.number("api.terrain.maxTiles"));
+  for(String invalid:new String[]{ServerSettings.template().replace("maxTiles = 4096","maxTiles = 1"),ServerSettings.template().replace("hidden = []","hidden = [\"10,0,0,0\"]"),ServerSettings.template().replace("maxZoom = 4","maxZoom = 7")})assertThrows(IllegalArgumentException.class,()->ServerSettings.parse(invalid));
+ }
+ @Test void apiSettingsUpgradeWithBackupAndKeepOwnerValues()throws Exception{
+  String original=ServerSettings.template().split("\\[api\\]",2)[0]+"[api]\nrequestsPerMinute = 77 # chosen budget\n";
+  Path file=root.resolve("config/rivet-server.toml");Files.createDirectories(file.getParent());Files.writeString(file,original);
+  var settings=ServerSettings.load(root);assertEquals(77,settings.number("api.requestsPerMinute"));assertEquals(256,settings.number("api.keyLimit"));
+  String upgraded=Files.readString(file);assertTrue(upgraded.contains("# chosen budget"));assertTrue(upgraded.contains("keyRetentionDays = 30"));assertTrue(upgraded.contains("[api.terrain]"));assertTrue(upgraded.contains("columnsPerTick = 64"));
+  try(var files=Files.list(file.getParent())){assertTrue(files.filter(p->p.toString().endsWith(".toml.bak")).anyMatch(p->{try{return Files.readString(p).equals(original);}catch(Exception e){return false;}}));}
+  ServerSettings.load(root);assertEquals(upgraded,Files.readString(file));
+  assertThrows(IllegalArgumentException.class,()->ServerSettings.parse(upgraded.replace("keyLimit = 256","keyLimit = 0")));
+ }
+ @Test void restDefaultsAndNetworkBoundariesAreExplicit()throws Exception{
+  var defaults=ServerSettings.parse(ServerSettings.template());assertFalse(defaults.flag("api.http.enabled"));assertEquals("127.0.0.1",defaults.text("api.http.bind"));assertTrue(defaults.strings("api.http.publicResources").isEmpty());
+  for(String bad:new String[]{"0.0.0.0","localhost","192.0.2.1"})assertThrows(IllegalArgumentException.class,()->ServerSettings.parse(ServerSettings.template().replace("bind = \"127.0.0.1\"","bind = \""+bad+"\"")));
+  for(String bad:new String[]{"*","http://example.org","https://example.org/path","https://user@example.org","https://example.org:0"})assertThrows(IllegalArgumentException.class,()->ServerSettings.parse(ServerSettings.template().replace("origins = []","origins = [\""+bad+"\"]")));
+  assertThrows(IllegalArgumentException.class,()->ServerSettings.parse(ServerSettings.template().replace("publicResources = []","publicResources = [\"players\"]")));
+  assertThrows(IllegalArgumentException.class,()->ServerSettings.parse(ServerSettings.template().replace("origins = []","origins = [1]")));
+ }
  @Test void configReviewHidesSecretsAndReloadsOnlyMenu()throws Exception{var original=ServerSettings.parse(ServerSettings.template());var next=ServerSettings.parse(ServerSettings.template().replace("password = \"\"","password = \"never-send-secret\"").replace("help = \"", "help = \"Изменено. "));assertFalse(original.preview(next).toString().contains("never-send-secret"));var live=original.liveFrom(next);assertEquals("",live.text("database.password"));assertTrue(live.text("menu.help").startsWith("Изменено."));}
  @Test void defaultsCoverAllModules()throws Exception{var s=ServerSettings.load(root);assertEquals("false",s.text("auth.mode"));assertEquals(6,s.number("auth.minPasswordLength"));assertFalse(s.votes().enabled());assertTrue(s.statistics().deaths());assertEquals(8,s.community().getAsJsonArray("sections").size());assertTrue(s.menu().getAsJsonArray("links").isEmpty());}
  @Test void acceptsLinksAndStatsSettings()throws Exception{var s=ServerSettings.parse(ServerSettings.template().replace("links = []","links = [{name = 'Сайт', url = 'https://example.org'}]").replace("playTime = true","playTime = false"));assertFalse(s.statistics().totalTime());assertEquals("Сайт",s.menu().getAsJsonArray("links").get(0).getAsJsonObject().get("name").getAsString());assertFalse(s.menu().has("database"));}

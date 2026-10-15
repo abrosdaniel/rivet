@@ -1,0 +1,4 @@
+CREATE TABLE api_apps(id TEXT PRIMARY KEY, requests_per_minute INTEGER NOT NULL CHECK(requests_per_minute>0), bucket BIGINT NOT NULL DEFAULT 0, requests INTEGER NOT NULL DEFAULT 0);
+CREATE TABLE api_keys(id UUID PRIMARY KEY, app TEXT NOT NULL REFERENCES api_apps(id), digest TEXT NOT NULL, scopes TEXT[] NOT NULL, created BIGINT NOT NULL, expires BIGINT NOT NULL, revoked BIGINT NOT NULL DEFAULT 0, disabled BOOLEAN NOT NULL DEFAULT FALSE, used BIGINT NOT NULL DEFAULT 0, requests_per_minute INTEGER NOT NULL CHECK(requests_per_minute>0), bucket BIGINT NOT NULL DEFAULT 0, requests INTEGER NOT NULL DEFAULT 0);
+CREATE INDEX api_keys_app ON api_keys(app);
+CREATE TABLE api_key_audit(id BIGSERIAL PRIMARY KEY, at BIGINT NOT NULL, action TEXT NOT NULL, app TEXT NOT NULL, key_id UUID);

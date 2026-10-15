@@ -42,11 +42,23 @@ public final class PackInstaller {
   var plan=new Planner.Plan(UUID.randomUUID().toString(),Hashes.sha256(server.getBytes(java.nio.charset.StandardCharsets.UTF_8)),List.copyOf(changes),Map.copyOf(owned),Set.copyOf(choices),List.copyOf(conflicts),downloads);return new Review(plan,manifest,state,server,configurations,Map.copyOf(activeConfigurations));
  }
  public String stage(Review review,PackClient client,AtomicBoolean cancel,Consumer<String> progress)throws IOException{
-  validateReview(review);
+  return stage(review,client,cancel,progress,event->{});
+ }
+ public String stage(Review review,PackClient client,AtomicBoolean cancel,Consumer<String> progress,Consumer<InstallProgress> observer)throws IOException{
+  observer.accept(InstallProgress.phase("checking"));validateReview(review);
   var hashes=new HashSet<String>();for(var c:review.plan().changes())if(c.after()!=null)hashes.add(c.after());for(var hash:List.copyOf(hashes))if(!review.manifest().files().stream().anyMatch(f->f.hash().equals(hash))){Path source=configurationObject(hash);Path object=cache.path(hash);Files.createDirectories(object.getParent());Files.copy(source,object,StandardCopyOption.REPLACE_EXISTING);hashes.remove(hash);}
-  for(var file:review.manifest().files())if(hashes.remove(file.hash())){if(cancel.get())throw new IOException(dev.abros.rivet.core.Messages.text("rivet.core.upload_cancelled_13f622b6"));cache.write(file.hash(),cancel,object->client.download(review.manifest().hash(),file,object,cancel,progress));}if(!hashes.isEmpty())throw new IOException(dev.abros.rivet.core.Messages.text("rivet.core.the_manifest_is_missing_required_files_f9ada0c2"));if(cancel.get())throw new IOException(dev.abros.rivet.core.Messages.text("rivet.core.upload_cancelled_13f622b6"));
-  validateMods(review);
-  var plan=review.plan();var accepted=new Planner.Plan(plan.id(),plan.projectKey(),plan.changes(),plan.ownership(),plan.selection(),List.of(),plan.downloadBytes());
+  var pending=new LinkedHashMap<String,PackManifest.Entry>();for(var file:review.manifest().files())if(hashes.contains(file.hash()))pending.putIfAbsent(file.hash(),file);
+  long total=pending.values().stream().mapToLong(PackManifest.Entry::size).sum(),completed=0;int done=0;
+  for(var file:pending.values()){
+   if(cancel.get())throw new IOException(dev.abros.rivet.core.Messages.text("rivet.core.upload_cancelled_13f622b6"));
+   long base=completed;int finished=done;
+   observer.accept(new InstallProgress("downloading",file.path(),base,total,finished,pending.size()));
+   cache.write(file.hash(),cancel,object->client.download(review.manifest().hash(),file,object,cancel,progress,(position,received)->observer.accept(new InstallProgress("downloading",file.path(),base+position,total,finished,pending.size()))));
+   completed+=file.size();done++;hashes.remove(file.hash());observer.accept(new InstallProgress("downloading",file.path(),completed,total,done,pending.size()));
+  }
+  if(!hashes.isEmpty())throw new IOException(dev.abros.rivet.core.Messages.text("rivet.core.the_manifest_is_missing_required_files_f9ada0c2"));if(cancel.get())throw new IOException(dev.abros.rivet.core.Messages.text("rivet.core.upload_cancelled_13f622b6"));
+  observer.accept(InstallProgress.phase("verifying"));validateMods(review);
+  observer.accept(InstallProgress.phase("preparing"));var plan=review.plan();var accepted=new Planner.Plan(plan.id(),plan.projectKey(),plan.changes(),plan.ownership(),plan.selection(),List.of(),plan.downloadBytes());
   new Transactions(game).prepare(accepted,review.manifest().bytes(),nextState(review));return plan.id();
  }
  public void saveSelection(Review review)throws IOException{

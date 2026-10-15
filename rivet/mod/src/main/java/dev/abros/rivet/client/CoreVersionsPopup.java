@@ -16,11 +16,12 @@ final class CoreVersionsPopup extends ScrollScreen {
     private CoreUpdater.Update selected;
     private boolean started,loading,installing,failed;
     private String status="";
+    private volatile dev.abros.rivet.core.InstallProgress progress=dev.abros.rivet.core.InstallProgress.phase("checking");
     CoreVersionsPopup(Screen parent){this(parent,"");}
     CoreVersionsPopup(Screen parent,String requirement){super(Client.tr("ui.rivet_version_11750c78"));this.parent=parent;this.requirement=requirement;if(Client.offeredUpdate!=null&&!Client.offeredUpdate.version().equals(Rivet.VERSION)&&(requirement.isEmpty()||dev.abros.rivet.core.Versions.supportsRequirement(Client.offeredUpdate.version(),requirement))){versions=List.of(Client.offeredUpdate);}}
     private int panelWidth(){return Math.min(300,width-24);}
-    private int rowCount(){return Math.max(1,Math.min(Math.max(1,versions.size()),Math.min(5,Math.max(1,(height-24-124)/24))));}
-    private int panelHeight(){return Math.min(height-16,124+rowCount()*24);}
+    private int rowCount(){return Math.max(1,Math.min(Math.max(1,versions.size()),Math.min(5,Math.max(1,(height-24-148)/24))));}
+    private int panelHeight(){return Math.min(height-16,148+rowCount()*24);}
     private int left(){return (width-panelWidth())/2;}
     private int top(){return (height-panelHeight())/2;}
     private int bottom(){return top()+panelHeight();}
@@ -51,7 +52,7 @@ final class CoreVersionsPopup extends ScrollScreen {
     }
     private void install(){
         if(selected==null||installing)return;installing=true;status="";var update=selected;rebuildWidgets();
-        Client.IO.submit(()->{try{String transaction=Client.hub.prepareCoreUpdate(Client.loadedJar,update);Client.pending=transaction;minecraft.execute(()->minecraft.setScreen(new RestartScreen(parent,transaction)));}catch(Exception failure){minecraft.execute(()->{installing=false;status=Errors.message(failure);rebuildWidgets();});}});
+        Client.IO.submit(()->{try{String transaction=Client.hub.prepareCoreUpdate(Client.loadedJar,update,event->progress=event);Client.pending=transaction;minecraft.execute(()->minecraft.setScreen(new RestartScreen(parent,transaction)));}catch(Exception failure){minecraft.execute(()->{installing=false;status=Errors.message(failure);rebuildWidgets();});}});
     }
     @Override public void renderBackground(GuiGraphics graphics,int x,int y,float delta){UiDialog.surface(graphics,left(),top(),panelWidth(),panelHeight());}
     @Override public void render(GuiGraphics graphics,int x,int y,float delta){
@@ -61,8 +62,9 @@ final class CoreVersionsPopup extends ScrollScreen {
             graphics.drawString(font,Client.text("ui.installed_version_81f7e135")+Rivet.VERSION,left()+12,top()+34,UiKit.muted(),false);
             if(versions.isEmpty())graphics.drawString(font,loading?Client.text("ui.fetching_versions_ab017709"):Client.text("ui.no_versions_available_50a8c186"),left()+12,top()+58,UiKit.muted(),false);
             String message=loading?Client.text("ui.checking_available_versions_8195b233"):!status.isBlank()?status:selected==null?Client.text("ui.select_a_version_to_install_7949aa4b"):Client.text("ui.install_02059d44")+selected.version()+Client.text("ui.a_game_restart_will_be_required_825c7633");
+            if(installing||loading)UiProgress.draw(graphics,font,left()+12,bottom()-78,panelWidth()-24,installing?progress:dev.abros.rivet.core.InstallProgress.phase("checking"));
             var lines=font.split(Component.literal(message),panelWidth()-24);
-            for(int i=0;i<Math.min(2,lines.size());i++)graphics.drawString(font,lines.get(i),left()+12,bottom()-60+i*11,UiKit.muted(),false);
+            for(int i=0;!installing&&!loading&&i<Math.min(2,lines.size());i++)graphics.drawString(font,lines.get(i),left()+12,bottom()-60+i*11,UiKit.muted(),false);
             graphics.flush();
         });
     }

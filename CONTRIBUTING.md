@@ -28,12 +28,29 @@ python3 -m pip install -r rivet/tooling/requirements.txt
 python3 -m unittest discover -s rivet/tooling/tests
 ```
 
+## Проверка необязательных адаптеров
+
+Для совместного прогона нужны Docker и каталог с JAR семи интеграций из
+[списка совместимости](docs/server/integrations.md), а также Create и Balm:
+
+```sh
+python3 rivet/tooling/optional_adapters_smoke.py /tmp/rivet-adapters --mods /path/to/test-mods
+```
+
+Сценарий создаёт отдельные клиент, сервер и PostgreSQL, проверяет обмен по сети,
+права, идентичность, голосовые ограничения, spark и Waystones. БД удаляется после
+проверки; логи остаются в тестовом каталоге. Проверяется также штатная остановка
+сервера: таймаут или ненулевой код завершают сценарий ошибкой. При задержке
+сохраняется стек потоков. Для запуска клиента требуется графическая сессия. `--scenario core`, `access`, `waystones`
+или `access-server` запускает выбранный сценарий. Передаваемый рабочий каталог
+должен быть тестовым: его конфигурация перезаписывается.
+
 ## Автоматические проверки
 
 Обычные push и pull request проверяют сборку на Linux, PostgreSQL 18 и инструменты.
 Новая версия в основной ветке проходит полную матрицу Linux/Windows/macOS,
 PostgreSQL 17/18, сценарии интерфейса Minecraft и запуск/остановку серверных
-модулей. Публикация выполняется только после успешного завершения полной матрицы.
+модулей, API и HTTPS/WSS через Nginx. Публикация выполняется только после успешного завершения полной матрицы.
 Полную проверку можно также выбрать в Actions → Build and test → Run workflow.
 Повторная проверка уже отмеченной тегом версии не публикует её заново.
 
@@ -42,8 +59,12 @@ TAB проверяется с пустым, небольшим и большим
 Серверные сценарии проверяют обычные настройки, выключенные чат/скины/Auth
 и базовую авторизацию; тестовые данные хранятся в отдельной PostgreSQL.
 
+Нагрузочные и браузерные сценарии описаны в [проверках API](docs/development/api-testing.md),
+TLS/WSS — в [проверке reverse proxy](docs/server/reverse-proxy.md).
+
 ## Структура
 
+- `rivet/api` — независимый Java-контракт для сторонних модов.
 - `rivet/core` — логика, независимая от Minecraft.
 - `rivet/mod` — серверные и клиентские возможности NeoForge.
 - `rivet/bootstrap` — загрузка комплекта мода.
@@ -87,3 +108,32 @@ TAB проверяется с пустым, небольшим и большим
 Опишите проблему, результат и выполненные проверки в pull request.
 Для ошибок приложите версию Minecraft, NeoForge и Rivet, шаги воспроизведения
 и относящиеся к ошибке строки лога. Удалите пароли и другие секреты из вложений.
+
+## Сайт документации
+
+Единственный источник руководств — `docs/`. GitHub Pages публикует собранный сайт;
+страницы Wiki не используются. Навигация задаётся в `mkdocs.yml`, оформление —
+в `docs/assets/stylesheets/rivet.css`. Ссылки на исходный код за пределами `docs/`
+при сборке преобразуются в ссылки на GitHub.
+
+```sh
+python3 -m venv .venv-docs
+.venv-docs/bin/python -m pip install -r tooling/docs/requirements.txt
+.venv-docs/bin/python -m mkdocs serve
+```
+
+Перед отправкой изменений выполните `.venv-docs/bin/python -m mkdocs build --strict`
+и `python3 tooling/docs/check_links.py` для проверки ссылок, якорей и ресурсов.
+Сайт формируется в `build/docs-site/`; этот каталог не коммитится.
+Workflow `Documentation` проверяет изменения в pull request и публикует `main`.
+Для первой публикации:
+
+1. В **Settings → Pages → Source** выберите **GitHub Actions**. Шаблоны Jekyll
+   и Static HTML не нужны: используется `.github/workflows/docs.yml`.
+2. После появления workflow в `main` откройте **Actions → Documentation → Run workflow**
+   и выберите `main`.
+3. Дождитесь успешного `deploy`; сайт доступен по адресу
+   [abrosdaniel.github.io/rivet/](https://abrosdaniel.github.io/rivet/).
+
+Следующие изменения документации в `main` публикуются автоматически.
+Публикация сайта не собирает и не выпускает JAR.

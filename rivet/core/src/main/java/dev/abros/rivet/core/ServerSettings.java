@@ -140,9 +140,9 @@ public final class ServerSettings {
         // Obsolete punishment defaults are ignored, so existing production configs still load.
         values.remove("map.sharing");values.remove("map.shareTiles");values.remove("project.repository");values.remove("project.requirePack");
         values.remove("chat.allowItems");values.remove("integrations.luckperms");values.remove("display.chatMode");values.remove("votes.actions.banMinutes");values.remove("votes.actions.muteMinutes");
-        for(var e:defaults.entrySet())if(!values.containsKey(e.getKey())&&List.of("statistics.","skins.","votes.","community.","menu.","updates.","retention.","chat.","display.","tasks.","spark.","groups.","storage.","board.","events.","polls.","ideas.","reports.","server.","pack.","map.").stream().anyMatch(e.getKey()::startsWith))values.put(e.getKey(),e.getValue());
+        for(var e:defaults.entrySet())if(!values.containsKey(e.getKey())&&List.of("api.","statistics.","skins.","votes.","community.","menu.","updates.","retention.","chat.","display.","tasks.","spark.","groups.","storage.","board.","events.","polls.","ideas.","reports.","server.","pack.","map.").stream().anyMatch(e.getKey()::startsWith))values.put(e.getKey(),e.getValue());
         var missing=new TreeSet<>(defaults.keySet());missing.removeAll(values.keySet());
-        if(!missing.isEmpty())throw invalid("отсутствуют обязательные параметры: "+String.join(", ",missing)+"; сверяйтесь с SERVER_GUIDE.md");
+        if(!missing.isEmpty())throw invalid("отсутствуют обязательные параметры: "+String.join(", ",missing)+"; сверяйтесь с https://abrosdaniel.github.io/rivet/server/configuration/");
         var unknown=new TreeSet<>(values.keySet());unknown.removeAll(defaults.keySet());
         if(!unknown.isEmpty()){String keys=unknown.stream().limit(10).map(key->key.length()<=80&&key.matches("[A-Za-z][A-Za-z0-9_.-]*")?key:"<некорректное имя>").collect(java.util.stream.Collectors.joining(", "));throw invalid("неизвестные параметры: "+keys+"; проверьте имя параметра и заголовок [раздела]");}
         for(var e:defaults.entrySet()){
@@ -157,10 +157,21 @@ public final class ServerSettings {
     public ServerSettings liveFrom(ServerSettings next){var merged=new HashMap<>(values);next.values.forEach((key,value)->{if(key.startsWith("menu.")||key.startsWith("community."))merged.put(key,value);});return new ServerSettings(merged);}
     public String text(String key){return (String)values.get(key);}
     public boolean flag(String key){return (Boolean)values.get(key);}
+    public java.util.List<String> strings(String key){var result=new java.util.ArrayList<String>();for(Object item:(java.util.List<?>)values.get(key)){if(!(item instanceof String value))throw invalid(key+": ожидаются строки");result.add(value);}return java.util.List.copyOf(result);}
+    public java.util.List<dev.abros.rivet.core.api.TerrainProfiles.Spec> terrainProfiles(){return dev.abros.rivet.core.api.TerrainProfiles.parse((java.util.List<?>)values.get("api.terrain.profiles"));}
     public int number(String key){return Math.toIntExact(((Number)values.get(key)).longValue());}
     private void range(String key,int min,int max){long n=((Number)values.get(key)).longValue();if(n<min||n>max)throw invalid(key+": допустимо "+min+"–"+max);}
     public FeatureModules modules(){return FeatureModules.from(this);}
     private void validate(){
+        var terrain=dev.abros.rivet.core.api.TerrainSettings.from(this);flag("api.terrain.isometric");
+        dev.abros.rivet.core.api.TerrainProfiles.masked(terrain,strings("api.terrain.publicHidden"));
+        for(var profile:terrainProfiles())dev.abros.rivet.core.api.TerrainProfiles.masked(terrain,profile.hidden());
+        dev.abros.rivet.core.api.RestSettings.from(this);
+        dev.abros.rivet.core.api.WebSocketSettings.from(this);
+        if(flag("api.http.enabled")&&flag("api.websocket.enabled")&&number("api.http.port")==number("api.websocket.port"))throw new IllegalArgumentException("API listener ports must differ");
+        dev.abros.rivet.core.api.BrowserTickets.Limits.from(this);
+        if(number("api.sessionHours")<1||number("api.sessionHours")>720||number("api.sessionLimit")<1||number("api.sessionLimit")>10000)throw new IllegalArgumentException("Invalid API session limits");
+        range("api.keyLimit",1,4096);range("api.appKeyLimit",1,64);range("api.requestsPerMinute",1,100000);range("api.maxKeyDays",1,3650);range("api.keyRetentionDays",1,365);range("api.auditEntries",100,100000);
         modules();range("map.nearbyRadius",1,4096);
         range("pack.protection.connectionsPerAddress",1,64);range("pack.protection.requestsPerSecond",1,1000);range("pack.protection.idleSeconds",1,300);range("pack.protection.queueSeconds",1,600);
         range("pack.network.port",1,65535);range("pack.network.publicPort",1,65535);

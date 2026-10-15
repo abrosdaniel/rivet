@@ -8,7 +8,7 @@ public interface CompatibilityAdapter {
  dev.abros.rivet.core.OptionalIntegration lifecycle();
  String id();
  String status();
- JsonObject execute(ServerPlayer actor,JsonObject request,ServerIdentityDirectory identities)throws Exception;
+ JsonObject execute(ServerPlayer actor,JsonObject request,dev.abros.rivet.api.IntegrationApi.Identity identities)throws Exception;
  default com.google.gson.JsonObject diagnostics(){var row=lifecycle().diagnostics();row.addProperty("id",id());return row;}
  default void clear(){}
 }

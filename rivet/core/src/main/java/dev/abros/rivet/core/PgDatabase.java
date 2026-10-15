@@ -13,6 +13,11 @@ public final class PgDatabase implements AutoCloseable {
     private final HikariDataSource pool;
     private final java.util.concurrent.Semaphore communitySlots;
     private final ThreadLocal<Connection> current = new ThreadLocal<>();
+    private final ThreadLocal<Boolean> communityChanged = new ThreadLocal<>();
+    private final java.util.concurrent.atomic.AtomicLong communityRevision = new java.util.concurrent.atomic.AtomicLong();
+    /** Payload-free invalidation, published only after the outer transaction commits. */
+    public void communityChanged(){if(!inTransaction())throw new IllegalStateException("Change outside transaction");communityChanged.set(true);}
+    public long communityRevision(){return communityRevision.get();}
 
     public PgDatabase(DatabaseSettings settings) throws Exception {
         communitySlots = new java.util.concurrent.Semaphore(Math.max(1, settings.poolSize()-2), true);
@@ -73,9 +78,9 @@ public final class PgDatabase implements AutoCloseable {
             PerformanceMetrics.end("database.acquire",acquire);
             connection.setAutoCommit(false);
             current.set(connection);
-            try { T result = work.run(); connection.commit(); failed=false;return result; }
+            try { T result = work.run(); connection.commit(); if(Boolean.TRUE.equals(communityChanged.get()))communityRevision.incrementAndGet(); failed=false;return result; }
             catch (Exception | Error ex) { try { connection.rollback(); } catch (SQLException rollback) { ex.addSuppressed(rollback); } throw ex; }
-            finally { current.remove(); }
+            finally { current.remove(); communityChanged.remove(); }
         }finally{PerformanceMetrics.record("database.transaction",System.nanoTime()-started,failed);}
     }
 

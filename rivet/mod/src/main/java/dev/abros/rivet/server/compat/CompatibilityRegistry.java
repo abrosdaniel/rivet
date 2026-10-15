@@ -15,7 +15,7 @@ import java.util.*;
 /** Explicit allowlist of optional adapters; no arbitrary reflective operation dispatch. */
 public final class CompatibilityRegistry {
  private static final SparkAdapter SPARK=new SparkAdapter();
- private static final Map<String,CompatibilityAdapter> ADAPTERS=Map.of(dev.abros.rivet.compat.AccessDeniedBindings.ID,new CreateAccessDeniedAdapter(),"spark",SPARK,"luckperms",new LuckPermsAdapter(),"plasmovoice",new PlasmoVoiceAdapter(),"voicechat",new SimpleVoiceChatAdapter());
+ private static final Map<String,CompatibilityAdapter> ADAPTERS=Map.of(dev.abros.rivet.compat.AccessDeniedBindings.ID,new CreateAccessDeniedAdapter(),"numismatics",new NumismaticsAdapter(),"spark",SPARK,"luckperms",new LuckPermsAdapter(),"plasmovoice",new PlasmoVoiceAdapter(),"voicechat",new SimpleVoiceChatAdapter());
  private static void guard(String id,dev.abros.rivet.core.OptionalIntegration.Operation<Boolean> work){var adapter=ADAPTERS.get(id);adapter.lifecycle().call(work,()->{if(adapter==SPARK)SPARK.unavailable();return false;});}
  private static final Map<UUID,Window> rates=new HashMap<>();
  private record Window(long start,int count){}
@@ -23,11 +23,12 @@ public final class CompatibilityRegistry {
  public static JsonArray diagnostics(){var rows=new JsonArray();ADAPTERS.values().stream().sorted(java.util.Comparator.comparing(CompatibilityAdapter::id)).forEach(a->{var row=a.diagnostics();rows.add(row);});rows.add(WaystonesAdapter.CAPABILITY.diagnostics());return rows;}
  private CompatibilityRegistry(){}
  public static void install(){
+  NeoForge.EVENT_BUS.addListener((net.neoforged.neoforge.event.server.ServerAboutToStartEvent e)->{ServerProviders.start(e.getServer());ServerProviders.registerAction(e.getServer(),ADAPTERS.get("numismatics"),dev.abros.rivet.api.IntegrationApi.ACCESS);ServerProviders.registerAction(e.getServer(),SPARK,dev.abros.rivet.api.IntegrationApi.DIAGNOSTICS);ServerProviders.registerAction(e.getServer(),ADAPTERS.get(dev.abros.rivet.compat.AccessDeniedBindings.ID),dev.abros.rivet.api.IntegrationApi.ACCESS);});
   NeoForge.EVENT_BUS.addListener((net.neoforged.neoforge.event.server.ServerStartedEvent e)->{ADAPTERS.values().forEach(CompatibilityAdapter::clear);SimpleVoiceChatAdapter.start(e.getServer());guard("spark",()->{SPARK.start(e.getServer());return true;});});
   NeoForge.EVENT_BUS.addListener((net.neoforged.neoforge.event.tick.ServerTickEvent.Post e)->{if(SPARK.sampleDue())guard("spark",()->{SPARK.tick(e.getServer());return true;});long revision=dev.abros.rivet.core.OptionalIntegration.changes();if(revision!=observed){observed=revision;ServerFeatures.adapterStateChanged(e.getServer());}});
   NeoForge.EVENT_BUS.addListener((net.neoforged.neoforge.event.CommandEvent e)->SPARK.command(e));
   NeoForge.EVENT_BUS.addListener((net.neoforged.neoforge.event.server.ServerStartedEvent e)->com.mojang.logging.LogUtils.getLogger().info("Rivet adapters: {}",status()));
-  NeoForge.EVENT_BUS.addListener((net.neoforged.neoforge.event.server.ServerStoppedEvent e)->{rates.clear();ADAPTERS.values().forEach(CompatibilityAdapter::clear);});
+  NeoForge.EVENT_BUS.addListener((net.neoforged.neoforge.event.server.ServerStoppedEvent e)->{rates.clear();ServerProviders.stop();ADAPTERS.values().forEach(CompatibilityAdapter::clear);});
   NeoForge.EVENT_BUS.addListener((net.neoforged.neoforge.event.entity.player.PlayerEvent.PlayerLoggedOutEvent e)->{rates.remove(e.getEntity().getUUID());});
   NeoForge.EVENT_BUS.addListener((net.neoforged.neoforge.event.RegisterCommandsEvent e)->{
    var root=Commands.literal("rivet").then(Commands.literal("compatibility").executes(c->{try(var locale=dev.abros.rivet.core.Messages.locale(c.getSource().getEntity() instanceof ServerPlayer p?p.clientInformation().language():"ru_ru")){String text=status();c.getSource().sendSuccess(()->Component.literal(text),false);return 1;}})
@@ -40,9 +41,9 @@ public final class CompatibilityRegistry {
  private static JsonObject execute(ServerPlayer p,JsonObject j)throws Exception{
   if(!AuthServer.authenticated(p))throw new IllegalArgumentException(dev.abros.rivet.core.Messages.text("rivet.core.sign_in_first_1023017b"));
   long now=System.currentTimeMillis();var w=rates.get(p.getUUID());if(w==null||now-w.start()>=1000)w=new Window(now,0);if(w.count()>=24)throw new IllegalArgumentException(dev.abros.rivet.core.Messages.text("rivet.core.too_many_adapter_requests_6dc400fc"));rates.put(p.getUUID(),new Window(w.start(),w.count()+1));
-  var adapter=ADAPTERS.get(Json.str(j,"adapter"));if(adapter==null)throw new IllegalArgumentException(dev.abros.rivet.core.Messages.text("rivet.core.adapter_not_found_1315ccb9"));if(adapter.apiVersion()!=CompatibilityAdapter.API_VERSION||j.has("adapterApi")&&j.get("adapterApi").getAsInt()!=adapter.apiVersion())throw new IllegalArgumentException(dev.abros.rivet.core.Messages.text("rivet.core.incompatible_adapter_api_8068e1aa"));var operation=(dev.abros.rivet.core.OptionalIntegration.Operation<JsonObject>)()->adapter.execute(p,j,new ServerIdentityDirectory(p.server));
-  boolean diagnostic=adapter==SPARK&&Set.of("snapshot","alerts").contains(Json.opt(j,"op","snapshot"));
-  var result=diagnostic?operation.run():adapter.lifecycle().required(operation);result.addProperty("adapterApi",adapter.apiVersion());return result;
+  var adapter=ADAPTERS.get(Json.str(j,"adapter"));if(adapter==null)throw new IllegalArgumentException(dev.abros.rivet.core.Messages.text("rivet.core.adapter_not_found_1315ccb9"));if(adapter.apiVersion()!=CompatibilityAdapter.API_VERSION||j.has("adapterApi")&&j.get("adapterApi").getAsInt()!=adapter.apiVersion())throw new IllegalArgumentException(dev.abros.rivet.core.Messages.text("rivet.core.incompatible_adapter_api_8068e1aa"));var service=adapter==SPARK?dev.abros.rivet.api.IntegrationApi.DIAGNOSTICS:dev.abros.rivet.api.IntegrationApi.ACCESS;
+  var provider=ServerProviders.find(service,adapter.id().replace('-','_'));
+  var result=provider.isPresent()?ServerProviders.json(provider.get().execute(p.getUUID(),ServerProviders.data(j))):adapter.lifecycle().required(()->adapter.execute(p,j,ServerProviders.find(dev.abros.rivet.api.IntegrationApi.IDENTITY,"rivet").orElseThrow()));result.addProperty("adapterApi",adapter.apiVersion());return result;
  }
  public static boolean handle(JsonObject j,IPayloadContext context){
   if(!Json.opt(j,"action","").equals("compatibility"))return false;

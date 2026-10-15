@@ -5,8 +5,9 @@
 <p align="center">Сборки, сообщество и задачи — внутри Minecraft.</p>
 <p align="center">
   <a href="https://github.com/abrosdaniel/rivet/releases/latest">Скачать</a> ·
+  <a href="https://abrosdaniel.github.io/rivet/">Документация</a> ·
   <a href="docs/player-guide.md">Руководство игрока</a> ·
-  <a href="SERVER_GUIDE.md">Настройка сервера</a> ·
+  <a href="docs/server/index.md">Настройка сервера</a> ·
   <a href="https://github.com/abrosdaniel/rivet/issues">Сообщить о проблеме</a>
 </p>
 
@@ -24,9 +25,13 @@ Rivet — мод для Minecraft с NeoForge. Он устанавливает �
 - Обмен метками через чат и публикация объектов карты с одобрением администратора.
 - Каналы чата с историей, оформление TAB и имён игроков, навигация по координатам.
 - Серверные инструменты модерации, авторизации и диагностики.
+- Java API для модов, REST и WebSocket для внешних приложений.
+- Серверный рендер поверхности, пещер и изометрической карты.
 
-Интеграции с LuckPerms, Plasmo Voice, Simple Voice Chat, Waystones, Create: Access Denied и spark
+Интеграции с LuckPerms, Plasmo Voice, Simple Voice Chat, Waystones, Create: Access Denied,
+Create: Numismatics и spark
 подключаются автоматически при наличии совместимого мода.
+[Возможности и проверенные версии](docs/server/integrations.md).
 Сборку публикует сервер Rivet; игрок получает её при подключении.
 Серверные функции требуют установки Rivet на сервере.
 
@@ -39,7 +44,8 @@ Rivet — мод для Minecraft с NeoForge. Он устанавливает �
 | NeoForge   | От 21.1.250 в ветке 21.1        |
 | PostgreSQL | Обязательна для серверной части |
 
-Конкретную версию NeoForge для клиентской сборки задаёт её владелец.
+Версия NeoForge в сборке служит рекомендацией; перед установкой Rivet проверяет
+требования всех выбранных и сохраняемых модов к установленной версии.
 
 ## Установка
 
@@ -50,13 +56,18 @@ Rivet — мод для Minecraft с NeoForge. Он устанавливает �
 
 **Владельцам серверов:** поместите JAR в `mods/` сервера и настройте PostgreSQL
 в `config/rivet-server.toml`. Установка, конфигурация и права описаны
-в [серверном справочнике](SERVER_GUIDE.md).
+в [серверном справочнике](docs/server/index.md).
 
 ## Документация
 
-- [Руководство игрока](docs/player-guide.md)
-- [Установка и настройка сервера](SERVER_GUIDE.md)
-- [Создание и публикация клиентской сборки](SERVER_GUIDE.md#клиентская-сборка)
-- [Разработка и проверки](CONTRIBUTING.md)
-- [Архитектура модулей](docs/development/modules.md)
-- [Система компонентов интерфейса](docs/development/ui-kit.md)
+[Сайт документации](https://abrosdaniel.github.io/rivet/) · [Исходники документации](docs/)
+
+| Кому | Раздел |
+| --- | --- |
+| Игрокам | [Сборка, вход и игровые возможности](docs/player-guide.md) |
+| Владельцам серверов | [Установка, настройки и эксплуатация](docs/server/index.md) |
+| Разработчикам интеграций | [Java](docs/api/java.md), [REST](docs/api/rest.md), [WebSocket](docs/api/websocket.md) |
+| Участникам проекта | [Сборка и тесты](CONTRIBUTING.md) |
+
+Сетевые слушатели и серверный рендер выключены по умолчанию.
+API-ключами управляют только из локальной консоли сервера.

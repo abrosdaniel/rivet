@@ -15,24 +15,24 @@ final class CreateAccessDeniedAdapter implements CompatibilityAdapter {
  public String id(){return AccessDeniedBindings.ID;}
  public String status(){return lifecycle.status();}
  public void clear(){previews.clear();lifecycle.reset();}
- public JsonObject execute(ServerPlayer actor,JsonObject request,ServerIdentityDirectory identities)throws Exception{
+ public JsonObject execute(ServerPlayer actor,JsonObject request,dev.abros.rivet.api.IntegrationApi.Identity identities)throws Exception{
   if(!AccessDeniedBindings.supported())throw new IllegalArgumentException(dev.abros.rivet.core.Messages.text("rivet.core.access_denied_adapter_94acf0ff")+status());
   String op=Json.str(request,"op");var result=new JsonObject();
   if(op.equals("lookup")){
    var profile=request.has("name")?identities.byName(Json.str(request,"name")):identities.byId(UUID.fromString(Json.str(request,"uuid")));
-   var p=profile.orElseThrow(()->new IllegalArgumentException(dev.abros.rivet.core.Messages.text("rivet.core.player_not_found_on_this_server_7c3ea4bb")));result.addProperty("name",p.getName());result.addProperty("uuid",p.getId().toString());return result;
+   var p=profile.orElseThrow(()->new IllegalArgumentException(dev.abros.rivet.core.Messages.text("rivet.core.player_not_found_on_this_server_7c3ea4bb")));result.addProperty("name",p.name());result.addProperty("uuid",p.uuid().toString());return result;
   }
   var network=UUID.fromString(Json.str(request,"network"));
   if(!AccessDeniedBindings.mayAdministrate(network,actor))throw new IllegalArgumentException(dev.abros.rivet.core.Messages.text("rivet.core.no_permission_to_manage_this_logistics_deed8389"));
   long now=System.currentTimeMillis();previews.values().removeIf(p->p.expires()<now);
   if(op.equals("add")){
    var p=identities.byName(Json.str(request,"name")).orElseThrow(()->new IllegalArgumentException(dev.abros.rivet.core.Messages.text("rivet.core.player_not_found_on_this_server_7c3ea4bb")));
-   var allowed=AccessDeniedBindings.allowed(network);if(!allowed.contains(p.getId())&&allowed.size()>=AccessDeniedBindings.limit())throw new IllegalArgumentException(dev.abros.rivet.core.Messages.text("rivet.core.player_limit_reached_536b9709"));
-   AccessDeniedBindings.add(network,p.getId());AccessDeniedBindings.sync(network,actor);result.addProperty("name",p.getName());result.addProperty("uuid",p.getId().toString());result.addProperty("text",dev.abros.rivet.core.Messages.text("rivet.core.access_granted_43f8a9a8")+p.getName());return result;
+   var allowed=AccessDeniedBindings.allowed(network);if(!allowed.contains(p.uuid())&&allowed.size()>=AccessDeniedBindings.limit())throw new IllegalArgumentException(dev.abros.rivet.core.Messages.text("rivet.core.player_limit_reached_536b9709"));
+   AccessDeniedBindings.add(network,p.uuid());AccessDeniedBindings.sync(network,actor);result.addProperty("name",p.name());result.addProperty("uuid",p.uuid().toString());result.addProperty("text",dev.abros.rivet.core.Messages.text("rivet.core.access_granted_43f8a9a8")+p.name());return result;
   }
   if(op.equals("preview")){
    var plan=AccessRepairPlan.preview(AccessDeniedBindings.allowed(network),identities::verifiedAlias);
-   var rows=new JsonArray();plan.replacements().forEach((from,to)->{var row=new JsonObject();row.addProperty("from",from.toString());row.addProperty("to",to.toString());row.addProperty("name",identities.byId(to).map(p->p.getName()).orElse(to.toString()));rows.add(row);});result.add("replacements",rows);
+   var rows=new JsonArray();plan.replacements().forEach((from,to)->{var row=new JsonObject();row.addProperty("from",from.toString());row.addProperty("to",to.toString());row.addProperty("name",identities.byId(to).map(p->p.name()).orElse(to.toString()));rows.add(row);});result.add("replacements",rows);
    result.addProperty("text",rows.size()+dev.abros.rivet.core.Messages.text("rivet.core.confirmed_replacements_other_entries_will_be_4db843f2"));
    if(!rows.isEmpty()){if(previews.size()>=128)throw new IllegalArgumentException(dev.abros.rivet.core.Messages.text("rivet.core.too_many_previews_e98ec549"));previews.values().removeIf(p->p.owner().equals(actor.getUUID())&&p.network().equals(network));var token=UUID.randomUUID();previews.put(token,new Preview(actor.getUUID(),network,plan,now+120000));result.addProperty("token",token.toString());}return result;
   }

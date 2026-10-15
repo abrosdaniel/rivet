@@ -132,6 +132,11 @@ public final class WorldMapClient {
             if(next.size()!=markers.size())try{persist(next);}catch(IllegalStateException ex){error=ex.getMessage();}
         }
         MapCaves.tick();index(MapCaves.layer(mc.level.dimension().location().toString()));
+        // Warm the first map view while the player is still in the world, before pressing M.
+        if(ticks%20==0&&!(mc.screen instanceof WorldMapScreen)){
+            var view=new MapViewport();view.center(mc.player.getX(),mc.player.getZ());view.zoomAt(Math.log(WorldMapScreen.lastZoom)/Math.log(1.25),0,0,0,0);
+            MapRegionTextures.warm(MapRegionTextures.viewKeys(MapCaves.layer(mc.level.dimension().location().toString()),view,mc.getWindow().getGuiScaledWidth(),mc.getWindow().getGuiScaledHeight(),mc.getWindow().getGuiScale()));
+        }
         sample();
         ++ticks;
         if(ticks%100==0)flush();
@@ -150,6 +155,7 @@ public final class WorldMapClient {
         if(!submit(()->{try{var queued=writes.pending(writeKey(repo,key));var read=queued==null?repo.read(layer,x,z).orElseGet(MapTile::new):((MapTile)queued).copy();var shared=received.read(layer,x,z).orElse(null);mc.execute(()->{if(repository==repo){loading.remove(key);tiles.put(key,read);if(shared!=null)receivedTiles.put(key,shared);combinedTiles.remove(key);MapTerrainCache.changed(key);evict();}});}catch(Exception ex){mc.execute(()->{if(repository==repo){loading.remove(key);retries.put(key,System.currentTimeMillis()+30000);failed(repo,ex);}});}}))loading.remove(key);
         return null;
     }
+    static boolean indexed(MapLayer layer){return indexed.contains(layer);}
     static boolean explored(TileKey key){return known.getOrDefault(key.layer(),Set.of()).contains(new MapRepository.Chunk(key.x(),key.z()));}
     static long terrainIndexRevision(){return knownRevision;}
     static MapTile exploredTile(String dimension,int x,int z){

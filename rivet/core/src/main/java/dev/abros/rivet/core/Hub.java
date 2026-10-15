@@ -36,10 +36,11 @@ public final class Hub {
         var updates=coreUpdater.releases(coreVersion,"1.21.1",neoVersion,100,true);coreCatalog=updates;coreCatalogAt=System.nanoTime();return updates;}
     }
     /** Called only after the player accepts this particular update. */
-    public String prepareCoreUpdate(Path loadedJar,CoreUpdater.Update update)throws Exception{ synchronized(coreInstallLock){
+    public String prepareCoreUpdate(Path loadedJar,CoreUpdater.Update update)throws Exception{return prepareCoreUpdate(loadedJar,update,event->{});}
+    public String prepareCoreUpdate(Path loadedJar,CoreUpdater.Update update,java.util.function.Consumer<InstallProgress> progress)throws Exception{ synchronized(coreInstallLock){
         state();
         if(Files.exists(game.resolve("rivet/pending.json"))||(helperProcess!=null&&helperProcess.isAlive()))throw new IllegalStateException(dev.abros.rivet.core.Messages.text("rivet.core.complete_the_prepared_update_first_3fda3bb7"));
-        String id=coreUpdater.stage(game,loadedJar,update,cache,state());
+        String id=coreUpdater.stage(game,loadedJar,update,cache,state(),progress);
         try { startHelper(id); }
         catch(Exception failure){if(helperProcess==null||!helperProcess.isAlive())new Transactions(game).abortReady(id);throw failure;}
         return id;}

@@ -7,7 +7,7 @@ public final class PlasmoVoiceAdapter implements dev.abros.rivet.server.compat.C
  public com.google.gson.JsonObject diagnostics(){var row=LIFECYCLE.diagnostics();row.addProperty("id",id());row.add("capabilities",dev.abros.rivet.core.Json.GSON.toJsonTree(java.util.List.of("voice-mute")));return row;}
  public dev.abros.rivet.core.OptionalIntegration lifecycle(){return LIFECYCLE;}
  public String id(){return "plasmovoice";}public String status(){return LIFECYCLE.status();}public void clear(){LIFECYCLE.reset();}
- public com.google.gson.JsonObject execute(net.minecraft.server.level.ServerPlayer actor,com.google.gson.JsonObject request,dev.abros.rivet.server.compat.ServerIdentityDirectory identities){throw new IllegalArgumentException(dev.abros.rivet.core.Messages.text("rivet.core.plasmo_voice_use_rivet_s_protected_6b7c9e44"));}
+ public com.google.gson.JsonObject execute(net.minecraft.server.level.ServerPlayer actor,com.google.gson.JsonObject request,dev.abros.rivet.api.IntegrationApi.Identity identities){throw new IllegalArgumentException(dev.abros.rivet.core.Messages.text("rivet.core.plasmo_voice_use_rivet_s_protected_6b7c9e44"));}
  static boolean available(){return LIFECYCLE.available();}
  static void mute(UUID target,int minutes,String reason)throws Exception{LIFECYCLE.required(()->{applyMute(target,minutes,reason);return true;});}
 

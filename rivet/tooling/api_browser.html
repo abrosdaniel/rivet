@@ -1,0 +1,42 @@
+<!doctype html><html lang="ru"><meta charset="utf-8"><title>Rivet API browser verification</title>
+<style>body{background:#171d23;color:#eef2f7;font:18px system-ui;max-width:900px;margin:50px auto}button{font:inherit;padding:12px}li{margin:10px}pre{white-space:pre-wrap}iframe{display:none}</style>
+<h1>Rivet API — проверка в браузере</h1><p>Изолированный тест. Страница получает только одноразовые tickets; постоянный ключ и сессия остаются на тестовом backend.</p>
+<button id="run">Запустить проверку</button><ol id="checks"></ol><pre id="status">Готово к запуску</pre>
+<script>
+const status=document.querySelector('#status'),checks=document.querySelector('#checks'),results=[];
+const pause=ms=>new Promise(r=>setTimeout(r,ms));
+function assert(ok,message){if(!ok)throw Error(message)}
+async function post(path){const r=await fetch(path,{method:'POST',body:'{}',headers:{'Content-Type':'application/json'},cache:'no-store'});assert(r.ok,'Backend '+path+' '+r.status);return r.json()}
+function attempt(ticket){const socket=new WebSocket('ws://127.0.0.1:24482/api/v1/ws',['rivet.v1','rivet.ticket.'+ticket]);const messages=[];let opened=false;
+ const closed=new Promise(resolve=>socket.addEventListener('close',e=>resolve(e.code),{once:true}));
+ socket.addEventListener('message',e=>messages.push(JSON.parse(e.data)));
+ const ready=new Promise(resolve=>{socket.addEventListener('open',()=>{opened=true;resolve(true)},{once:true});socket.addEventListener('error',()=>resolve(false),{once:true});});
+ return {socket,messages,ready,closed,get opened(){return opened}}}
+async function wait(promise,label,ms=7000){return Promise.race([promise,new Promise((_,reject)=>setTimeout(()=>reject(Error('Timeout: '+label)),ms))])}
+async function next(c){for(let i=0;i<100;i++){if(c.messages.length)return c.messages.shift();await pause(50)}throw Error('No WS message')}
+async function connect(){const ticket=(await post('/ticket')).ticket,c=attempt(ticket);assert(await wait(c.ready,'handshake'),'Handshake rejected');assert(c.socket.protocol==='rivet.v1','Wrong selected protocol');return {c,ticket}}
+async function denied(ticket){const c=attempt(ticket);assert(!(await wait(c.ready,'rejected handshake')),'Ticket unexpectedly accepted');await wait(c.closed,'rejected socket close');}
+function pass(name){results.push(name);const li=document.createElement('li');li.textContent='✓ '+name;checks.append(li)}
+if(location.hostname==='localhost'){
+ document.querySelector('#run').hidden=true;
+ addEventListener('message',async e=>{if(e.origin!=='http://127.0.0.1:24480')return;try{await denied(e.data.ticket);e.source.postMessage({originDenied:true},e.origin)}catch(error){e.source.postMessage({originDenied:false},e.origin)}});
+}else document.querySelector('#run').onclick=async()=>{
+ document.querySelector('#run').disabled=true;status.textContent='Проверяем…';let active=[];
+ try{
+  const {c,ticket}=await connect();active.push(c);c.socket.send(JSON.stringify({type:'watch',id:'mine',path:'tasks',query:{},session:null,cursor:null}));const first=await next(c);
+  assert(first.type==='resource.snapshot','No snapshot');assert(first.data.resource.items.length===1&&first.data.resource.items[0].title==='Private-0','Wrong private data');pass('Ticket, подпротокол и приватная подписка');
+  await denied(ticket);pass('Повторное использование ticket отклонено');
+  const foreign=await post('/ticket'),frame=document.createElement('iframe');frame.src='http://localhost:24480/';const loaded=new Promise(r=>frame.onload=r);document.body.append(frame);await wait(loaded,'foreign page');
+  const reply=new Promise(r=>{function handler(e){if(e.origin==='http://localhost:24480'&&e.source===frame.contentWindow){removeEventListener('message',handler);r(e.data)}}addEventListener('message',handler)});
+  frame.contentWindow.postMessage({ticket:foreign.ticket},'http://localhost:24480');assert((await wait(reply,'foreign origin')).originDenied,'Foreign Origin accepted');frame.remove();pass('Чужой Origin отклонён реальным браузером');
+  const expired=await post('/ticket');await pause(5300);await denied(expired.ticket);pass('Просроченный ticket отклонён');
+  const mutation=await connect();active.push(mutation.c);mutation.c.socket.send(JSON.stringify({type:'request',id:'write',method:'POST',path:'/api/v1/tasks',session:null,ifMatch:null,body:{}}));const rejected=await next(mutation.c);assert(rejected.type==='error'&&rejected.data.code==='FORBIDDEN','Browser mutation accepted');await wait(mutation.c.closed,'mutation close');pass('Изменения через браузерный WebSocket запрещены');
+  let corsDenied=false;try{await fetch('http://127.0.0.1:24481/api/v1/server/status')}catch(e){corsDenied=e instanceof TypeError}assert(corsDenied,'Unexpected browser REST access');pass('REST недоступен Origin без разрешения');
+  await post('/revoke');await wait(c.closed,'session revoke');pass('Отзыв сессии закрывает активное соединение');
+  await post('/relink');const last=await connect();active.push(last.c);await post('/revoke-key');await wait(last.c.closed,'key revoke');pass('Отзыв ключа закрывает активное соединение');
+  status.textContent='PASS — '+results.length+' проверок';await postReport({ok:true,checks:results,userAgent:navigator.userAgent});
+ }catch(error){status.textContent='FAIL — '+error.message;await postReport({ok:false,checks:results,error:error.message,userAgent:navigator.userAgent})}
+ finally{for(const c of active)c.socket.close()}
+};
+async function postReport(report){await fetch('/report',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(report)})}
+</script></html>

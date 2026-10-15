@@ -24,7 +24,7 @@ final class ServerModerationVotes {
  private static boolean voiceAvailable(MinecraftServer server){return VoiceModeration.available();}
  private static boolean protectedPlayer(MinecraftServer server,UUID id,String name){
   if(server.getPlayerList().isOp(new GameProfile(id,name)))return true;
-  if(ServerIntegration.luckPermsEnabled()){var profile=LuckPermsAdapter.profile(id);if(!profile.has("available"))return true;var caps=profile.getAsJsonObject("capabilities");return caps.get("rivet.admin").getAsBoolean()||caps.get("rivet.vote.protected").getAsBoolean();}return false;
+  if(ServerIntegration.luckPermsEnabled()){var profile=ServerPermissions.profile(id);if(!profile.has("available"))return true;var caps=profile.getAsJsonObject("capabilities");return caps.get("rivet.admin").getAsBoolean()||caps.get("rivet.vote.protected").getAsBoolean();}return false;
  }
  private record Snapshot(Set<UUID> eligible,String name,boolean protectedTarget,boolean voice){}
  static void request(ServerPlayer player,JsonObject request,java.util.function.Consumer<JsonObject> success,java.util.function.Consumer<Exception> failure){

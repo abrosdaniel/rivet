@@ -1,4 +1,13 @@
 {
+  "rivet.api.keys.cleanup": "Изменение сохранено. Не удалось удалить старый файл выдачи %s.secret; удалите его вручную.",
+  "rivet.api.keys.issued": "API: ключ=%s, приложение=%s. Секрет в файле rivet/api-keys/%s.secret. Прочитайте локально и удалите файл.",
+  "rivet.api.keys.scopes": "Права API: %s",
+  "rivet.api.keys.empty": "Ключей API пока нет.",
+  "rivet.api.keys.limit": "Общий лимит запросов приложения обновлён.",
+  "rivet.api.keys.error": "API: %s. Секрет не выводится в журнал.",
+  "rivet.api.keys.revoke": "Ключ API отозван: %s",
+  "rivet.api.keys.disable": "Ключ API отключён: %s",
+  "rivet.api.keys.enable": "Ключ API включён: %s",
   "rivet.core.pack_component_counts": "файлов: %s; компонентов: %s (обязательных: %s, необязательных: %s)",
   "key.categories.rivet": "Rivet",
   "rivet.core.a_dependency_task_was_deleted_6887826f": "Зависимая задача удалена",

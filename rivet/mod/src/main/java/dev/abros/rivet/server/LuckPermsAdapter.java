@@ -20,11 +20,26 @@ public final class LuckPermsAdapter implements dev.abros.rivet.server.compat.Com
         Object permissions=Class.forName("net.luckperms.api.cacheddata.CachedDataManager").getMethod("getPermissionData",Class.forName("net.luckperms.api.query.QueryOptions")).invoke(cached,options);
         return Class.forName("net.luckperms.api.cacheddata.CachedPermissionData").getMethod("checkPermission",String.class).invoke(permissions,permission).toString().equals("TRUE");
     },()->false);}
+    /** Called only by bounded API workers, never on the server tick. Loads offline users explicitly. */
+    public static boolean offlineAllowed(UUID id,String right){return LIFECYCLE.call(()->{
+        Object api=Class.forName("net.luckperms.api.LuckPermsProvider").getMethod("get").invoke(null);
+        var apiType=Class.forName("net.luckperms.api.LuckPerms");var managerType=Class.forName("net.luckperms.api.model.user.UserManager");Object manager=apiType.getMethod("getUserManager").invoke(api);
+        // A command or another integration can already own this offline user's live data.
+        // Do not reload it from storage or clean it up while that owner is modifying it.
+        Object user=managerType.getMethod("getUser",UUID.class).invoke(manager,id);boolean loaded=user==null;
+        if(loaded)user=((java.util.concurrent.CompletableFuture<?>)managerType.getMethod("loadUser",UUID.class).invoke(manager,id)).get(3,java.util.concurrent.TimeUnit.SECONDS);
+        try{Object cached=Class.forName("net.luckperms.api.model.user.User").getMethod("getCachedData").invoke(user);Object context=apiType.getMethod("getContextManager").invoke(api);
+            Object options=Class.forName("net.luckperms.api.context.ContextManager").getMethod("getStaticQueryOptions").invoke(context);
+            Object permissions=Class.forName("net.luckperms.api.cacheddata.CachedDataManager").getMethod("getPermissionData",Class.forName("net.luckperms.api.query.QueryOptions")).invoke(cached,options);
+            var check=Class.forName("net.luckperms.api.cacheddata.CachedPermissionData").getMethod("checkPermission",String.class);
+            return check.invoke(permissions,"rivet.admin").toString().equals("TRUE")||check.invoke(permissions,right).toString().equals("TRUE");
+        }finally{if(loaded)managerType.getMethod("cleanupUser",Class.forName("net.luckperms.api.model.user.User")).invoke(manager,user);}
+    },()->false);}
     public dev.abros.rivet.core.OptionalIntegration lifecycle(){return LIFECYCLE;}
     public String id(){return "luckperms";}
     public String status(){return LIFECYCLE.status();}
     public void clear(){LIFECYCLE.reset();}
-    public JsonObject execute(net.minecraft.server.level.ServerPlayer actor,JsonObject request,dev.abros.rivet.server.compat.ServerIdentityDirectory identities){throw new IllegalArgumentException(dev.abros.rivet.core.Messages.text("rivet.core.luckperms_use_rivet_permission_and_profile_16a8a657"));}
+    public JsonObject execute(net.minecraft.server.level.ServerPlayer actor,JsonObject request,dev.abros.rivet.api.IntegrationApi.Identity identities){throw new IllegalArgumentException(dev.abros.rivet.core.Messages.text("rivet.core.luckperms_use_rivet_permission_and_profile_16a8a657"));}
     private static JsonObject denied(){var result=new JsonObject();var caps=new JsonObject();for(String right:ServerCommands.RIGHTS)caps.addProperty(right,false);for(String right:new String[]{"rivet.admin","rivet.events","rivet.auth.reset","rivet.map.teleport","rivet.vote.protected"})caps.addProperty(right,false);result.add("capabilities",caps);return result;}
     public static JsonObject profile(UUID id){return LIFECYCLE.call(()->loadProfile(id,null),LuckPermsAdapter::denied);}
     public static com.google.gson.JsonArray roles(){return LIFECYCLE.call(LuckPermsAdapter::loadRoles,com.google.gson.JsonArray::new);}

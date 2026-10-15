@@ -14,7 +14,7 @@ final class ServerSocial {
  private record Membership(long until,Map<String,String> groups){}
  private record Metadata(long until,JsonObject value,String context){}
  private static final Map<UUID,Metadata> metadata=new HashMap<>();
- static JsonObject metadata(ServerPlayer p){long now=System.currentTimeMillis();var saved=metadata.get(p.getUUID());if(saved!=null&&saved.until>now&&saved.context.equals(p.level().dimension().location().toString()+":"+LuckPermsAdapter.revision()))return saved.value;var row=ServerIntegration.luckPermsEnabled()?LuckPermsAdapter.profile(p):new JsonObject();metadata.put(p.getUUID(),new Metadata(now+2000,row,p.level().dimension().location().toString()+":"+LuckPermsAdapter.revision()));return row;}
+ static JsonObject metadata(ServerPlayer p){long now=System.currentTimeMillis();var saved=metadata.get(p.getUUID());if(saved!=null&&saved.until>now&&saved.context.equals(p.level().dimension().location().toString()+":"+ServerPermissions.revision()))return saved.value;var row=ServerIntegration.luckPermsEnabled()?ServerPermissions.profile(p):new JsonObject();metadata.put(p.getUUID(),new Metadata(now+2000,row,p.level().dimension().location().toString()+":"+ServerPermissions.revision()));return row;}
  private static final Map<UUID,Presence> presence=new HashMap<>();
  private static final Map<UUID,Membership> groups=new HashMap<>();
  private static final Set<UUID> loading=new HashSet<>();

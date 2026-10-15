@@ -41,6 +41,24 @@ public final class MapPreviewCache {
         // At most 31 additional pages (~0.5 MiB) between bounded cleanups.
         if(writes++%32==0)trim();
     }
+    /** Preserve an overview even when that zoom level has never been opened. */
+    public void writePyramid(MapLayer layer,int x,int z,int level,int[] pixels)throws IOException{
+        write(layer,x,z,level,pixels);
+        while(level<4){
+            int parentX=Math.floorDiv(x,2),parentZ=Math.floorDiv(z,2);
+            int[] parent=read(layer,parentX,parentZ,level+1).orElseGet(()->new int[PIXELS]);
+            int offsetX=Math.floorMod(x,2)*32,offsetZ=Math.floorMod(z,2)*32;
+            for(int pz=0;pz<32;pz++)for(int px=0;px<32;px++){
+                int r=0,g=0,b=0,count=0;
+                for(int dz=0;dz<2;dz++)for(int dx=0;dx<2;dx++){
+                    int color=pixels[(pz*2+dz)*64+px*2+dx];if(color==0)continue;
+                    r+=color&255;g+=color>>>8&255;b+=color>>>16&255;count++;
+                }
+                parent[(offsetZ+pz)*64+offsetX+px]=count==0?0:0xff000000|(b/count)<<16|(g/count)<<8|r/count;
+            }
+            x=parentX;z=parentZ;level++;pixels=parent;write(layer,x,z,level,pixels);
+        }
+    }
     private void trim()throws IOException{
         record Entry(Path path,long modified){}
         var files=new ArrayList<Entry>();

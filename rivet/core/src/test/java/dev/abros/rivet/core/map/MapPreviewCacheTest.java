@@ -17,6 +17,16 @@ class MapPreviewCacheTest {
   assertTrue(new MapRepository(root,world,UUID.randomUUID()).previews().read(layer,-1,2,3).isEmpty());
   assertTrue(reopened.chunks(layer).isEmpty(),"Previews must never discover terrain");
  }
+ @Test void overviewSurvivesRestartAndPreservesNeighbourQuadrants()throws Exception{
+  var layer=MapLayer.surface("minecraft:overworld");var cache=new MapPreviewCache(root);
+  int[] red=new int[4096],blue=new int[4096];Arrays.fill(red,0xff0000ff);Arrays.fill(blue,0xffff0000);
+  cache.writePyramid(layer,-2,-2,0,red);cache.writePyramid(layer,-1,-2,0,blue);
+  var reopened=new MapPreviewCache(root);var parent=reopened.read(layer,-1,-1,1).orElseThrow();
+  assertEquals(red[0],parent[0]);assertEquals(blue[0],parent[32]);assertEquals(0,parent[32*64]);
+  assertTrue(reopened.read(layer,-1,-1,4).isPresent());
+  cache.writePyramid(layer,-2,-2,0,new int[4096]);parent=reopened.read(layer,-1,-1,1).orElseThrow();
+  assertEquals(0,parent[0]);assertEquals(blue[0],parent[32]);
+ }
  @Test void corruptedAndTruncatedPreviewsAreIgnored()throws Exception{
   var cache=new MapPreviewCache(root);var layer=MapLayer.surface("minecraft:overworld");cache.write(layer,0,0,0,new int[4096]);Path file;try(var paths=Files.list(root.resolve("previews-v1"))){file=paths.findFirst().orElseThrow();}
   byte[] bytes=Files.readAllBytes(file);bytes[10]^=1;Files.write(file,bytes);assertTrue(cache.read(layer,0,0,0).isEmpty());

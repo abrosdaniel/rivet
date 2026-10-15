@@ -1,4 +1,13 @@
 {
+  "rivet.api.keys.cleanup": "The change is saved. Could not remove old delivery file %s.secret; delete it manually.",
+  "rivet.api.keys.issued": "API: key=%s, application=%s. Secret file: rivet/api-keys/%s.secret. Read locally, then delete the file.",
+  "rivet.api.keys.scopes": "API scopes: %s",
+  "rivet.api.keys.empty": "No API keys yet.",
+  "rivet.api.keys.limit": "Application request budget updated.",
+  "rivet.api.keys.error": "API: %s. The secret is not logged.",
+  "rivet.api.keys.revoke": "API key revoked: %s",
+  "rivet.api.keys.disable": "API key disabled: %s",
+  "rivet.api.keys.enable": "API key enabled: %s",
   "rivet.core.pack_component_counts": "files: %s; components: %s (required: %s, optional: %s)",
   "rivet.ui.appearance_custom": "Custom",
   "rivet.map.compass.north": "N",
@@ -2727,5 +2736,14 @@
   "rivet.map.saveAndPublish": "Save and submit for review…",
   "rivet.map.publicationCancelHint": "The submission will be cancelled. Your local object remains and will not appear for other players.",
   "rivet.map.publicationModeration": "Player publications",
-  "rivet.map.myPublications": "My publications"
+  "rivet.map.myPublications": "My publications",
+  "rivet.api.link.confirmed": "Application linked. Revoke access with /rivet unlink",
+  "rivet.api.link.failed": "Link unavailable: check the code, application and expiration.",
+  "rivet.api.link.revoked": "All external sessions revoked.",
+  "rivet.progress.checking": "Checking files",
+  "rivet.progress.downloading": "Downloading files",
+  "rivet.progress.verifying": "Checking compatibility",
+  "rivet.progress.preparing": "Preparing installation",
+  "rivet.progress.wait": "Please wait…",
+  "rivet.progress.files": "files"
 }

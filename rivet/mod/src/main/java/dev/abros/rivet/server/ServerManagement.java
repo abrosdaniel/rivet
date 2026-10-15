@@ -13,21 +13,35 @@ import static dev.abros.rivet.server.ServerFeatures.*;
 final class ServerManagement {
  static boolean maintenance;static String maintenanceReason="",restartReason="";
  static long maintenanceUntil,restartAt,pinnedUntil;static String pinnedText="";
+ private static long controlRevision=-1,nextControlSync;private static boolean controlSyncPending;
  private static volatile boolean active;private static boolean timerPending;static String originalMotd="";
  static void start(ServerStartingEvent e)throws Exception{stop();originalMotd=e.getServer().getMotd();
  var store=communityStore();var pin=new CommunityAdministration(ServerDatabase.get(),store).pin();pinnedUntil=pin==null||Json.opt(pin,"text","").isBlank()?0:pin.get("until").getAsLong();pinnedText=pin==null?"":Json.opt(pin,"text","");
  var j=store.record("state","maintenance");store.deleteRecord("state","restart");if(j!=null){maintenance=j.get("maintenance").getAsBoolean();maintenanceReason=Json.opt(j,"reason","");maintenanceUntil=j.get("until").getAsLong();if(maintenanceUntil>0&&maintenanceUntil<=System.currentTimeMillis()){maintenance=false;maintenanceUntil=0;store.deleteRecord("state","maintenance");}}
  active=true;
  }
- static void stop(){active=false;timerPending=false;maintenance=false;maintenanceUntil=0;restartAt=0;pinnedUntil=0;pinnedText="";maintenanceReason="";restartReason="";originalMotd="";}
- static void install(){NeoForge.EVENT_BUS.addListener((net.neoforged.neoforge.event.tick.ServerTickEvent.Post e)->{if(!active)return;long now=System.currentTimeMillis();
+ static void stop(){controlRevision=-1;nextControlSync=0;controlSyncPending=false;active=false;timerPending=false;maintenance=false;maintenanceUntil=0;restartAt=0;pinnedUntil=0;pinnedText="";maintenanceReason="";restartReason="";originalMotd="";}
+ static void install(){NeoForge.EVENT_BUS.addListener((net.neoforged.neoforge.event.tick.ServerTickEvent.Post e)->{if(!active)return;long now=System.currentTimeMillis();syncControl(e.getServer(),now);
          if(!timerPending&&(restartAt>0&&now>=restartAt||maintenance&&maintenanceUntil>0&&now>=maintenanceUntil)){
             boolean stop=restartAt>0&&now>=restartAt;long expected=stop?restartAt:maintenanceUntil;timerPending=true;var store=communityStore();
-            try{control(()->{try{boolean consumed=store.inTransaction(()->{var saved=store.record("state",stop?"restart":"maintenance");if(saved==null||saved.get(stop?"at":"until").getAsLong()!=expected)return false;store.deleteRecord("state",stop?"restart":"maintenance");store.audit("server",stop?"scheduled shutdown":"maintenance expired",Long.toString(expected));return true;});if(!consumed){e.getServer().execute(dev.abros.rivet.core.Messages.capture(()->timerPending=false));return;}e.getServer().execute(dev.abros.rivet.core.Messages.capture(()->{timerPending=false;if(communityStore()!=store)return;if(stop&&restartAt==expected){restartAt=0;urgentNotice(e.getServer(),dev.abros.rivet.core.LocalizedText.key("rivet.core.server_is_saving_and_shutting_down_4d6ef4ad"));e.getServer().halt(false);}else if(!stop&&maintenanceUntil==expected){maintenance=false;maintenanceUntil=0;e.getServer().setMotd(originalMotd);notice(e.getServer(),dev.abros.rivet.core.LocalizedText.key("rivet.core.maintenance_completed_011be41e"));}}));}catch(Exception ex){e.getServer().execute(dev.abros.rivet.core.Messages.capture(()->timerPending=false));com.mojang.logging.LogUtils.getLogger().warn("Rivet: cannot complete scheduled action; will retry");}});}catch(RejectedExecutionException busy){timerPending=false;}
+            try{control(()->{try{boolean consumed=store.inTransaction(()->{ServerDatabase.get().lock("server-control");var saved=store.record("state",stop?"restart":"maintenance");if(saved==null||saved.get(stop?"at":"until").getAsLong()!=expected)return false;store.deleteRecord("state",stop?"restart":"maintenance");store.audit("server",stop?"scheduled shutdown":"maintenance expired",Long.toString(expected));return true;});if(!consumed){e.getServer().execute(dev.abros.rivet.core.Messages.capture(()->timerPending=false));return;}e.getServer().execute(dev.abros.rivet.core.Messages.capture(()->{timerPending=false;if(communityStore()!=store)return;if(stop&&restartAt==expected){restartAt=0;urgentNotice(e.getServer(),dev.abros.rivet.core.LocalizedText.key("rivet.core.server_is_saving_and_shutting_down_4d6ef4ad"));e.getServer().halt(false);}else if(!stop&&maintenanceUntil==expected){maintenance=false;maintenanceUntil=0;e.getServer().setMotd(originalMotd);notice(e.getServer(),dev.abros.rivet.core.LocalizedText.key("rivet.core.maintenance_completed_011be41e"));}}));}catch(Exception ex){e.getServer().execute(dev.abros.rivet.core.Messages.capture(()->timerPending=false));com.mojang.logging.LogUtils.getLogger().warn("Rivet: cannot complete scheduled action; will retry");}});}catch(RejectedExecutionException busy){timerPending=false;}
         }
         if(maintenance)e.getServer().setMotd("[Maintenance] "+maintenanceReason);
 
  });}
+ private static void syncControl(MinecraftServer server,long now){
+  var db=ServerDatabase.get();if(controlSyncPending||now<nextControlSync||db.communityRevision()==controlRevision)return;
+  controlSyncPending=true;nextControlSync=now+1000;var store=communityStore();
+  try{control(()->{try{long revision=db.communityRevision();var snapshot=new ApiServerControl(db,store).read();server.execute(()->{if(!active||communityStore()!=store)return;controlSyncPending=false;controlRevision=revision;applyControl(server,snapshot);});}catch(Exception failure){server.execute(()->{if(communityStore()==store)controlSyncPending=false;});com.mojang.logging.LogUtils.getLogger().warn("Server control synchronization will retry ({})",failure.getClass().getSimpleName());}});}catch(RejectedExecutionException busy){controlSyncPending=false;}
+ }
+ private static void applyControl(MinecraftServer server,JsonObject snapshot){
+  boolean changed=false;
+  if(snapshot.get("maintenance").isJsonObject()){var m=snapshot.getAsJsonObject("maintenance");boolean enabled=m.get("maintenance").getAsBoolean();long until=m.get("until").getAsLong();String reason=Json.opt(m,"reason","");
+   if(maintenance!=enabled||maintenanceUntil!=until||!maintenanceReason.equals(reason)){if(enabled&&!maintenance)originalMotd=server.getMotd();maintenance=enabled;maintenanceUntil=until;maintenanceReason=reason;server.setMotd(enabled?"[Maintenance] "+reason:originalMotd);notice(server,enabled?LocalizedText.parts(LocalizedText.key("rivet.message.maintenance_prefix"),LocalizedText.literal(reason)):LocalizedText.key("rivet.core.maintenance_completed_011be41e"));changed=true;}}
+  if(snapshot.get("restart").isJsonObject()){var r=snapshot.getAsJsonObject("restart");long at=r.get("at").getAsLong();String reason=Json.opt(r,"reason","");if(restartAt!=at||!restartReason.equals(reason)){restartAt=at;restartReason=reason;notice(server,at==0?LocalizedText.key("rivet.core.scheduled_shutdown_cancelled_24f52381"):LocalizedText.parts(LocalizedText.key("rivet.core.shutting_down_in_04e92dc3"),LocalizedText.literal(Long.toString(Math.max(0,(at-System.currentTimeMillis()+999)/1000))),LocalizedText.key("rivet.core.since_05912f4e"),LocalizedText.literal(reason),LocalizedText.key("rivet.core.the_control_panel_handles_restarting_f13d3ee8")));changed=true;}}
+  if(snapshot.get("pinned-announcement").isJsonObject()){var pin=snapshot.getAsJsonObject("pinned-announcement");pinnedText=Json.opt(pin,"text","");pinnedUntil=pin.get("until").getAsLong();}
+  if(changed)for(var player:server.getPlayerList().getPlayers())sendState(player,false);
+ }
  static void publish(long now,List<UUID> players)throws Exception{if(active)new ScheduledAnnouncements(communityStore()).publish(now,players.stream().map(UUID::toString).toList());}
  static Component maintenanceMessage(){return Component.translatable("rivet.message.maintenance_prefix").append(maintenanceReason).append(maintenanceUntil>0?Component.translatable("rivet.message.maintenance_until").append(java.time.Instant.ofEpochMilli(maintenanceUntil).toString()):Component.empty());}
      static void maintenance(MinecraftServer server,boolean enabled,int minutes,String reason,CommandSourceStack source)throws Exception{
@@ -42,7 +56,7 @@ final class ServerManagement {
     }
     private static void persistState(MinecraftServer server,String key,JsonObject data,CommandSourceStack source,Runnable apply){var store=communityStore();control(()->{try{
         if(!server.submit(()->ServerCommands.allowed(source,"rivet."+key)).get(2,TimeUnit.SECONDS))throw new IllegalArgumentException(dev.abros.rivet.core.Messages.text("rivet.core.permissions_changed_980f6f62"));
-        store.inTransaction(()->{store.record("state",key,data);store.audit(source.getTextName(),key,Json.GSON.toJson(data));return null;});
+        store.inTransaction(()->{ServerDatabase.get().lock("server-control");store.record("state",key,data);store.audit(source.getTextName(),key,Json.GSON.toJson(data));return null;});
         server.execute(dev.abros.rivet.core.Messages.capture(()->{if(communityStore()==store){apply.run();ServerCommands.reply(source,dev.abros.rivet.core.Messages.text("rivet.ui.saved_f0dff5ab"));for(var player:server.getPlayerList().getPlayers())sendState(player,false);}}));
     }catch(Exception ex){server.execute(dev.abros.rivet.core.Messages.capture(()->ServerCommands.error(source,ex)));}});}
 
