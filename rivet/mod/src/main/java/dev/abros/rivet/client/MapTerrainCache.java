@@ -48,6 +48,7 @@ final class MapTerrainCache {
         for(int z=0;z<=1;z++)for(int x=0;x<=1;x++){
             if((x!=0||z!=0)&&!edgeChanged)continue;
             var affected=new WorldMapClient.TileKey(key.layer(),key.x()+x,key.z()+z);
+            MapRegionTextures.changed(affected);
             if(images.containsKey(affected)||overview.containsKey(affected)||pending.contains(affected))changes.put(affected,++change);
         }
     }

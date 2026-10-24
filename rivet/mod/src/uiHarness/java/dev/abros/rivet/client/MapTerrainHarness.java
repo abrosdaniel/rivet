@@ -25,6 +25,7 @@ public final class MapTerrainHarness {
  private static final String RESTART_FILE=System.getenv("RIVET_TERRAIN_RESTART_FILE");
  private static volatile boolean previewsSaved;private static long previewStart;
  private static final java.util.concurrent.CountDownLatch holdColours=new java.util.concurrent.CountDownLatch(1),coloursHeld=new java.util.concurrent.CountDownLatch(1);
+ private static final java.util.concurrent.CountDownLatch holdOldPage=new java.util.concurrent.CountDownLatch(1);
  private static final java.util.concurrent.CountDownLatch holdTerrainIo=new java.util.concurrent.CountDownLatch(1);
  private static Object field(Class<?> type,String name)throws Exception{var f=type.getDeclaredField(name);f.setAccessible(true);return f.get(null);}
  private static void set(Class<?> type,String name,Object value)throws Exception{var f=type.getDeclaredField(name);f.setAccessible(true);f.set(null,value);}
@@ -44,6 +45,20 @@ public final class MapTerrainHarness {
    }
   }
   return true;
+ }
+ /** Force a page sampled before an edit to finish after the edit, on every machine. */
+ private static void queueOldPage()throws Exception{
+  var key=new MapRegionTextures.Key(DIM,0,0,3);
+  var textures=(Map<MapRegionTextures.Key,MapRegionTextures.Texture>)field(MapRegionTextures.class,"textures");
+  var old=textures.get(key);check(old!=null,"Missing page for delayed composition");
+  check(!((Set<?>)field(MapRegionTextures.class,"pending")).contains(key),"Page still composing before delayed edit");
+  // A restored page has no current source signature and requires background composition.
+  textures.put(key,new MapRegionTextures.Texture(old.id(),old.texture(),old.level(),Long.MIN_VALUE,false));
+  ((Map<?,?>)field(MapRegionTextures.class,"checked")).remove(key);
+  ((Set<?>)field(MapRegionTextures.class,"scanQueue")).clear();
+  check(MapTerrainCache.work(()->{try{holdOldPage.await();}catch(InterruptedException ex){Thread.currentThread().interrupt();}}),"Could not hold page worker");
+  MapRegionTextures.prepareView(Set.of(key));
+  check(((Set<?>)field(MapRegionTextures.class,"pending")).contains(key),"Old page was not queued before edit");
  }
  @SubscribeEvent public static void frame(net.neoforged.neoforge.client.event.RenderFrameEvent.Pre event){
   if(ADDRESS==null||done||phase!=10)return;long now=System.nanoTime();
@@ -112,7 +127,7 @@ public final class MapTerrainHarness {
     check(settled(),"Overview changed after settling");for(var entry:retained.entrySet())check(MapRegionTextures.texture(entry.getKey(),3).texture()==entry.getValue().texture(),"Stationary view rebuilt texture");mc.setScreen(null);map=new WorldMapScreen(null);mc.setScreen(map);var dim=WorldMapScreen.class.getDeclaredField("dimension");dim.setAccessible(true);dim.set(map,DIM);map.view.center(256,256);phase=4;ticks=0;
    }else if(phase==4){check(settled(),"Reopening map lost terrain");for(var entry:retained.entrySet())check(MapRegionTextures.texture(entry.getKey(),3).texture()==entry.getValue().texture(),"Reopening discarded GPU cache");map.view.zoomAt(30,0,0,0,0);phase=5;ticks=0;
    }else if(phase==5){var key=new MapRegionTextures.Key(DIM,0,0);var texture=MapRegionTextures.texture(key,0);if(texture==null)return;var pixels=texture.texture().getPixels();for(int z=0;z<64;z++)for(int x=0;x<64;x++){int c=expected(x,z),rgba=c&0xff00ff00|(c&255)<<16|(c>>>16&255);if(pixels.getPixelRGBA(x,z)!=rgba)return;}check(pixels.getWidth()==64,"Detailed texture size wrong");map.view.zoomAt(-30,0,0,0,0);phase=6;}
-   else if(phase==6){check(settled(),"Returning to overview lost pixels");edited=true;var tile=new MapTile();for(int z=0;z<16;z++)for(int x=0;x<16;x++)tile.set(x,z,color(496+x,496+z),height(496+x,496+z));var key=new WorldMapClient.TileKey(DIM,31,31);((Map<WorldMapClient.TileKey,MapTile>)field(WorldMapClient.class,"tiles")).put(key,tile);MapTerrainCache.changed(key);phase=7;ticks=0;}
+   else if(phase==6){check(settled(),"Returning to overview lost pixels");queueOldPage();edited=true;var tile=new MapTile();for(int z=0;z<16;z++)for(int x=0;x<16;x++)tile.set(x,z,color(496+x,496+z),height(496+x,496+z));var key=new WorldMapClient.TileKey(DIM,31,31);((Map<WorldMapClient.TileKey,MapTile>)field(WorldMapClient.class,"tiles")).put(key,tile);MapTerrainCache.changed(key);check(((Map<?,?>)field(MapRegionTextures.class,"invalidated")).containsKey(new MapRegionTextures.Key(DIM,0,0,3)),"In-flight page was not invalidated by edit");holdOldPage.countDown();phase=7;ticks=0;}
    else if(phase==7){if(!settled())return;check(true,"Overview update");if(!WorldMapClient.previewIo(()->previewsSaved=true))return;phase=8;}
    else if(phase==8){if(!previewsSaved)return;
     if(RESTART_FILE!=null)java.nio.file.Files.writeString(java.nio.file.Path.of(RESTART_FILE),fixtureRoot+"\n"+fixtureWorld+"\n"+mc.player.getUUID()+"\n");
@@ -123,7 +138,7 @@ public final class MapTerrainHarness {
     mc.setScreen(null);map=new WorldMapScreen(null);mc.setScreen(map);var dim=WorldMapScreen.class.getDeclaredField("dimension");dim.setAccessible(true);dim.set(map,DIM);map.view.center(256,256);map.view.zoomAt(-30,0,0,0,0);phase=9;ticks=0;previewStart=System.nanoTime();
    }else if(phase==9){if(coloursHeld.getCount()!=0)return;MapTerrainCache.relightAll();boolean all=true;
     for(int z=-1;z<=1;z++)for(int x=-1;x<=1;x++){var key=new MapRegionTextures.Key(DIM,x,z,3);var texture=MapRegionTextures.texture(key,3);if(texture==null){all=false;continue;}check(texture.signature()==Long.MIN_VALUE,"Expected persisted preview before any terrain composition");
-     var pixels=texture.texture().getPixels();for(int cz=0;cz<32;cz++)for(int cx=0;cx<32;cx++){int[] expected=expectedTile(x*32+cx,z*32+cz,3);for(int pz=0;pz<2;pz++)for(int px=0;px<2;px++){int c=expected[pz*2+px],rgba=c&0xff00ff00|(c&255)<<16|(c>>>16&255);check(pixels.getPixelRGBA(cx*2+px,cz*2+pz)==rgba,"Persisted preview pixel changed");}}}
+     var pixels=texture.texture().getPixels();for(int cz=0;cz<32;cz++)for(int cx=0;cx<32;cx++){int[] expected=expectedTile(x*32+cx,z*32+cz,3);for(int pz=0;pz<2;pz++)for(int px=0;px<2;px++){int c=expected[pz*2+px],rgba=c&0xff00ff00|(c&255)<<16|(c>>>16&255);check(pixels.getPixelRGBA(cx*2+px,cz*2+pz)==rgba,"Persisted preview pixel changed region="+x+","+z+" pixel="+(cx*2+px)+","+(cz*2+pz)+" expected="+Integer.toHexString(rgba)+" actual="+Integer.toHexString(pixels.getPixelRGBA(cx*2+px,cz*2+pz)));}}}
     if(!all){if(ticks>100)throw new IllegalStateException("Persisted previews did not restore");return;}
     var visible=MapRegionTextures.viewKeys(MapLayer.surface(DIM),map.view,map.width,map.height,mc.getWindow().getGuiScale());
     MapRegionTextures.prepareView(visible);if(!MapRegionTextures.restored(visible)){if(ticks>100)throw new IllegalStateException("Whole saved view did not become ready");return;}
@@ -131,6 +146,6 @@ public final class MapTerrainHarness {
     check(((Map<?,?>)field(MapTerrainCache.class,"images")).isEmpty(),"Preview restoration depended on recomputing terrain");
     holdColours.countDown();holdTerrainIo.countDown();System.out.println("RIVET_TERRAIN_PREVIEW_MS="+(System.nanoTime()-previewStart)/1000000);System.out.println("RIVET_TERRAIN_OK checks="+checks+" disk=true eviction=true seams=true reopen=true lod=true borderUpdates=true sessionPreview=true indexIndependent=true");done=true;mc.stop();
    }
-  }catch(Throwable ex){holdColours.countDown();holdTerrainIo.countDown();done=true;System.out.println("RIVET_TERRAIN_FAILED phase="+phase);ex.printStackTrace();mc.stop();}
+  }catch(Throwable ex){holdOldPage.countDown();holdColours.countDown();holdTerrainIo.countDown();done=true;System.out.println("RIVET_TERRAIN_FAILED phase="+phase);ex.printStackTrace();mc.stop();}
  }
 }

@@ -26,6 +26,18 @@ final class MapRegionTextures {
     private static final Map<Key,Long> empty=new LinkedHashMap<>(128,.75f,true);
     private static final Map<Key,Long> saved=new HashMap<>(),saveRetry=new HashMap<>();
     private static final Set<Key> pending=new HashSet<>();
+    private static final Map<Key,Long> invalidated=new HashMap<>();
+    private static long invalidation;
+    /** An in-flight page must not publish pixels sampled before a block/edge change. */
+    static void changed(WorldMapClient.TileKey tile){
+        for(int level=0;level<=4;level++){
+            int chunks=4<<level;var key=new Key(tile.layer(),Math.floorDiv(tile.x(),chunks),Math.floorDiv(tile.z(),chunks),level);
+            checked.remove(key);
+            var ready=prepared.get(key);
+            if(ready!=null&&ready.signature()!=Long.MIN_VALUE){prepared.remove(key);ready.image().close();}
+            if(pending.contains(key))invalidated.put(key,++invalidation);
+        }
+    }
     private static final Set<Key> previewReads=new LinkedHashSet<>(),previewPending=new HashSet<>();
     private static long generation,scanStart;
     private static int scans;
@@ -166,14 +178,14 @@ final class MapRegionTextures {
         // Missing source pages during a disk/cache refill must not erase already drawn terrain.
         int[] previous=new int[64*64];
         if(existing!=null){var pixels=existing.texture().getPixels();for(int z=0;z<64;z++)for(int x=0;x<64;x++)previous[z*64+x]=pixels.getPixelRGBA(x,z);}
-        long owner=generation,targetSignature=signature,styleEpoch=MapTerrainCache.styleEpoch();boolean targetComplete=complete;pending.add(key);
+        long owner=generation,targetSignature=signature,styleEpoch=MapTerrainCache.styleEpoch(),invalidationStamp=invalidated.getOrDefault(key,0L);boolean targetComplete=complete;pending.add(key);
         if(!MapTerrainCache.work(()->{
             int tileSide=16>>level,side=64;var image=new NativeImage(side,side,false);
             for(int z=0;z<side;z++)for(int x=0;x<side;x++){
                 var source=images[z/tileSide*chunks+x/tileSide];int color=source==null?0:source.levels()[level][z%tileSide*tileSide+x%tileSide];
                 image.setPixelRGBA(x,z,source==null?previous[z*64+x]:color&0xff00ff00|(color&255)<<16|(color>>>16&255));
             }
-            Minecraft.getInstance().execute(()->{if(generation!=owner){image.close();return;}pending.remove(key);if(styleEpoch!=MapTerrainCache.styleEpoch()){image.close();checked.remove(key);return;}var old=prepared.put(key,new Prepared(image,level,targetSignature,targetComplete,styleEpoch));if(old!=null)old.image().close();while(prepared.size()>512){var oldest=prepared.keySet().iterator().next();prepared.remove(oldest).image().close();checked.remove(oldest);}});
+            Minecraft.getInstance().execute(()->{if(generation!=owner){image.close();return;}pending.remove(key);long currentInvalidation=invalidated.getOrDefault(key,0L);invalidated.remove(key);if(invalidationStamp!=currentInvalidation||styleEpoch!=MapTerrainCache.styleEpoch()){image.close();checked.remove(key);return;}var old=prepared.put(key,new Prepared(image,level,targetSignature,targetComplete,styleEpoch));if(old!=null)old.image().close();while(prepared.size()>512){var oldest=prepared.keySet().iterator().next();prepared.remove(oldest).image().close();checked.remove(oldest);}});
         })){pending.remove(key);}else if(complete)checked.put(key,stamp);else checked.remove(key);
         return existing;
     }
@@ -203,6 +215,6 @@ final class MapRegionTextures {
         var matrix=g.pose().last().pose();var vertices=com.mojang.blaze3d.vertex.Tesselator.getInstance().begin(com.mojang.blaze3d.vertex.VertexFormat.Mode.QUADS,com.mojang.blaze3d.vertex.DefaultVertexFormat.POSITION_TEX);
         vertices.addVertex(matrix,left,top,0).setUv(u0,v0);vertices.addVertex(matrix,left,bottom,0).setUv(u0,v1);vertices.addVertex(matrix,right,bottom,0).setUv(u1,v1);vertices.addVertex(matrix,right,top,0).setUv(u1,v0);com.mojang.blaze3d.vertex.BufferUploader.drawWithShader(vertices.buildOrThrow());com.mojang.blaze3d.systems.RenderSystem.disableBlend();
     }
-    static void reset(){generation++;empty.clear();scanQueue.clear();visible=Set.of();textureLimit=2048;for(var texture:textures.values())Minecraft.getInstance().getTextureManager().release(texture.id());textures.clear();for(var image:prepared.values())image.image().close();prepared.clear();pending.clear();checked.clear();saved.clear();saveRetry.clear();previewReads.clear();previewPending.clear();}
+    static void reset(){generation++;invalidated.clear();empty.clear();scanQueue.clear();visible=Set.of();textureLimit=2048;for(var texture:textures.values())Minecraft.getInstance().getTextureManager().release(texture.id());textures.clear();for(var image:prepared.values())image.image().close();prepared.clear();pending.clear();checked.clear();saved.clear();saveRetry.clear();previewReads.clear();previewPending.clear();}
     private MapRegionTextures(){}
 }
