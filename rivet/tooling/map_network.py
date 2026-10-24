@@ -27,7 +27,10 @@ SCENARIOS = (
 def verify(path, marker):
     text = Path(path).read_text(errors="replace")
     if marker not in text or re.search(r"RIVET_[A-Z0-9_]*FAILED\b", text):
-        raise RuntimeError(f"Native scenario incomplete: {marker}; see {path}")
+        lines = text.splitlines()
+        failure = next((i for i, line in enumerate(lines) if re.search(r"RIVET_[A-Z0-9_]*FAILED\b", line)), None)
+        details = "\n".join(lines[max(0, failure - 3):failure + 28] if failure is not None else lines[-40:])
+        raise RuntimeError(f"Native scenario incomplete: {marker}; see {path}\n{details}")
 
 def stop(process):
     if process.poll() is None:
@@ -131,6 +134,7 @@ def main():
                     client = subprocess.Popen(command(work, java, "client") + ["--username", player, "--width", "1280", "--height", "1024"], cwd=work / "client", env=client_env, stdout=output, stderr=subprocess.STDOUT)
                     try:
                         if client.wait(timeout=limit) != 0:
+                            verify(work / (name + ".log"), marker)
                             raise RuntimeError("Client failed: " + name)
                     finally:
                         stop(client)

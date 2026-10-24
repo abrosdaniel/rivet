@@ -22,6 +22,16 @@ class MapNetwork(unittest.TestCase):
             log.write_text('RIVET_MAP_PERMISSION_OK')
             m.verify(log, 'RIVET_MAP_PERMISSION_OK')
 
+    def test_failure_reports_original_exception(self):
+        with tempfile.TemporaryDirectory() as directory:
+            log = Path(directory) / 'run.log'
+            log.write_text('RIVET_ROLE_NETWORK_FAILED phase=20\nAssertionError: Missing entry\n' + 'shutdown\n' * 100)
+            with self.assertRaisesRegex(RuntimeError, 'AssertionError: Missing entry'):
+                m.verify(log, 'RIVET_ROLE_NETWORK_OK')
+            log.write_text('Startup failed: missing library')
+            with self.assertRaisesRegex(RuntimeError, 'Startup failed: missing library'):
+                m.verify(log, 'RIVET_ROLE_NETWORK_OK')
+
     def test_isolated_configuration_and_non_operator_guest(self):
         import json
         root = TOOLS.parents[1]

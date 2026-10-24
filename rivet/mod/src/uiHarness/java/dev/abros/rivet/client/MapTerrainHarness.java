@@ -19,6 +19,7 @@ public final class MapTerrainHarness {
  private static int phase=-1,ticks,checks;private static long deadline,started;private static boolean done;
  private static final AtomicBoolean prepared=new AtomicBoolean();private static volatile Throwable preparationFailure;
  private static final Map<MapRegionTextures.Key,MapRegionTextures.Texture> retained=new HashMap<>();
+ private static MapRegionTextures.Key discoveredRegion;
  private static WorldMapScreen map;private static boolean edited,profiled;private static long lastFrame,frameStart,lastRender,lastGc;
  private static MapRepository fixture;private static java.nio.file.Path fixtureRoot;private static UUID fixtureWorld;
  private static final String RESTART_FILE=System.getenv("RIVET_TERRAIN_RESTART_FILE");
@@ -77,8 +78,25 @@ public final class MapTerrainHarness {
     System.out.println("RIVET_TERRAIN_COLD_START chunks="+known.size());
    }else if(phase==2){if(ticks%20==0)System.out.println("RIVET_TERRAIN_PROGRESS overview="+((Map<?,?>)field(MapTerrainCache.class,"overview")).size()+" textures="+((Map<?,?>)field(MapRegionTextures.class,"textures")).size()+" pending="+((Set<?>)field(MapRegionTextures.class,"pending")).size()+" queued="+((Set<?>)field(MapRegionTextures.class,"scanQueue")).size()+" prepared="+((Map<?,?>)field(MapRegionTextures.class,"prepared")).size());
     if(!settled())return;check(((Map<?,?>)field(MapTerrainCache.class,"images")).size()<=8192,"Full-resolution cache unbounded");check(((Map<?,?>)field(MapTerrainCache.class,"overview")).size()>=9216,"Overview lost evicted tiles");
+    var empty=(Map<MapRegionTextures.Key,Long>)field(MapRegionTextures.class,"empty");
+    check(!empty.isEmpty()&&empty.size()<=8192,"Empty region cache absent or unbounded");
+    var emptyKey=empty.entrySet().stream().filter(e2->e2.getKey().dimension().equals(DIM)&&e2.getValue()==WorldMapClient.terrainIndexRevision()).map(Map.Entry::getKey).findFirst().orElseThrow();
+    int scansBefore=(int)field(MapRegionTextures.class,"scans");
+    for(int i=0;i<20;i++)check(MapRegionTextures.texture(emptyKey,emptyKey.level())==null,"Empty region produced a texture");
+    check((int)field(MapRegionTextures.class,"scans")==scansBefore,"Empty region was rescanned without index changes");
     for(int z=-1;z<=1;z++)for(int x=-1;x<=1;x++){var key=new MapRegionTextures.Key(DIM,x,z,3);retained.put(key,MapRegionTextures.texture(key,3));}
-    System.out.println("RIVET_TERRAIN_COLD_OK ms="+(System.nanoTime()-started)/1000000+" chunks=9216 exactPixels=36864");phase=3;ticks=0;
+    System.out.println("RIVET_TERRAIN_COLD_OK ms="+(System.nanoTime()-started)/1000000+" chunks=9216 exactPixels=36864");
+    discoveredRegion=empty.keySet().stream().filter(k->k.dimension().equals(DIM)).findFirst().orElseThrow();
+    var discoveredKey=new WorldMapClient.TileKey(DIM,discoveredRegion.x()*discoveredRegion.chunks(),discoveredRegion.z()*discoveredRegion.chunks());var discoveredTile=new MapTile();
+    for(int z=0;z<16;z++)for(int x=0;x<16;x++)discoveredTile.set(x,z,0xffaa7755,80);
+    fixture.write(DIM,discoveredKey.x(),discoveredKey.z(),discoveredTile);
+    ((Map<WorldMapClient.TileKey,MapTile>)field(WorldMapClient.class,"tiles")).put(discoveredKey,discoveredTile);
+    ((Map<MapLayer,Set<MapRepository.Chunk>>)field(WorldMapClient.class,"known")).get(MapLayer.surface(DIM)).add(new MapRepository.Chunk(discoveredKey.x(),discoveredKey.z()));
+    set(WorldMapClient.class,"knownRevision",WorldMapClient.terrainIndexRevision()+1);phase=11;ticks=0;
+   }else if(phase==11){
+    var discovered=MapRegionTextures.texture(discoveredRegion,discoveredRegion.level());if(discovered==null||!discovered.complete())return;
+    check((discovered.texture().getPixels().getPixelRGBA(0,0)>>>24)!=0,"Exploring a cached empty region did not reveal terrain");
+    System.out.println("RIVET_TERRAIN_EMPTY_INVALIDATION_OK");phase=3;ticks=0;
    }else if(phase==10){
     map.view.center(256+Math.sin(ticks*.06)*384,256+Math.cos(ticks*.04)*384);
     if(ticks%8==0)map.view.zoomAt(ticks%80<40?2:-2,0,0,0,0);

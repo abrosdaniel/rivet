@@ -41,6 +41,7 @@ def main():
                 client = subprocess.Popen(command(work, java, "client") + ["--username", "RivetMapTest", "--width", "1280", "--height", "1024"], cwd=work / "client", env=dict(env, RIVET_ROLE_NETWORK_ADDRESS=f"127.0.0.1:{args.game_port}"), stdout=output, stderr=subprocess.STDOUT)
                 try:
                     if client.wait(timeout=600) != 0:
+                        verify(work / "roles.log", "RIVET_ROLE_NETWORK_OK")
                         raise RuntimeError("Role client failed; see roles.log")
                 finally:
                     stop(client)
