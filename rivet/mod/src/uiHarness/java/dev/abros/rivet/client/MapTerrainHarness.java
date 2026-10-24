@@ -16,7 +16,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
 public final class MapTerrainHarness {
  private static final String ADDRESS=System.getenv("RIVET_MAP_TERRAIN_ADDRESS"),DIM="rivet:terrain-check";
  private static final int MIN=-32,MAX=64;
- private static int phase=-1,ticks,checks;private static long deadline,started;private static boolean done;
+ private static int phase=-1,ticks,checks,deferredAttempts;private static long deadline,started;private static boolean done;
  private static final AtomicBoolean prepared=new AtomicBoolean();private static volatile Throwable preparationFailure;
  private static final Map<MapRegionTextures.Key,MapRegionTextures.Texture> retained=new HashMap<>();
  private static MapRegionTextures.Key discoveredRegion;
@@ -25,6 +25,7 @@ public final class MapTerrainHarness {
  private static final String RESTART_FILE=System.getenv("RIVET_TERRAIN_RESTART_FILE");
  private static volatile boolean previewsSaved;private static long previewStart;
  private static final java.util.concurrent.CountDownLatch holdColours=new java.util.concurrent.CountDownLatch(1),coloursHeld=new java.util.concurrent.CountDownLatch(1);
+ private static final java.util.concurrent.CountDownLatch oldPageHeld=new java.util.concurrent.CountDownLatch(1);
  private static final java.util.concurrent.CountDownLatch holdOldPage=new java.util.concurrent.CountDownLatch(1);
  private static final java.util.concurrent.CountDownLatch holdTerrainIo=new java.util.concurrent.CountDownLatch(1);
  private static Object field(Class<?> type,String name)throws Exception{var f=type.getDeclaredField(name);f.setAccessible(true);return f.get(null);}
@@ -47,18 +48,27 @@ public final class MapTerrainHarness {
   return true;
  }
  /** Force a page sampled before an edit to finish after the edit, on every machine. */
- private static void queueOldPage()throws Exception{
+ private static boolean queueOldPage()throws Exception{
   var key=new MapRegionTextures.Key(DIM,0,0,3);
+  if(((Set<?>)field(MapRegionTextures.class,"pending")).contains(key))return true;
   var textures=(Map<MapRegionTextures.Key,MapRegionTextures.Texture>)field(MapRegionTextures.class,"textures");
   var old=textures.get(key);check(old!=null,"Missing page for delayed composition");
-  check(!((Set<?>)field(MapRegionTextures.class,"pending")).contains(key),"Page still composing before delayed edit");
-  // A restored page has no current source signature and requires background composition.
+  // A previously prepared upload can replace the sentinel; consume it before requesting composition.
+  if(((Map<?,?>)field(MapRegionTextures.class,"prepared")).containsKey(key)){
+   set(MapRegionTextures.class,"scans",8);MapRegionTextures.texture(key,3);return false;
+  }
   textures.put(key,new MapRegionTextures.Texture(old.id(),old.texture(),old.level(),Long.MIN_VALUE,false));
   ((Map<?,?>)field(MapRegionTextures.class,"checked")).remove(key);
-  ((Set<?>)field(MapRegionTextures.class,"scanQueue")).clear();
-  check(MapTerrainCache.work(()->{try{holdOldPage.await();}catch(InterruptedException ex){Thread.currentThread().interrupt();}}),"Could not hold page worker");
+  var queue=(Set<MapRegionTextures.Key>)field(MapRegionTextures.class,"scanQueue");queue.clear();queue.add(key);
+  if(deferredAttempts<3){
+   // Exercise a spent frame budget on every run, rather than relying on runner speed.
+   set(MapRegionTextures.class,"scans",8);
+   MapRegionTextures.texture(key,3);
+   check(!((Set<?>)field(MapRegionTextures.class,"pending")).contains(key),"Exhausted scan budget was ignored");deferredAttempts++;
+   return false;
+  }
   MapRegionTextures.prepareView(Set.of(key));
-  check(((Set<?>)field(MapRegionTextures.class,"pending")).contains(key),"Old page was not queued before edit");
+  return ((Set<?>)field(MapRegionTextures.class,"pending")).contains(key);
  }
  @SubscribeEvent public static void frame(net.neoforged.neoforge.client.event.RenderFrameEvent.Pre event){
   if(ADDRESS==null||done||phase!=10)return;long now=System.nanoTime();
@@ -127,7 +137,17 @@ public final class MapTerrainHarness {
     check(settled(),"Overview changed after settling");for(var entry:retained.entrySet())check(MapRegionTextures.texture(entry.getKey(),3).texture()==entry.getValue().texture(),"Stationary view rebuilt texture");mc.setScreen(null);map=new WorldMapScreen(null);mc.setScreen(map);var dim=WorldMapScreen.class.getDeclaredField("dimension");dim.setAccessible(true);dim.set(map,DIM);map.view.center(256,256);phase=4;ticks=0;
    }else if(phase==4){check(settled(),"Reopening map lost terrain");for(var entry:retained.entrySet())check(MapRegionTextures.texture(entry.getKey(),3).texture()==entry.getValue().texture(),"Reopening discarded GPU cache");map.view.zoomAt(30,0,0,0,0);phase=5;ticks=0;
    }else if(phase==5){var key=new MapRegionTextures.Key(DIM,0,0);var texture=MapRegionTextures.texture(key,0);if(texture==null)return;var pixels=texture.texture().getPixels();for(int z=0;z<64;z++)for(int x=0;x<64;x++){int c=expected(x,z),rgba=c&0xff00ff00|(c&255)<<16|(c>>>16&255);if(pixels.getPixelRGBA(x,z)!=rgba)return;}check(pixels.getWidth()==64,"Detailed texture size wrong");map.view.zoomAt(-30,0,0,0,0);phase=6;}
-   else if(phase==6){check(settled(),"Returning to overview lost pixels");queueOldPage();edited=true;var tile=new MapTile();for(int z=0;z<16;z++)for(int x=0;x<16;x++)tile.set(x,z,color(496+x,496+z),height(496+x,496+z));var key=new WorldMapClient.TileKey(DIM,31,31);((Map<WorldMapClient.TileKey,MapTile>)field(WorldMapClient.class,"tiles")).put(key,tile);MapTerrainCache.changed(key);check(((Map<?,?>)field(MapRegionTextures.class,"invalidated")).containsKey(new MapRegionTextures.Key(DIM,0,0,3)),"In-flight page was not invalidated by edit");holdOldPage.countDown();phase=7;ticks=0;}
+   else if(phase==6){check(settled(),"Returning to overview lost pixels");
+    // Stop map rendering from adding work while the test establishes its worker barrier.
+    mc.setScreen(null);
+    if(!MapTerrainCache.work(()->{mc.execute(oldPageHeld::countDown);try{holdOldPage.await();}catch(InterruptedException ex){Thread.currentThread().interrupt();}}))return;
+    phase=12;ticks=0;
+   }else if(phase==12){
+    if(oldPageHeld.getCount()!=0)return;
+    if(!queueOldPage()){if(ticks>100)throw new IllegalStateException("Old page did not queue within the existing worker barrier");return;}
+    check(deferredAttempts==3,"Delayed-page regression did not exercise deferred scheduling");
+    System.out.println("RIVET_TERRAIN_DEFERRED_PAGE_OK ticks="+ticks);
+    edited=true;var tile=new MapTile();for(int z=0;z<16;z++)for(int x=0;x<16;x++)tile.set(x,z,color(496+x,496+z),height(496+x,496+z));var key=new WorldMapClient.TileKey(DIM,31,31);((Map<WorldMapClient.TileKey,MapTile>)field(WorldMapClient.class,"tiles")).put(key,tile);MapTerrainCache.changed(key);check(((Map<?,?>)field(MapRegionTextures.class,"invalidated")).containsKey(new MapRegionTextures.Key(DIM,0,0,3)),"In-flight page was not invalidated by edit");holdOldPage.countDown();mc.setScreen(map);phase=7;ticks=0;}
    else if(phase==7){if(!settled())return;check(true,"Overview update");if(!WorldMapClient.previewIo(()->previewsSaved=true))return;phase=8;}
    else if(phase==8){if(!previewsSaved)return;
     if(RESTART_FILE!=null)java.nio.file.Files.writeString(java.nio.file.Path.of(RESTART_FILE),fixtureRoot+"\n"+fixtureWorld+"\n"+mc.player.getUUID()+"\n");
