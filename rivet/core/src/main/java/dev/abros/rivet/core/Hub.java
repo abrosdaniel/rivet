@@ -31,9 +31,12 @@ public final class Hub {
         return coreUpdater.check(coreVersion,"1.21.1",neoVersion);
     }
     public java.util.List<CoreUpdater.Update> availableCoreUpdates()throws Exception{
+        return availableCoreUpdates(false);
+    }
+    public java.util.List<CoreUpdater.Update> availableCoreUpdates(boolean refresh)throws Exception{
         synchronized(coreCatalogLock){
-        if(coreCatalog!=null&&System.nanoTime()-coreCatalogAt<java.util.concurrent.TimeUnit.MINUTES.toNanos(5))return coreCatalog;
-        var updates=coreUpdater.releases(coreVersion,"1.21.1",neoVersion,100,true);coreCatalog=updates;coreCatalogAt=System.nanoTime();return updates;}
+        if(!refresh&&coreCatalog!=null&&System.nanoTime()-coreCatalogAt<java.util.concurrent.TimeUnit.MINUTES.toNanos(5))return coreCatalog;
+        var updates=coreUpdater.releases(coreVersion,"1.21.1",neoVersion,100,true,refresh);coreCatalog=updates;coreCatalogAt=System.nanoTime();return updates;}
     }
     /** Called only after the player accepts this particular update. */
     public String prepareCoreUpdate(Path loadedJar,CoreUpdater.Update update)throws Exception{return prepareCoreUpdate(loadedJar,update,event->{});}

@@ -17,6 +17,9 @@ final class UpdateMetadataCache {
  UpdateMetadataCache(Path directory){this(directory,System::currentTimeMillis);}
  UpdateMetadataCache(Path directory,LongSupplier clock){this.directory=directory;this.clock=clock;}
  byte[] read(Remote remote,String url,int limit)throws IOException,InterruptedException {
+  return read(remote,url,limit,false);
+ }
+ byte[] read(Remote remote,String url,int limit,boolean refresh)throws IOException,InterruptedException {
   String key=Hashes.sha256(url.getBytes(StandardCharsets.UTF_8));
   synchronized(locks.computeIfAbsent(key,ignored->new Object())){
    Path file=directory.resolve(key+".json");long now=clock.getAsLong(),fetched=0,retry=0;byte[] cached=null;
@@ -29,8 +32,8 @@ final class UpdateMetadataCache {
      if(!body.isEmpty()){var bytes=Base64.getDecoder().decode(body);if(bytes.length<=limit&&fetched<=now&&now-fetched<=MAX_AGE)cached=bytes;}
     }
    }catch(IOException|RuntimeException invalid){cached=null;fetched=0;retry=0;}
-   if(cached!=null&&now-fetched<FRESH)return cached;
-   if(retry>now&&retry-now<=RETRY){if(cached!=null)return cached;throw new Remote.Unavailable(dev.abros.rivet.core.Messages.text("rivet.core.update_checks_are_temporarily_unavailable_try_ddd66fd2"));}
+   if(!refresh&&cached!=null&&now-fetched<FRESH)return cached;
+   if(!refresh&&retry>now&&retry-now<=RETRY){if(cached!=null)return cached;throw new Remote.Unavailable(dev.abros.rivet.core.Messages.text("rivet.core.update_checks_are_temporarily_unavailable_try_ddd66fd2"));}
    try{
     byte[] bytes=remote.bytes(url,limit);
     com.google.gson.JsonParser.parseString(new String(bytes,StandardCharsets.UTF_8));
@@ -38,7 +41,7 @@ final class UpdateMetadataCache {
    }catch(InterruptedException cancelled){throw cancelled;}
    catch(IOException|RuntimeException failure){
     save(file,url,fetched,clock.getAsLong()+RETRY,cached);
-    if(cached!=null)return cached;
+    if(!refresh&&cached!=null)return cached;
     if(failure instanceof IOException io)throw io;throw new IOException("Invalid update metadata",failure);
    }
   }

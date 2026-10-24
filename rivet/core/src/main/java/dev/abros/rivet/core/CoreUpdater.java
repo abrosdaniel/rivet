@@ -15,7 +15,7 @@ public final class CoreUpdater {
     private final UpdateMetadataCache metadata;
     public CoreUpdater(Remote remote){this(remote,null);}
     public CoreUpdater(Remote remote,Path metadataDirectory){this.remote=remote;this.metadata=metadataDirectory==null?null:new UpdateMetadataCache(metadataDirectory);}
-    private byte[] metadata(String url,int limit)throws Exception{return metadata==null?remote.bytes(url,limit):metadata.read(remote,url,limit);}
+    private byte[] metadata(String url,int limit,boolean refresh)throws Exception{return metadata==null?remote.bytes(url,limit):metadata.read(remote,url,limit,refresh);}
     public Optional<Update> check(String runningVersion,String minecraft,String neoForge)throws Exception{
         return available(runningVersion,minecraft,neoForge,1).stream().findFirst();
     }
@@ -23,11 +23,14 @@ public final class CoreUpdater {
         return releases(runningVersion,minecraft,neoForge,limit,false);
     }
     public List<Update> releases(String runningVersion,String minecraft,String neoForge,int limit,boolean includeOlder)throws Exception{
+        return releases(runningVersion,minecraft,neoForge,limit,includeOlder,false);
+    }
+    public List<Update> releases(String runningVersion,String minecraft,String neoForge,int limit,boolean includeOlder,boolean refresh)throws Exception{
         if(limit<1||limit>100)throw new IllegalArgumentException("Release list limit");
         var versions=new java.util.TreeSet<String>((a,b)->Versions.compare(b,a));
         for(int page=1;page<=100;page++){
             String url=RELEASES+(page==1?"":"&page="+page);
-            var releases=JsonParser.parseString(new String(metadata(url,4*1024*1024),StandardCharsets.UTF_8));
+            var releases=JsonParser.parseString(new String(metadata(url,4*1024*1024,refresh),StandardCharsets.UTF_8));
             if(!releases.isJsonArray())throw new IllegalArgumentException("Invalid official release list");
             for(var value:releases.getAsJsonArray()){
                 var release=value.getAsJsonObject();if(release.get("draft").getAsBoolean()||(release.has("prerelease")&&release.get("prerelease").getAsBoolean()))continue;
@@ -45,7 +48,7 @@ public final class CoreUpdater {
         try{
             while(candidates.hasNext()&&found.size()<limit&&System.nanoTime()<deadline){
                 int pending=0;
-                while(pending<4&&candidates.hasNext()){String version=candidates.next();jobs.add(completed.submit(()->descriptor(version,minecraft,neoForge)));pending++;}
+                while(pending<4&&candidates.hasNext()){String version=candidates.next();jobs.add(completed.submit(()->descriptor(version,minecraft,neoForge,refresh)));pending++;}
                 while(pending>0){
                     var job=completed.poll(Math.max(1,deadline-System.nanoTime()),java.util.concurrent.TimeUnit.NANOSECONDS);
                     if(job==null){failure=new java.util.concurrent.TimeoutException();break;}
@@ -57,9 +60,9 @@ public final class CoreUpdater {
         if(found.isEmpty()&&failure!=null)throw new java.io.IOException(dev.abros.rivet.core.Messages.text("rivet.core.could_not_load_available_rivet_versions_8ab41b79"),failure);
         return found.stream().sorted((a,b)->Versions.compare(b.version(),a.version())).limit(limit).toList();
     }
-    private Optional<Update> descriptor(String version,String minecraft,String neoForge)throws Exception{
+    private Optional<Update> descriptor(String version,String minecraft,String neoForge,boolean refresh)throws Exception{
         String base=REPOSITORY+"/releases/download/v"+version+"/";
-        var descriptor=Json.parse(new String(metadata(base+"core.json",1024*1024),StandardCharsets.UTF_8));Schema.validate("core-release",descriptor);
+        var descriptor=Json.parse(new String(metadata(base+"core.json",1024*1024,refresh),StandardCharsets.UTF_8));Schema.validate("core-release",descriptor);
         if(!version.equals(Json.str(descriptor,"version")))throw new IllegalArgumentException("Official release version mismatch");
         for(var value:descriptor.getAsJsonArray("artifacts")){
             var artifact=value.getAsJsonObject();

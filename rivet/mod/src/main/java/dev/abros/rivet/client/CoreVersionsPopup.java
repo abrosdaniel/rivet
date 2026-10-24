@@ -42,12 +42,13 @@ final class CoreVersionsPopup extends ScrollScreen {
     }
     private void load(){
         if(loading||installing)return;
+        boolean refresh=failed;
         loading=true;failed=false;status="";rebuildWidgets();
         try{Client.NETWORK.submit(()->{try{
             var hub=Client.ensureHub();
-            var updates=hub.availableCoreUpdates().stream().filter(u->!u.version().equals(Rivet.VERSION)).filter(u->requirement.isEmpty()||dev.abros.rivet.core.Versions.supportsRequirement(u.version(),requirement)).toList();
+            var updates=hub.availableCoreUpdates(refresh).stream().filter(u->!u.version().equals(Rivet.VERSION)).filter(u->requirement.isEmpty()||dev.abros.rivet.core.Versions.supportsRequirement(u.version(),requirement)).toList();
             minecraft.execute(()->{loading=false;versions=updates;if(selected==null||!updates.contains(selected))selected=null;status=updates.isEmpty()?Client.text("ui.no_other_versions_81bda77b"):"";if(minecraft.screen==this)rebuildWidgets();});
-        }catch(Exception failure){minecraft.execute(()->{loading=false;failed=true;status=Client.text("ui.could_not_check_versions_you_can_2b98d80f");if(minecraft.screen==this)rebuildWidgets();});}});
+        }catch(Exception failure){System.getLogger(CoreVersionsPopup.class.getName()).log(System.Logger.Level.WARNING,"Rivet version check failed",failure);minecraft.execute(()->{loading=false;failed=true;status=Client.text("ui.could_not_check_versions_you_can_2b98d80f");if(minecraft.screen==this)rebuildWidgets();});}});
         }catch(java.util.concurrent.RejectedExecutionException busy){loading=false;failed=true;status=Client.text("ui.the_check_is_busy_try_again_03cafbbc");rebuildWidgets();}
     }
     private void install(){
@@ -60,7 +61,7 @@ final class CoreVersionsPopup extends ScrollScreen {
             Branding.icon(graphics,left()+12,top()+12,14);
             graphics.drawString(font,Client.text("ui.rivet_update_5591c964"),left()+32,top()+15,UiKit.text(),false);
             graphics.drawString(font,Client.text("ui.installed_version_81f7e135")+Rivet.VERSION,left()+12,top()+34,UiKit.muted(),false);
-            if(versions.isEmpty())graphics.drawString(font,loading?Client.text("ui.fetching_versions_ab017709"):Client.text("ui.no_versions_available_50a8c186"),left()+12,top()+58,UiKit.muted(),false);
+            if(versions.isEmpty()&&!failed)graphics.drawString(font,loading?Client.text("ui.fetching_versions_ab017709"):Client.text("ui.no_versions_available_50a8c186"),left()+12,top()+58,UiKit.muted(),false);
             String message=loading?Client.text("ui.checking_available_versions_8195b233"):!status.isBlank()?status:selected==null?Client.text("ui.select_a_version_to_install_7949aa4b"):Client.text("ui.install_02059d44")+selected.version()+Client.text("ui.a_game_restart_will_be_required_825c7633");
             if(installing||loading)UiProgress.draw(graphics,font,left()+12,bottom()-78,panelWidth()-24,installing?progress:dev.abros.rivet.core.InstallProgress.phase("checking"));
             var lines=font.split(Component.literal(message),panelWidth()-24);

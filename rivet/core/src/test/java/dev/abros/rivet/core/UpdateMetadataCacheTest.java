@@ -48,4 +48,17 @@ class UpdateMetadataCacheTest {
   cache.read(source,url,1024);cache.read(source,url,1024);assertEquals(1,source.calls.get());
  }
 
+
+ @Test void explicitRetryBypassesPersistedFailureWithoutWaiting()throws Exception{
+  var source=new Source();source.failed=true;var cache=new UpdateMetadataCache(root,()->1_000_000L);
+  assertThrows(IOException.class,()->cache.read(source,url,1024));source.failed=false;
+  assertEquals("[]",new String(new UpdateMetadataCache(root,()->1_000_001L).read(source,url,1024,true)));
+  assertEquals(2,source.calls.get());
+ }
+ @Test void explicitRefreshDoesNotHideFailureBehindStaleSuccess()throws Exception{
+  var source=new Source();var cache=new UpdateMetadataCache(root,()->1_000_000L);cache.read(source,url,1024);
+  source.failed=true;assertThrows(IOException.class,()->cache.read(source,url,1024,true));
+  source.failed=false;source.body="[1]";assertEquals("[1]",new String(cache.read(source,url,1024,true)));
+  assertEquals(3,source.calls.get());
+ }
 }

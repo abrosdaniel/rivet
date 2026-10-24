@@ -30,8 +30,13 @@ public final class PublicHttp {
  private static final DnsResolver DNS=resolver(InetAddress::getAllByName);
  private static final java.util.concurrent.ScheduledThreadPoolExecutor CANCELLATION=new java.util.concurrent.ScheduledThreadPoolExecutor(1,r->{var thread=new Thread(r,"Rivet HTTPS cancellation");thread.setDaemon(true);return thread;});
  static{CANCELLATION.setRemoveOnCancelPolicy(true);}
+ // GitHub release responses contain CSP and signed redirect headers exceeding 8 KiB.
+ // Keep explicit finite limits rather than disabling response-header protection.
+ static final org.apache.hc.client5.http.impl.io.ManagedHttpClientConnectionFactory CONNECTIONS=
+  org.apache.hc.client5.http.impl.io.ManagedHttpClientConnectionFactory.builder().http1Config(
+   org.apache.hc.core5.http.config.Http1Config.custom().setMaxLineLength(32768).setMaxHeaderCount(100).build()).build();
  private static final CloseableHttpClient CLIENT=HttpClients.custom()
-  .setConnectionManager(PoolingHttpClientConnectionManagerBuilder.create().setDnsResolver(DNS).setMaxConnTotal(32).setMaxConnPerRoute(8)
+  .setConnectionManager(PoolingHttpClientConnectionManagerBuilder.create().setConnectionFactory(CONNECTIONS).setDnsResolver(DNS).setMaxConnTotal(32).setMaxConnPerRoute(8)
    .setDefaultConnectionConfig(ConnectionConfig.custom().setConnectTimeout(Timeout.ofSeconds(10)).setSocketTimeout(Timeout.ofSeconds(30)).build()).build())
   .setDefaultRequestConfig(RequestConfig.custom().setConnectionRequestTimeout(Timeout.ofSeconds(10)).setResponseTimeout(Timeout.ofSeconds(30)).build())
   .disableRedirectHandling().disableAutomaticRetries().disableCookieManagement().disableContentCompression().build();

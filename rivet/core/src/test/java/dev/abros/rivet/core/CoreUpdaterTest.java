@@ -139,4 +139,13 @@ class CoreUpdaterTest {
         assertEquals("1.1.40",new CoreUpdater(remote).check("1.0.0","1.21.1","21.1.250").orElseThrow().version());assertEquals(4,count.get());
     }
 
+
+    @Test void userRetryReloadsCatalogAndFailedDescriptors()throws Exception{
+        var remote=source();var updater=new CoreUpdater(remote,game.resolve("metadata"));
+        remote.data.remove(base("1.1.0")+"core.json");
+        assertThrows(IOException.class,()->updater.releases("1.0.0","1.21.1","21.1.250",100,true));
+        remote.put(base("1.1.0")+"core.json",descriptor("1.1.0","21.1.250"));
+        assertThrows(IOException.class,()->updater.releases("1.0.0","1.21.1","21.1.250",100,true));
+        assertEquals("1.1.0",updater.releases("1.0.0","1.21.1","21.1.250",100,true,true).getFirst().version());
+    }
 }
