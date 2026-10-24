@@ -49,6 +49,7 @@ public final class ServerProviders {
   });
   owner("luckperms").register(IntegrationApi.PERMISSIONS,"luckperms",new IntegrationApi.Permissions(){
    public long revision(){return LuckPermsAdapter.revision();}
+   public java.util.concurrent.CompletionStage<IntegrationApi.Data> editRole(UUID id,IntegrationApi.Data request){return LuckPermsAdapter.editRole(actor(server,id),json(request)).thenApply(ServerProviders::data);}
    public IntegrationApi.Data profile(UUID id,boolean online){return data(online?LuckPermsAdapter.profile(permissionPlayer(server,id)):LuckPermsAdapter.profile(id));}
    public boolean allowed(UUID id,String right){thread(server);return LuckPermsAdapter.allowed(permissionPlayer(server,id),right);}
    public boolean offlineAllowed(UUID id,String right){if(server.isSameThread())throw new IllegalStateException("Offline permissions require a worker");return LuckPermsAdapter.offlineAllowed(id,right);}

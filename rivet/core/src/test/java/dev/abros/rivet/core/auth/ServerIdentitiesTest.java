@@ -17,4 +17,10 @@ class ServerIdentitiesTest {
  }
  @Test void invalidNamesAreRejected(){var index=new ServerIdentities(List.of());for(String s:List.of("","a/b","x".repeat(17)))assertThrows(IllegalArgumentException.class,()->index.resolve(s));}
  @Test void linkedLauncherRoutesAfterRenameAndUnlinkRemovesRoute(){var id=UUID.randomUUID();var official=UUID.randomUUID();var profile=new AuthStore.Profile("ServerName",id,official);var index=new ServerIdentities(List.of(profile));assertEquals(profile,index.resolve("NewMinecraftName",official));index.remember(new AuthStore.Profile("ServerName",id));assertNotEquals(id,index.resolve("NewMinecraftName",official).uuid());}
+ @Test void renameRemovesOldAliasAndPreservesVerifiedRoute(){
+  var id=UUID.randomUUID();var official=UUID.randomUUID();var index=new ServerIdentities(List.of(new AuthStore.Profile("Before",id,official)));
+  var renamed=new AuthStore.Profile("After",id,official);index.remember(renamed);
+  index.rememberCurrent(new AuthStore.Profile("Before",id,official));
+  assertTrue(index.known("Before").isEmpty());assertEquals(renamed,index.known(id).orElseThrow());assertEquals(renamed,index.resolve("after"));assertEquals(renamed,index.resolve("LauncherName",official));
+ }
 }

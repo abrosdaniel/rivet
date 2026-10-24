@@ -53,18 +53,21 @@ final class SkinsScreen extends ScrollScreen {
   var apply=button(SkinClient.busy?Client.text("ui.applying_190c3756"):draft!=null?Client.text("ui.upload_and_apply_eb06bef3"):selection.equals(active())?Client.text("ui.active_skin_ab570d9a"):Client.text("map.caveApply"),right,height-82,pw,()->{
    if(draft!=null){if(draftName.strip().isEmpty()){message=Client.text("ui.enter_a_skin_name_299b5e8e");return;}uploadPending=true;SkinClient.upload(draftName.strip(),slim,draft);}else SkinClient.command("select",selection,false);rebuildWidgets();
   });apply.active=!SkinClient.busy&&!choosing&&!uploadPending&&(draft!=null||!selection.equals(active()));
-  if(draft==null&&selectedEntry()!=null){var menu=button(Client.text("ui.actions_928503bd"),right,compact()?58:48,Math.min(120,pw),this::actions);menu.active=!SkinClient.busy&&!choosing;}
+  if(draft==null){var menu=button(Client.text("ui.actions_928503bd"),right,compact()?58:48,Math.min(120,pw),this::actions);menu.active=!SkinClient.busy&&!choosing;}
   if(SkinClient.retryable)button(Client.text("ui.retry_request_fcb97cf7"),right,height-56,pw,SkinClient::retry);
   }else if(draft!=null)button(Client.text("ui.upload_and_apply_eb06bef3"),left,height-56,listWidth,()->{if(draftName.strip().isEmpty()){message=Client.text("ui.enter_a_skin_name_299b5e8e");return;}uploadPending=true;SkinClient.upload(draftName.strip(),slim,draft);rebuildWidgets();}).active=!SkinClient.busy&&!choosing&&!uploadPending;
   UiPageFooter.workspace(width,height).end(UiActions.Command.BACK,this::addRenderableWidget,this::onClose).active=moving.isEmpty();
   if(minecraft.level!=null&&minecraft.player!=null&&previewPlayer==null)previewPlayer=new RemotePlayer(minecraft.level,minecraft.player.getGameProfile()){@Override public PlayerSkin getSkin(){return previewSkin();}@Override public boolean isModelPartShown(net.minecraft.world.entity.player.PlayerModelPart part){return secondLayer;}};
  }
- private void actions(){var entry=selectedEntry();if(entry==null)return;String id=selection;var labels=new java.util.ArrayList<String>();var actions=new java.util.ArrayList<Runnable>();
+ private void actions(){var entry=selectedEntry();String id=selection;var labels=new java.util.ArrayList<String>();var actions=new java.util.ArrayList<Runnable>();
+  labels.add(Client.text(SkinWheelFavorites.contains(id)?"skins.wheel.remove":"skins.wheel.add"));actions.add(()->{String error=SkinWheelFavorites.toggle(id);message=error.isEmpty()?"":Client.text(error);rebuildWidgets();});
+  if(entry!=null){
   if(dev.abros.rivet.network.Protocol.supportedFeatures.contains("skin-names")){labels.add(Client.text("ui.rename_715e8f0c"));actions.add(()->minecraft.setScreen(new NameScreen(this,id,Json.str(entry,"name"))));}
   labels.add(entry.get("slim").getAsBoolean()?Client.text("ui.use_classic_arms_45286ef5"):Client.text("ui.use_slim_arms_40a8a1d9"));actions.add(()->SkinClient.command("model",id,!entry.get("slim").getAsBoolean()));
 
   labels.add(Client.text("ui.delete_f43320b0"));actions.add(()->minecraft.setScreen(new UiConfirmDialog(ok->{minecraft.setScreen(this);if(ok){selection="";SkinClient.command("delete",id,false);}},Client.tr("ui.delete_skin_67f3302d"),Component.literal(Json.str(entry,"name"))).dangerous()));
-  minecraft.setScreen(new ChoicePopup(this,Client.text("ui.actions_9978ac34"),labels,n->actions.get(n).run()).danger(labels.size()-1).anchorLabel(Client.text("ui.actions_928503bd")));
+  }
+  var popup=new ChoicePopup(this,Client.text("ui.actions_9978ac34"),labels,n->actions.get(n).run()).anchorLabel(Client.text("ui.actions_928503bd"));if(entry!=null)popup.danger(labels.size()-1);minecraft.setScreen(popup);
  }
  private void chooseFile(){
   if(!PICKER.compareAndSet(false,true))return;

@@ -41,6 +41,14 @@ class DomainRestTest {
    assertEquals(operation.equals("stop")?ApiException.Code.UNAVAILABLE:ApiException.Code.UNAUTHENTICATED,failure.code());
   }
  }
+ @Test void renameRevokesWebsiteSessionButKeepsCanonicalIdentity()throws Exception{
+  auth.register("Alice",player,"secret-password".toCharArray(),System.currentTimeMillis());configure(true);
+  String old=json(post("password","{\"login\":\"Alice\",\"password\":\"secret-password\"}")).get("session").getAsString();
+  auth.rename("console","Alice","Renamed",player,System.currentTimeMillis());
+  assertThrows(ApiException.class,()->sessions.validate(grant,old));
+  String renewed=json(post("password","{\"login\":\"Renamed\",\"password\":\"secret-password\"}")).get("session").getAsString();
+  assertEquals(player,sessions.validate(grant,renewed).uuid());assertEquals("Renamed",sessions.validate(grant,renewed).name());
+ }
  @Test void passwordIdentityGenerationAndApplicationBinding()throws Exception{
   auth.register("Alice",player,"secret-password".toCharArray(),System.currentTimeMillis());configure(true);
   assertEquals(401,post("password","{\"login\":\"Nobody\",\"password\":\"wrong\"}").status());

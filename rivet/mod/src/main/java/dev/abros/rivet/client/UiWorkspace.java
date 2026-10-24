@@ -17,9 +17,10 @@ record UiWorkspace(NativeLayout.Box frame,NativeLayout.Box header,NativeLayout.B
   return new UiWorkspace(frame,header,sidebar,page,footer);
  }
  void draw(GuiGraphics g){
-  UiTheme.panel(g,frame.x(),frame.y(),frame.width(),frame.height(),UiKit.surface(UiKit.Surface.CANVAS));
-  g.fill(header.x(),header.bottom()+3,header.right(),header.bottom()+4,UiKit.border());
-  if(!compact())g.fill(sidebar.right()+5,sidebar.y(),sidebar.right()+6,sidebar.bottom(),UiKit.border());
+  UiKit.rounded(g,frame.x(),frame.y(),frame.width(),frame.height(),10,AccessibilityScreen.background(UiKit.surface(UiKit.Surface.CANVAS)));
+  // Navigation stays on the quiet foundation; content is a separate, raised working surface.
+  UiKit.material(g,page.x()-6,page.y()-6,page.width()+12,page.height()+12);
+  if(AccessibilityScreen.highContrast())UiKit.ring(g,page.x()-6,page.y()-6,page.width()+12,page.height()+12,8,UiKit.border());
  }
  boolean compact(){return sidebar.width()==0;}
  void heading(GuiGraphics g,Font font,Component title){UiBrand.draw(g,font,header);int titleWidth=Math.max(0,UiBrand.left(font,header)-header.x()-12);if(!compact()&&titleWidth>12)UiTypography.draw(g,font,title.getString(),header.x()+4,header.y()+5,titleWidth,UiTypography.Role.PAGE);}

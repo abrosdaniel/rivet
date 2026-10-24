@@ -13,8 +13,8 @@ final class UiSummaryCard extends Button {
  static UiSummaryCard compact(int x,int y,int width,String title,String value,List<String> details,int accent,Runnable action){var card=new UiSummaryCard(x,y,width,title,value,details,accent,action);card.setHeight(62);return card;}
  @Override protected void renderWidget(GuiGraphics g,int mx,int my,float delta){
   int x=getX(),y=getY(),w=getWidth(),color=UiPalette.color(accent);var font=Minecraft.getInstance().font;
-  UiKit.plate(g,x,y,w,getHeight(),UiTheme.mix(UiKit.surface(),UiKit.surface(UiKit.Surface.HOVER),UiTheme.hover(this)));
-  if(isFocused())g.renderOutline(x,y,w,getHeight(),color);
+  UiKit.plate(g,x,y,w,getHeight(),UiTheme.mix(UiKit.surface(UiKit.Surface.CONTROL),UiKit.surface(UiKit.Surface.HOVER),UiTheme.hover(this)));
+  if(UiTheme.keyboardFocus(this))UiKit.focus(g,x,y,w,getHeight());
   g.enableScissor(x+8,y+5,x+w-8,y+getHeight()-5);
   UiTypography.draw(g,font,title,x+12,y+9,w-40,UiTypography.Role.TITLE);
   Ui.text(g,font,UiKit.fit(font,value,w-26),x+12,y+27,color,false);

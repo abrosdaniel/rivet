@@ -14,6 +14,6 @@ public final class ServerPermissions {
  public static boolean allowed(ServerPlayer player,String right){return ServerProviders.withPermissionActor(player,()->provider().map(p->p.allowed(player.getUUID(),right)).orElse(false));}
  public static boolean offlineAllowed(UUID id,String right){return provider().map(p->p.offlineAllowed(id,right)).orElse(false);}
  public static JsonArray roles(){var result=new JsonArray();provider().ifPresent(p->p.roles().forEach(r->result.add(ServerProviders.json(r))));return result;}
- private static JsonObject denied(){var result=new JsonObject();var caps=new JsonObject();for(var right:ServerCommands.RIGHTS)caps.addProperty(right,false);for(var right:List.of("rivet.admin","rivet.events","rivet.auth.reset","rivet.map.teleport","rivet.vote.protected"))caps.addProperty(right,false);result.add("capabilities",caps);return result;}
+ private static JsonObject denied(){var result=new JsonObject();var caps=new JsonObject();for(var right:ServerCommands.RIGHTS)caps.addProperty(right,false);for(var right:dev.abros.rivet.core.PermissionCatalog.nodes())caps.addProperty(right,false);result.add("capabilities",caps);return result;}
  private ServerPermissions(){}
 }

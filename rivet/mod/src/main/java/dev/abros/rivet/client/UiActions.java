@@ -20,6 +20,13 @@ final class UiActions {
  enum Tone { NORMAL, PRIMARY, DANGER }
  record Style(Tone tone,String icon){}
  private static final java.util.Set<Button> tools=java.util.Collections.newSetFromMap(new java.util.WeakHashMap<>());
+ private static final java.util.Map<Button,Boolean> quiet=new java.util.WeakHashMap<>();
+ private static final java.util.Set<Button> leading=java.util.Collections.newSetFromMap(new java.util.WeakHashMap<>());
+ static Button leading(Button button){leading.add(button);return button;}
+ static boolean isLeading(AbstractButton button){return leading.contains(button);}
+ static Button quiet(Button button,boolean selected){quiet.put(button,selected);return button;}
+ static boolean isQuiet(AbstractButton button){return quiet.containsKey(button);}
+ static boolean selected(AbstractButton button){return Boolean.TRUE.equals(quiet.get(button));}
  private static final java.util.Map<Button,Integer> iconColors=new java.util.WeakHashMap<>();
  static Button tool(Component label,String icon,int x,int y,Runnable run){return tool(label,icon,x,y,w->run.run());}
  static Button tool(Component label,String icon,int x,int y,Button.OnPress press){var b=button(label,Tone.NORMAL,icon,press).bounds(x,y,20,20).build();tools.add(b);b.setTooltip(Tooltip.create(label));return b;}

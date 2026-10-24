@@ -11,11 +11,27 @@ class MenuArchitectureTest {
     private static JsonObject read(String correlation) { return json("{\"action\":\"community\",\"section\":\"board\",\"op\":\"list\",\"request\":\"" + correlation + "\"}"); }
     private static JsonObject response(JsonObject packet, String fields) { var reply = json("{" + fields + "}"); reply.addProperty("request", Json.str(packet, "request")); return reply; }
     private static MenuData.Page page(String entries, String cursor) { return MenuData.page(json("{\"entries\":" + entries + ",\"nextCursor\":\"" + cursor + "\"}"), "entries"); }
+    @Test void foregroundReadDoesNotWaitBehindBackgroundCommunityReads() {
+        var queue=new MenuTransport<Object>();var owner=new Object();
+        var background=read("background");background.addProperty("section","home");
+        queue.enqueue(background,null,true,0);queue.enqueue(read("visible"),owner,false,0);
+        assertEquals("visible",Json.str(queue.dispatch(0,owner).getFirst(),"request"));
+        assertTrue(queue.dispatch(549,owner).isEmpty());
+        assertEquals("background",Json.str(queue.dispatch(550,owner).getFirst(),"request"));
+    }
+    @Test void invalidationDuringReadSurvivesResponseAndTriggersRefresh() {
+        var now=new AtomicLong(1);var sent=new ArrayList<JsonObject>();
+        var model=new CommunityWorkspace("board","",sent::add,now::get);
+        model.load(filters());now.set(200);model.invalidate();
+        model.receive(response(sent.getLast(),"\"entries\":[],\"nextCursor\":\"\""));
+        now.set(800);assertTrue(model.dirtyDue());model.tick(filters());
+        assertEquals(2,sent.size());assertTrue(model.busy());
+    }
     @Test void transportCoalescesOnlyTheSameOwnersReads() {
         var queue = new MenuTransport<Object>(); var owner = new Object(); var other = new Object();
         queue.enqueue(read("old"), owner, false, 0); queue.enqueue(read("new"), owner, false, 0); queue.enqueue(read("other"), other, false, 0);
-        assertEquals(2, queue.queued()); assertEquals(2, queue.trackedReads());
-        var packets = queue.dispatch(0, owner); assertEquals(1, packets.size()); assertEquals("new", Json.str(packets.getFirst(), "request")); assertEquals(1, queue.trackedReads());
+        assertEquals(2, queue.queued()); assertEquals(1, queue.trackedReads());
+        var packets = queue.dispatch(0, owner); assertEquals(1, packets.size()); assertEquals("new", Json.str(packets.getFirst(), "request")); assertEquals(0, queue.trackedReads());
     }
     @Test void slowerOldReadCannotOverwriteNewerCacheSnapshot() {
         var queue = new MenuTransport<Object>(); var owner = new Object(); var old = read("old"); var latest = read("latest");
@@ -27,6 +43,37 @@ class MenuArchitectureTest {
         var queue = new MenuTransport<Object>(); var owner = new Object(); var packet = read("one");
         queue.enqueue(packet, owner, false, 0); queue.dispatch(0, owner); queue.cancel(owner);
         queue.receive(response(packet, "\"entries\":[]"), 1); assertNull(queue.cached(packet, 2));
+    }
+    @Test void backgroundReplyCannotOverwriteNewerForegroundCache() {
+        var queue=new MenuTransport<Object>();var owner=new Object();
+        var old=read("background");var latest=read("visible");
+        queue.enqueue(old,null,true,0);queue.dispatch(0,owner);
+        queue.enqueue(latest,owner,false,1);queue.dispatch(550,owner);
+        queue.receive(response(latest,"\"title\":\"current\""),551);
+        queue.receive(response(old,"\"title\":\"stale\""),552);
+        assertEquals("current",Json.str(queue.cached(latest,553),"title"));
+    }
+    @Test void taskListPermissionOnlyChangesRequestRedraw() {
+        var sent=new ArrayList<JsonObject>();var model=new TaskWorkspace("g","",sent::add,q->null,()->1L);
+        model.list("","");model.receive(response(sent.getLast(),"\"tasks\":[],\"canCreate\":false,\"canManage\":false,\"createReason\":\"quota\""),false);
+        model.list("","");
+        assertTrue(model.receive(response(sent.getLast(),"\"tasks\":[],\"canCreate\":false,\"canManage\":true,\"createReason\":\"quota\""),false).changed());
+        assertTrue(model.canManage());model.list("","");
+        assertTrue(model.receive(response(sent.getLast(),"\"tasks\":[],\"canCreate\":false,\"canManage\":true,\"createReason\":\"disabled\""),false).changed());
+        assertEquals("disabled",model.createReason());model.list("","");
+        assertFalse(model.receive(response(sent.getLast(),"\"tasks\":[],\"canCreate\":false,\"canManage\":true,\"createReason\":\"disabled\""),false).changed());
+    }
+    @Test void missingTaskDeltaBaselineRequestsOneFullSnapshot() {
+        var sent=new ArrayList<JsonObject>();var model=new TaskWorkspace("","",sent::add,q->null,()->1L);
+        model.list("","");model.receive(response(sent.getLast(),"\"tasks\":[{\"id\":\"a\"}],\"canCreate\":true"),false);
+        model.list("","");assertTrue(sent.getLast().has("knownTaskRows"));
+        String broken="\"tasksDelta\":{\"order\":[\"missing\"],\"rows\":[]}";
+        model.receive(response(sent.getLast(),broken),false);
+        assertEquals(1,model.tasks().size());assertTrue(model.consumeDirty());assertFalse(model.consumeDirty());
+        model.list("","");assertFalse(sent.getLast().has("knownTaskRows"));
+        model.receive(response(sent.getLast(),broken),false);assertFalse(model.consumeDirty());
+        model.list("","");model.receive(response(sent.getLast(),"\"tasks\":[{\"id\":\"b\"}],\"canCreate\":true"),false);
+        assertTrue(model.listLoaded());assertEquals("b",Json.str(model.tasks().get(0).getAsJsonObject(),"id"));
     }
     @Test void transportPreservesWritesAcrossNavigationAndCopiesPackets() {
         var queue = new MenuTransport<Object>(); var owner = new Object(); var command = json("{\"action\":\"community\",\"op\":\"create\",\"title\":\"original\"}");

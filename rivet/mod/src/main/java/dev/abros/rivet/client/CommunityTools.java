@@ -19,6 +19,7 @@ final class CommunityTools {
  }
  static void groupItems(CommunityScreen host,JsonObject group){
   String kind=host.groupTab.equals("tasks")?"task":"place";boolean manage=group.get("manage").getAsBoolean();
+  host.text(Client.text(kind.equals("task")?"flow.groupTasksHint":"flow.groupMarkersHint"));
   if(manage){host.actionRow(List.of(new CommunityScreen.Row(kind.equals("task")?Client.text("ui.task_df308174"):Client.text("ui.waypoint_acdea915"),()->edit(host,kind,null))));host.text("");}
   int found=0;
   if(group.has("groupItems"))for(var element:group.getAsJsonArray("groupItems")){var item=element.getAsJsonObject();if(!Json.str(item,"kind").equals(kind))continue;found++;int card=host.beginCard();var controls=new ArrayList<CommunityScreen.Row>();

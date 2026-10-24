@@ -23,7 +23,7 @@ final class UiContextPopup extends ScrollScreen implements UiParentScreen {
         scrollArea(items.size(),new NativeLayout.Box(panel.x()+4,panel.y()+4,w-8,h-8),24);
         for(int n=firstRow;n<Math.min(items.size(),firstRow+visibleRows);n++){var item=items.get(n);addRenderableWidget(new UiMenuItem(item.label().getString(),panel.x()+4,panel.y()+4+(n-firstRow)*24,w-12,false,item.danger(),()->{minecraft.setScreen(parent);item.run().run();}));}
     }
-    @Override public void renderBackground(GuiGraphics g,int x,int y,float delta){UiKit.material(g,panel.x(),panel.y(),panel.width(),panel.height());g.renderOutline(panel.x(),panel.y(),panel.width(),panel.height(),UiKit.border());}
+    @Override public void renderBackground(GuiGraphics g,int x,int y,float delta){UiKit.material(g,panel.x(),panel.y(),panel.width(),panel.height());UiKit.ring(g,panel.x(),panel.y(),panel.width(),panel.height(),8,UiKit.border());}
     @Override public void render(GuiGraphics g,int x,int y,float delta){ModalLayer.render(parent,this,g,delta,()->super.render(g,x,y,delta));}
     @Override public boolean mouseClicked(double x,double y,int button){if(x<panel.x()||x>=panel.right()||y<panel.y()||y>=panel.bottom()){onClose();return true;}return super.mouseClicked(x,y,button);}
     @Override public void onClose(){minecraft.setScreen(parent);}

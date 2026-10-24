@@ -34,7 +34,7 @@ final class MapSurfaceSampler {
             if(!entered){
                 if(!state.isAir()&&!(state.getBlock() instanceof LiquidBlock)&&!state.ignitedByLava()&&!state.canBeReplaced()
                     &&state.getPistonPushReaction()!=net.minecraft.world.level.material.PushReaction.DESTROY
-                    &&!(state.getBlock() instanceof TransparentBlock)&&!MapBlockColors.translucent(state))entered=true;
+                    &&!(state.getBlock() instanceof TransparentBlock)&&!MapBlockColors.translucent(level,at,state))entered=true;
             }else if(state.isAir()||!state.getFluidState().isEmpty()){
                 var sample=column(level,chunk,x,z,at,y,bottom,true);
                 return sample==null?empty(level):sample;
@@ -58,7 +58,7 @@ final class MapSurfaceSampler {
                 if(state.getBlock() instanceof LiquidBlock)continue;
             }
             if(invisible(state))continue;
-            if(MapRenderSettings.INSTANCE.transparency&&(state.getBlock() instanceof TransparentBlock||MapBlockColors.translucent(state))){if(visible==Integer.MIN_VALUE)visible=y;add(level,at,state,layers,cave);}
+            if(MapRenderSettings.INSTANCE.transparency&&(state.getBlock() instanceof TransparentBlock||MapBlockColors.translucent(level,at,state))){if(visible==Integer.MIN_VALUE)visible=y;add(level,at,state,layers,cave);}
             else{int color=MapBlockColors.color(level,at,state);if(color==0)continue;if(visible==Integer.MIN_VALUE)visible=y;return finish(level,at,state,visible,y,layers,color,cave);}
         }
         if(cave&&!layers.isEmpty()){at.set(x,level.getMinBuildHeight(),z);return finish(level,at,Blocks.AIR.defaultBlockState(),visible,level.getMinBuildHeight(),layers,0x010101,true);}

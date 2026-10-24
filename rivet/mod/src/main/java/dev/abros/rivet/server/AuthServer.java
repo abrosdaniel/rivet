@@ -34,6 +34,9 @@ public final class AuthServer {
     private static final Map<Connection,Session> SESSIONS=new ConcurrentHashMap<>();
     private static volatile AuthStore store;private static AuthTls.Identity identity;private static MinecraftServer server;private static Path root;private static volatile String mode="false";private static long lastCheck;
     private static volatile ServerIdentities identities;
+    private static final Object IDENTITY_GATE=new Object();
+    private static final Set<String> RENAMING_NAMES=new HashSet<>();
+    private static final Set<UUID> RENAMING_IDS=new HashSet<>();
     /** Cache lookups also serve synthetic mod profiles; only player profiles are remapped. */
     public static com.mojang.authlib.GameProfile lookupProfile(com.mojang.authlib.GameProfile original){
         if(original==null||original.getId()==null||!AuthStore.validName(original.getName()))return original;
@@ -46,7 +49,7 @@ public final class AuthServer {
         var index=identities;if(!enabled()||index==null)return original;var identity=index.resolve(original.getName(),original.getId(),claimedOfficial);
         var result=new com.mojang.authlib.GameProfile(identity.uuid(),identity.name());result.getProperties().putAll(original.getProperties());return result;
     }
-    private static void remember(AuthStore.Account account){identities.remember(new AuthStore.Profile(account.name(),UUID.fromString(account.uuid()),account.official()==null?null:UUID.fromString(account.official())));}
+    private static void remember(AuthStore.Account account){synchronized(IDENTITY_GATE){if(RENAMING_IDS.contains(UUID.fromString(account.uuid())))return;identities.rememberCurrent(new AuthStore.Profile(account.name(),UUID.fromString(account.uuid()),account.official()==null?null:UUID.fromString(account.official())));}}
     public static Optional<AuthStore.Profile> knownIdentity(String name){var index=identities;return index==null?Optional.empty():index.known(name);}
     public static Optional<AuthStore.Profile> knownIdentity(UUID id){var index=identities;return index==null?Optional.empty():index.known(id);}
     public static Optional<AuthStore.Profile> verifiedAlias(UUID id){var index=identities;return index==null?Optional.empty():index.verifiedAlias(id);}
@@ -56,7 +59,7 @@ public final class AuthServer {
         NeoForge.EVENT_BUS.addListener(AuthServer::tick);NeoForge.EVENT_BUS.addListener(AuthServer::commands);
 
     }
-    static void stop(){SESSIONS.values().forEach(Session::close);SESSIONS.clear();ModuleWorkers.stop(WORK,OFFICIAL,DEADLINES,VALIDATION);WORK=null;OFFICIAL=null;DEADLINES=null;VALIDATION=null;validating.set(false);store=null;identity=null;identities=null;mode="false";server=null;}
+    static void stop(){SESSIONS.values().forEach(Session::close);SESSIONS.clear();ModuleWorkers.stop(WORK,OFFICIAL,DEADLINES,VALIDATION);WORK=null;OFFICIAL=null;DEADLINES=null;VALIDATION=null;validating.set(false);store=null;identity=null;identities=null;mode="false";server=null;synchronized(IDENTITY_GATE){RENAMING_NAMES.clear();RENAMING_IDS.clear();}}
     static void start(net.neoforged.neoforge.event.server.ServerStartingEvent e){
         server=e.getServer();mode="false";store=null;identity=null;lastCheck=0;
         String requestedMode=ServerDatabase.settings().text("auth.mode");if(requestedMode.equals("false"))return;
@@ -66,6 +69,11 @@ public final class AuthServer {
         root=net.neoforged.fml.loading.FMLPaths.GAMEDIR.get();
         try{
             store=new AuthStore(database,ServerDatabase.settings().number("auth.minPasswordLength"));identities=new ServerIdentities(store.profiles());identity=AuthTls.identity(root.resolve("rivet"));mode=requestedMode;
+            for(var pending:store.pendingRenames()){
+                refreshRenamedProfile(server,new com.mojang.authlib.GameProfile(UUID.fromString(pending.uuid()),pending.newName()));
+                renameScores(server,pending.oldName(),pending.newName());
+                store.finishRename(pending);
+            }
             com.mojang.logging.LogUtils.getLogger().info("Rivet Auth TLS fingerprint: {}",identity.fingerprint());
         }catch(Exception ex){throw new IllegalStateException("Cannot initialize Rivet Auth; startup aborted",ex);}
     }
@@ -77,7 +85,15 @@ public final class AuthServer {
         if(!listener.hasChannel(AuthProtocol.Upgrade.TYPE)||!listener.hasChannel(AuthProtocol.Ready.TYPE)||!listener.hasChannel(AuthProtocol.Hello.TYPE)||!listener.hasChannel(AuthProtocol.ToServer.TYPE)||!listener.hasChannel(AuthProtocol.ToClient.TYPE)){listener.disconnect(Component.translatable("rivet.core.rivet_with_the_auth_module_is_94b77602"));return;}
         e.register(new ICustomConfigurationTask(){public ConfigurationTask.Type type(){return TASK;}public void run(java.util.function.Consumer<net.minecraft.network.protocol.common.custom.CustomPacketPayload> send){
             if(SESSIONS.values().stream().filter(s->!s.joined).count()>=128||SESSIONS.values().stream().filter(s->!s.joined&&sameAddress(s.connection,listener.getConnection())).count()>=8){listener.disconnect(Component.translatable("rivet.core.too_many_connections_try_again_later_8527f3ad"));return;}
-            try{Session session=new Session(listener);var previous=SESSIONS.put(listener.getConnection(),session);if(previous!=null)previous.close();send.accept(new AuthProtocol.Hello(identity.fingerprint()));}catch(Exception ex){listener.disconnect(Component.translatable("rivet.core.could_not_start_secure_sign_in_c01a4595"));}
+            try{synchronized(IDENTITY_GATE){
+                var profile=listener.getOwner();var canonical=identities.known(profile.getId());
+                if(RENAMING_NAMES.contains(profile.getName().toLowerCase(Locale.ROOT))||RENAMING_IDS.contains(profile.getId())
+                    ||canonical.isPresent()&&!canonical.get().name().equalsIgnoreCase(profile.getName())
+                    ||identities.known(profile.getName()).filter(p->!p.uuid().equals(profile.getId())).isPresent()){
+                    listener.disconnect(Component.translatable("rivet.auth.rename.reconnect"));return;
+                }
+                Session session=new Session(listener);var previous=SESSIONS.put(listener.getConnection(),session);if(previous!=null)previous.close();send.accept(new AuthProtocol.Hello(identity.fingerprint()));
+            }}catch(Exception ex){listener.disconnect(Component.translatable("rivet.core.could_not_start_secure_sign_in_c01a4595"));}
         }});
     }
     private static void upgrade(IPayloadContext context){
@@ -215,9 +231,85 @@ public final class AuthServer {
         var reset=Commands.literal("reset").requires(s->enabled()&&(console(s)||s.getEntity() instanceof ServerPlayer p&&mayReset(p)))
             .then(Commands.argument("player",StringArgumentType.word()).suggests((c,b)->ServerCommands.suggest(b)).executes(c->{var source=c.getSource();String target=StringArgumentType.getString(c,"player");if(source.getEntity() instanceof ServerPlayer p)return playerInvitation(source,p,target);return consoleJob(source,(database,index)->{String token=database.invite("console",target,System.currentTimeMillis());return dev.abros.rivet.core.Messages.text("rivet.core.recovery_code_for_6a7b63d0")+AuthStore.name(target)+": "+token+dev.abros.rivet.core.Messages.text("rivet.core.valid_for_15_minutes_single_use_e2005e55");});}));
         var auth=Commands.literal("auth").then(reset);
+        auth.then(Commands.literal("rename").requires(AuthServer::mayRename)
+            .then(Commands.argument("player",StringArgumentType.word()).suggests((c,b)->ServerCommands.suggest(b))
+                .then(Commands.argument("newName",StringArgumentType.word()).executes(c->rename(c.getSource(),StringArgumentType.getString(c,"player"),StringArgumentType.getString(c,"newName"))))));
         for(boolean block:List.of(true,false))auth.then(Commands.literal(block?"block":"unblock").requires(s->enabled()&&console(s)).then(Commands.argument("player",StringArgumentType.word()).suggests((c,b)->ServerCommands.suggest(b)).executes(c->consoleJob(c.getSource(),(database,index)->{database.block("console",StringArgumentType.getString(c,"player"),block,System.currentTimeMillis());invalidate(StringArgumentType.getString(c,"player"));return dev.abros.rivet.core.Messages.text("rivet.core.account_status_updated_13647c8c");}))));
-        auth.then(Commands.literal("reserve").requires(s->enabled()&&console(s)).then(Commands.argument("player",StringArgumentType.word()).suggests((c,b)->ServerCommands.suggest(b)).executes(c->consoleJob(c.getSource(),(database,index)->{String name=AuthStore.name(StringArgumentType.getString(c,"player"));database.reserve(name,index.resolve(name).uuid().toString());var account=database.account(name);index.remember(new AuthStore.Profile(account.name(),UUID.fromString(account.uuid()),account.official()==null?null:UUID.fromString(account.official())));return dev.abros.rivet.core.Messages.text("rivet.core.name_reserved_create_an_invitation_using_6ca5a363")+name;}))));
+        auth.then(Commands.literal("reserve").requires(s->enabled()&&console(s)).then(Commands.argument("player",StringArgumentType.word()).suggests((c,b)->ServerCommands.suggest(b)).executes(c->consoleJob(c.getSource(),(database,index)->{String name=AuthStore.name(StringArgumentType.getString(c,"player"));database.reserve(name,index.resolve(name).uuid().toString());var account=database.account(name);remember(account);return dev.abros.rivet.core.Messages.text("rivet.core.name_reserved_create_an_invitation_using_6ca5a363")+name;}))));
         e.getDispatcher().register(Commands.literal("rivet").then(auth));
+    }
+    static boolean mayRename(CommandSourceStack source){
+        return enabled()&&(console(source)||source.getEntity() instanceof ServerPlayer p&&p.connection.getConnection().isConnected()&&authenticated(p)&&ServerFeatures.admin(p));
+    }
+    private static int rename(CommandSourceStack source,String oldName,String newName){
+        try(var locale=dev.abros.rivet.core.Messages.locale(source.getEntity() instanceof ServerPlayer p?p.clientInformation().language():"ru_ru")){
+            if(!mayRename(source))throw new IllegalArgumentException(dev.abros.rivet.core.Messages.text("rivet.core.insufficient_permissions_3f48d3d9"));
+            if(!AuthStore.validName(oldName)||!AuthStore.validName(newName))throw renameFailure("invalid");
+            var owner=source.getServer();var database=store;var index=identities;var workers=WORK;
+            if(database==null||index==null||workers==null||server!=owner)throw renameFailure("changed");
+            var target=index.known(oldName).orElseThrow(()->renameFailure("missing"));
+            if(!target.name().equals(newName)&&scoreNameOccupied(owner,newName))throw renameFailure("occupied");
+            String oldKey=oldName.toLowerCase(Locale.ROOT),newKey=newName.toLowerCase(Locale.ROOT);
+            synchronized(IDENTITY_GATE){
+                if(RENAMING_NAMES.contains(oldKey)||RENAMING_NAMES.contains(newKey)||RENAMING_IDS.contains(target.uuid()))throw renameFailure("busy");
+                if(owner.getPlayerList().getPlayer(target.uuid())!=null||owner.getPlayerList().getPlayerByName(newName)!=null
+                    ||SESSIONS.values().stream().anyMatch(s->s.connection.isConnected()&&(s.uuid.equals(target.uuid().toString())||s.name.equalsIgnoreCase(oldName)||s.name.equalsIgnoreCase(newName))))throw renameFailure("online");
+                RENAMING_NAMES.add(oldKey);RENAMING_NAMES.add(newKey);RENAMING_IDS.add(target.uuid());
+            }
+            Runnable release=()->{synchronized(IDENTITY_GATE){RENAMING_NAMES.remove(oldKey);RENAMING_NAMES.remove(newKey);RENAMING_IDS.remove(target.uuid());}};
+            try{workers.execute(()->{
+                boolean committed=false;
+                try{
+                    if(store!=database||identities!=index||server!=owner)throw renameFailure("changed");
+                    // Re-evaluate the administrator after waiting in the auth queue.
+                    if(!owner.submit(()->store==database&&mayRename(source)).get(2,TimeUnit.SECONDS))throw renameFailure("denied");
+                    var account=database.rename(source.getEntity() instanceof ServerPlayer p?p.getUUID().toString():"console",oldName,newName,target.uuid().toString(),System.currentTimeMillis());
+                    committed=true;
+                    index.remember(new AuthStore.Profile(account.name(),target.uuid(),account.official()==null?null:UUID.fromString(account.official())));
+                    owner.execute(dev.abros.rivet.core.Messages.capture(()->{
+                        try{
+                            if(store!=database||identities!=index||server!=owner)return;
+                            refreshRenamedProfile(owner,new com.mojang.authlib.GameProfile(target.uuid(),account.name()));
+                            renameScores(owner,target.name(),account.name());
+                            ServerFeatures.invalidate(owner);
+                            workers.execute(()->{
+                                try{database.finishRename(new AuthStore.Rename(account.uuid(),target.name(),account.name()));release.run();
+                                    owner.execute(()->source.sendSuccess(()->Component.translatable("rivet.auth.rename.success",target.name(),account.name(),account.uuid()),false));
+                                }catch(Exception failure){com.mojang.logging.LogUtils.getLogger().error("Cannot complete Rivet rename recovery record",failure);owner.execute(()->source.sendFailure(Component.translatable("rivet.auth.rename.refresh_failed")));}
+                            });
+                        }catch(Exception failure){com.mojang.logging.LogUtils.getLogger().error("Rivet account renamed, profile cache refresh failed",failure);source.sendFailure(Component.translatable("rivet.auth.rename.refresh_failed"));}
+                    }));
+                }catch(Exception failure){
+                    if(!committed)release.run();boolean changed=committed;
+                    owner.execute(dev.abros.rivet.core.Messages.capture(()->{if(store==database){if(changed)source.sendFailure(Component.translatable("rivet.auth.rename.refresh_failed"));else ServerCommands.error(source,failure);}}));
+                }
+            });}catch(RejectedExecutionException busy){release.run();throw renameFailure("busy");}
+            source.sendSuccess(()->Component.translatable("rivet.auth.rename.pending"),false);return 1;
+        }catch(Exception failure){ServerCommands.error(source,failure);return 0;}
+    }
+    private static IllegalArgumentException renameFailure(String code){return new IllegalArgumentException(dev.abros.rivet.core.Messages.text("rivet.auth.rename."+code));}
+    private static boolean scoreNameOccupied(MinecraftServer owner,String name){
+        var board=owner.getScoreboard();return board.getPlayersTeam(name)!=null||!board.listPlayerScores(net.minecraft.world.scores.ScoreHolder.forNameOnly(name)).isEmpty();
+    }
+    private static void renameScores(MinecraftServer owner,String oldName,String newName){
+        if(oldName.equals(newName))return;
+        var board=owner.getScoreboard();var old=net.minecraft.world.scores.ScoreHolder.forNameOnly(oldName);var renamed=net.minecraft.world.scores.ScoreHolder.forNameOnly(newName);
+        for(var objective:List.copyOf(board.getObjectives())){
+            var value=board.getPlayerScoreInfo(old,objective);if(value==null)continue;
+            var source=board.getOrCreatePlayerScore(old,objective,true);var destination=board.getOrCreatePlayerScore(renamed,objective,true);
+            destination.set(value.value());destination.display(source.display());destination.numberFormatOverride(value.numberFormat());
+            if(value.isLocked())destination.lock();else destination.unlock();
+        }
+        var team=board.getPlayersTeam(oldName);if(team!=null){board.addPlayerToTeam(newName,team);board.removePlayerFromTeam(oldName,team);}
+        board.resetAllPlayerScores(old);
+        owner.overworld().getDataStorage().save();
+    }
+    private static void refreshRenamedProfile(MinecraftServer owner,com.mojang.authlib.GameProfile profile)throws Exception{
+        var players=owner.getPlayerList();var whitelist=players.getWhiteList();var ops=players.getOps();var bans=players.getBans();
+        if(whitelist.get(profile)!=null){whitelist.add(new net.minecraft.server.players.UserWhiteListEntry(profile));whitelist.save();}
+        var op=ops.get(profile);if(op!=null){ops.add(new net.minecraft.server.players.ServerOpListEntry(profile,op.getLevel(),op.getBypassesPlayerLimit()));ops.save();}
+        var ban=bans.get(profile);if(ban!=null){bans.add(new net.minecraft.server.players.UserBanListEntry(profile,ban.getCreated(),ban.getSource(),ban.getExpires(),ban.getReason()));bans.save();}
+        var cache=owner.getProfileCache();if(cache!=null)cache.add(profile);
     }
     private static int playerInvitation(CommandSourceStack source,ServerPlayer player,String target){
         var session=SESSIONS.get(player.connection.getConnection());

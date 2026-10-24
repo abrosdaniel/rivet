@@ -17,6 +17,8 @@ final class CommunityMapPositions {
   if(!op.equals("mapPositionPeers")||!in.has("positionCandidates"))throw new CommunityFailure(CommunityFailure.Code.FORBIDDEN,dev.abros.rivet.core.Messages.text("rivet.core.positions_unavailable_26a3ffbd"));
   var candidates=in.getAsJsonArray("positionCandidates");if(candidates.size()>(in.has("positionCompact")&&in.get("positionCompact").getAsBoolean()?dev.abros.rivet.core.map.MapPositionPage.SNAPSHOT_LIMIT:64))throw new IllegalArgumentException(dev.abros.rivet.core.Messages.text("rivet.message.error_6335dff903bd"));var ids=new LinkedHashSet<String>();for(var id:candidates){String uuid=UUID.fromString(id.getAsString()).toString();if(!uuid.equals(actor.id()))ids.add(uuid);}
   if(ids.isEmpty()){out.add("positionPolicies",new JsonArray());return out;}
+  // Trusted native staff capability needs no stored audience or membership lookup.
+  if(actor.seeHiddenPlayers()){var rows=new JsonArray();for(String id:ids){var row=MapPositionPolicy.defaults().json();row.addProperty("uuid",id);rows.add(row);}out.add("positionPolicies",rows);return out;}
   var policies=new HashMap<String,MapPositionPolicy>();var shared=new HashSet<String>();
   long policyTiming=PerformanceMetrics.start();
   try(var q=db.connection().prepareStatement("SELECT id,body FROM records WHERE namespace='map-position' AND id=ANY(?)")){q.setArray(1,db.connection().createArrayOf("text",ids.toArray()));try(var rs=q.executeQuery()){while(rs.next())policies.put(rs.getString(1),MapPositionPolicy.read(Json.parse(rs.getString(2))));}}finally{PerformanceMetrics.end("map.positions.policies",policyTiming);}

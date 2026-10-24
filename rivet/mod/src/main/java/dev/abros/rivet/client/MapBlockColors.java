@@ -29,24 +29,35 @@ final class MapBlockColors {
             var sprite=mc.getTextureAtlas(net.minecraft.world.inventory.InventoryMenu.BLOCK_ATLAS).apply(net.minecraft.resources.ResourceLocation.parse("minecraft:block/water_still"));
             return MapColors.tint(average(sprite),settings.biomeBlend?net.minecraft.client.renderer.BiomeColors.getAverageWaterColor(level,pos):level.getBiome(pos).value().getWaterColor());
         }
-        var faces=states.computeIfAbsent(state,s->{
-            try {
-                var model=mc.getBlockRenderer().getBlockModel(s);var rand=RandomSource.create(0);
-                var quads=new ArrayList<net.minecraft.client.renderer.block.model.BakedQuad>();
-                for(var type:model.getRenderTypes(s,rand,ModelData.EMPTY)){
-                    quads.addAll(model.getQuads(s,Direction.UP,rand,ModelData.EMPTY,type));
-                    for(var q:model.getQuads(s,null,rand,ModelData.EMPTY,type))if(q.getDirection()==Direction.UP)quads.add(q);
-                }
-                if(quads.isEmpty())return List.of(new Face(average(model.getParticleIcon(ModelData.EMPTY)),mc.getBlockColors().getColor(s,level,pos,0)==-1?-1:0));
-                var q=quads.stream().max(Comparator.comparingDouble(MapBlockColors::area)).orElseThrow();return List.of(new Face(average(q.getSprite()),q.isTinted()?q.getTintIndex():-1));
-            }catch(RuntimeException|LinkageError ex){return List.of();}
-        });
+        var model=mc.getBlockRenderer().getBlockModel(state);
+        ModelData data;
+        try{data=model.getModelData(level,pos,state,level.getModelDataManager().getAt(pos));}
+        catch(RuntimeException|LinkageError failure){return 0xff000000|state.getMapColor(level,pos).col;}
+        // Instance materials must never leak into the shared BlockState cache.
+        var faces=data==ModelData.EMPTY&&!state.hasBlockEntity()
+            ?states.computeIfAbsent(state,s->faces(level,pos,s,model,data))
+            :faces(level,pos,state,model,data);
         if(faces.isEmpty())return 0xff000000|state.getMapColor(level,pos).col;
         long a=0,r=0,g=0,b=0;
         for(var face:faces){int tint=face.tint()<0?-1:mc.getBlockColors().getColor(state,level,pos,face.tint());if(tint!=-1&&!settings.biomeBlend){int raw=vegetationTint(level,pos,state);if(raw!=-1)tint=raw;}int c=tint==-1?face.color():MapColors.tint(face.color(),tint);int alpha=c>>>24;a+=alpha;r+=(c>>>16&255)*alpha;g+=(c>>>8&255)*alpha;b+=(c&255)*alpha;}
         if(a==0)return 0;int color=(int)(a/faces.size())<<24|(int)(r/a)<<16|(int)(g/a)<<8|(int)(b/a);
         if((color&0xffffff)==0&&state.getMapColor(level,pos).col!=0)return color&0xff000000|state.getMapColor(level,pos).col;
         return color;
+    }
+    private static List<Face> faces(ClientLevel level,BlockPos pos,BlockState state,
+            net.minecraft.client.resources.model.BakedModel model,ModelData data){
+        try{
+            var rand=RandomSource.create(state.getSeed(pos));
+            var quads=new ArrayList<net.minecraft.client.renderer.block.model.BakedQuad>();
+            for(var type:model.getRenderTypes(state,rand,data)){
+                quads.addAll(model.getQuads(state,Direction.UP,rand,data,type));
+                for(var q:model.getQuads(state,null,rand,data,type))if(q.getDirection()==Direction.UP)quads.add(q);
+            }
+            if(quads.isEmpty())return List.of(new Face(average(model.getParticleIcon(data)),
+                Minecraft.getInstance().getBlockColors().getColor(state,level,pos,0)==-1?-1:0));
+            var q=quads.stream().max(Comparator.comparingDouble(MapBlockColors::area)).orElseThrow();
+            return List.of(new Face(average(q.getSprite()),q.isTinted()?q.getTintIndex():-1));
+        }catch(RuntimeException|LinkageError ex){return List.of();}
     }
     private static int vegetationTint(ClientLevel level,BlockPos pos,BlockState state){
         var block=state.getBlock();var biome=level.getBiome(pos).value();
@@ -55,19 +66,28 @@ final class MapBlockColors {
         if(state.getFluidState().is(net.minecraft.tags.FluidTags.WATER))return biome.getWaterColor();return -1;
     }
     static boolean translucent(BlockState state){
-        return translucency.computeIfAbsent(state,s->{
+        return translucency.computeIfAbsent(state,s->translucentModel(s,ModelData.EMPTY));
+    }
+    static boolean translucent(ClientLevel level,BlockPos pos,BlockState state){
+        if(!state.hasBlockEntity())return translucent(state);
+        try{
+            var model=Minecraft.getInstance().getBlockRenderer().getBlockModel(state);
+            var data=model.getModelData(level,pos,state,level.getModelDataManager().getAt(pos));
+            return translucentModel(state,data);
+        }catch(RuntimeException|LinkageError failure){return false;}
+    }
+    private static boolean translucentModel(BlockState state,ModelData data){
             try{
-                var model=Minecraft.getInstance().getBlockRenderer().getBlockModel(s);var random=RandomSource.create(0);double largest=0;boolean translucent=false;int alpha=255;
-                for(var type:model.getRenderTypes(s,random,ModelData.EMPTY)){
-                    var quads=new ArrayList<>(model.getQuads(s,Direction.UP,random,ModelData.EMPTY,type));
-                    for(var q:model.getQuads(s,null,random,ModelData.EMPTY,type))if(q.getDirection()==Direction.UP)quads.add(q);
+                var model=Minecraft.getInstance().getBlockRenderer().getBlockModel(state);var random=RandomSource.create(0);double largest=0;boolean translucent=false;int alpha=255;
+                for(var type:model.getRenderTypes(state,random,data)){
+                    var quads=new ArrayList<>(model.getQuads(state,Direction.UP,random,data,type));
+                    for(var q:model.getQuads(state,null,random,data,type))if(q.getDirection()==Direction.UP)quads.add(q);
                     for(var quad:quads){double size=area(quad);boolean transparent=type==net.minecraft.client.renderer.RenderType.translucent()||type.sortOnUpload();
                         if(size>largest||size==largest&&translucent&&!transparent){largest=size;translucent=transparent;alpha=average(quad.getSprite())>>>24;}
                     }
                 }
                 return translucent&&alpha<=240;
             }catch(RuntimeException|LinkageError ex){return false;}
-        });
     }
     private static double area(net.minecraft.client.renderer.block.model.BakedQuad quad){
         int[] v=quad.getVertices();int stride=v.length/4;double[] a=new double[3],b=new double[3];

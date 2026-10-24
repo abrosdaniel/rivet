@@ -40,6 +40,11 @@ public interface IntegrationApi extends AutoCloseable {
         /** May block; only call from bounded workers, never the server tick. */
         boolean offlineAllowed(UUID player,String permission);
         List<Data> roles();
+        /** Server thread only. Provider must authorize the live actor; completion means durable save.
+         * Only registered Rivet nodes and global, permanent group assignments may be edited. */
+        default java.util.concurrent.CompletionStage<Data> editRole(UUID actor,Data request){
+            return java.util.concurrent.CompletableFuture.failedFuture(new UnsupportedOperationException("Role editing unavailable"));
+        }
     }
     record Player(UUID uuid,String name){}
     interface Identity {

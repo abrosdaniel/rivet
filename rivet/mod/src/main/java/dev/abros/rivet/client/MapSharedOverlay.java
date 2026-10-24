@@ -25,7 +25,7 @@ final class MapSharedOverlay {
    for(int top:new int[]{y+size/2+2,y-size/2-16}){
     var label=new dev.abros.rivet.core.NativeLayout.Box(x-w/2,top,w,14);
     if(label.x()<0||label.right()>width||label.y()<0||label.bottom()>height||occupied.intersects(label)||reserved.stream().anyMatch(b->overlaps(b,label)))continue;
-    g.fill(label.x(),label.y(),label.right(),label.bottom(),0xee10151a);g.drawString(font,name,label.x()+5,label.y()+3,UiKit.text(),false);occupied.add(label);break;
+    UiKit.control(g,label.x(),label.y(),label.width(),label.height(),UiKit.surface());g.drawString(font,name,label.x()+5,label.y()+3,UiKit.text(),false);occupied.add(label);break;
    }
   }
  }

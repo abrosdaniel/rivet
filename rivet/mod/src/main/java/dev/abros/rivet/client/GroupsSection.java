@@ -27,6 +27,8 @@ final class GroupsSection {
    if(j.getAsJsonObject("invitations").isEmpty())host.text(Client.text("ui.no_pending_invitations_9279ff1a"));
    for(String target:j.getAsJsonObject("invitations").keySet()){int card=host.beginCard();host.text(host.shortName(target));host.action(Client.text("ui.cancel_invitation_748e4a88"),()->{var b=new JsonObject();b.addProperty("target",target);host.confirm(Client.text("ui.cancel_invitation_051bcc1f"),"revokeInvitation",b);});host.endCard(card);}
   }else{
+   String role=Json.opt(j,"myRole",j.get("isMember").getAsBoolean()?"member":"");
+   if(!role.isEmpty())host.text(Client.text("flow.yourRole")+switch(role){case "leader"->Client.text("ui.leader_3dc64933");case "assistant"->Client.text("ui.assistant_ffcd1996");default->Client.text("ui.member_76ffe26d");});
    host.text(Json.str(j,"type")+" · "+(j.get("recruiting").getAsBoolean()?Client.text("ui.registration_open_4bd5a5ce"):Client.text("ui.registration_closed_a0d3acee")));
    host.text(Client.text("ui.members_2bee8bf5")+j.get("membersCount").getAsInt());
    if(MapGroupClient.available()){

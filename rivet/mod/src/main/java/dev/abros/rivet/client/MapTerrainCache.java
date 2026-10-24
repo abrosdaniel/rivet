@@ -26,7 +26,7 @@ final class MapTerrainCache {
     static long styleEpoch(){return styleEpoch;}
     private static int uploads;
     static void beginFrame(){uploadStart=0;uploads=0;}
-    static boolean uploadAllowed(){return uploads<8&&(uploadStart==0||System.nanoTime()-uploadStart<2_000_000);}
+    static boolean uploadAllowed(){if(uploadStart==0)uploadStart=System.nanoTime();return uploads<8&&System.nanoTime()-uploadStart<2_000_000;}
     static void uploaded(){if(uploadStart==0)uploadStart=System.nanoTime();uploads++;}
     static boolean canWork(){return WORKER.getQueue().remainingCapacity()>0;}
     static boolean waiting(WorldMapClient.TileKey key){return pending.contains(key)||changes.containsKey(key);}

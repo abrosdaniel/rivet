@@ -21,7 +21,7 @@ final class CommunityMapObjects {
    String target=Json.opt(in,"id","");if(!target.isEmpty())target=UUID.fromString(target).toString();
    String filter=manage?"(body->>'owner'=? OR ?)":"jsonb_typeof(body->'published')='object'";
    try(var q=db.connection().prepareStatement("SELECT id,body FROM records WHERE namespace='map-object' AND id>? AND "+filter+" AND (?='' OR id=?) ORDER BY id LIMIT 17")){
-    q.setString(1,cursor);if(manage){q.setString(2,actor.id());q.setBoolean(3,actor.admin());}q.setString(manage?4:2,target);q.setString(manage?5:3,target);
+    q.setString(1,cursor);if(manage){q.setString(2,actor.id());q.setBoolean(3,actor.admin()&&!(in.has("mine")&&in.get("mine").getAsBoolean()));}q.setString(manage?4:2,target);q.setString(manage?5:3,target);
     try(var rs=q.executeQuery()){while(rs.next()){
      if(rows.size()==16){out.addProperty("nextCursor",Json.str(rows.get(15).getAsJsonObject(),"id"));break;}
      var row=Json.parse(rs.getString(2));row.addProperty("id",rs.getString(1));if(!manage)row=published(row);int size=wireRowSize(row);if(pageChars+size>28000&&!rows.isEmpty()){out.addProperty("nextCursor",Json.str(rows.get(rows.size()-1).getAsJsonObject(),"id"));break;}rows.add(row);pageChars+=size;

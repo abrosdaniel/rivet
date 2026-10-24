@@ -63,13 +63,14 @@ final class ServerMenuScreen extends ScrollScreen implements CommunityScreen.Rec
             dashboardSections.clear();
             if(Set.of("overview","reports","diagnostics","tools").contains(adminGroup)){
                 if(Set.of("overview","reports").contains(adminGroup)){
-                if(ServerMenuClient.may("rivet.reports"))dashboardSections.add(new DashboardSection(Client.text("ui.reports_summary_89cfcf75"),List.of()));
+                if(ServerMenuClient.may("rivet.reports")&&ServerMenuClient.admin())dashboardSections.add(new DashboardSection(Client.text("ui.reports_summary_89cfcf75"),List.of()));
                 if(ServerMenuClient.may("rivet.reports")){
                     if(overviewData.has("attentionReports"))for(var entry:overviewData.getAsJsonArray("attentionReports")){var report=entry.getAsJsonObject();card(Json.opt(report,"player",Client.text("map.tool.player")),Json.opt(report,"attentionReason",Client.text("ui.awaiting_response_dacc6a50")),Json.opt(report,"message",""),Json.opt(report,"assignedName","").isBlank()?Client.text("ui.no_assignee_b69f1a51"):Client.text("ui.assigned_to_31372c54")+Json.opt(report,"assignedName",""),0xFFEF7777,()->minecraft.setScreen(new ReportDetailScreen(this,report,true)));}
                     if(summaries.isEmpty()&&!metric("openReports").equals("0"))card(Client.text("ui.player_reports_2b875ea4"),overviewBusy?Client.text("server.loading"):metric("openReports").equals("0")?Client.text("ui.all_reports_have_been_processed_b2b9863e"):Client.text("ui.open_queue_3514fdc1"),Client.text("ui.assign_staff_and_reply_3b5dcd83"),Client.text("ui.open_and_closed_reports_b20552f3"),metric("openReports").equals("0")?0xFF79CBA6:0xFFEF7777,()->FeatureListScreen.open(this,"reports"));
                     section(Client.text("ui.player_reports_2b875ea4"));
                 }
                 }
+                if(adminGroup.equals("overview")&&ServerMenuClient.admin()&&MapPublications.available()){card(Client.text("map.publications"),Client.text("map.awaitingApproval"),Client.text("flow.publicationReviewHint"),Client.text("map.publicationModeration"),UiKit.accent(),()->minecraft.setScreen(MapPublicationsScreen.moderation(this)));section(Client.text("map.publications"));}
                 boolean rivetErrors=overviewData.has("recentErrors")&&!overviewData.getAsJsonArray("recentErrors").isEmpty();
                 if(Set.of("overview","diagnostics").contains(adminGroup)&&rivetErrors)card(Client.text("ui.rivet_errors_72a769f5"),overviewData.getAsJsonArray("recentErrors").size()+Client.text("ui.recent_errors_8b705430"),Client.text("ui.open_diagnostics_64fa5b35"),Client.text("ui.details_and_log_29abf380"),0xFFEF7777,()->minecraft.setScreen(new AdminDashboardScreen(this,true)));
                 if(adminGroup.equals("overview")&&server&&(stateFlag("maintenance")||scheduled())){card(Client.text("ui.server_status_6081a1b2"),stateFlag("maintenance")?Client.text("ui.maintenance_enabled_76d9d6ea"):Client.text("ui.shutdown_scheduled_a649930e"),Client.text("ui.check_mode_and_shutdown_time_f69fb895"),Client.text("ui.open_server_management_35d6f85a"),0xFFF0A77C,()->group("server"));}
@@ -81,7 +82,7 @@ final class ServerMenuScreen extends ScrollScreen implements CommunityScreen.Rec
                 if(!summaries.isEmpty())section(Client.text("ui.server_and_diagnostics_08e852ff"));
                 }
                 if(adminGroup.equals("tools")){
-                if(ServerMenuClient.admin()&&ServerMenuClient.supports("community-extensions"))card(Client.text("ui.role_permissions_950366f4"),Client.text("ui.preview_5d092ca8"),Client.text("ui.available_sections_and_actions_3b04cc4d"),Client.text("ui.keep_your_current_role_ef14dd6f"),0xFFB49AE8,()->minecraft.setScreen(new RolePreviewScreen(this)));
+                if(ServerMenuClient.admin()&&ServerMenuClient.supports("community-extensions"))card(Client.text("ui.role_permissions_950366f4"),Client.text("permissions.cardAction"),Client.text("permissions.cardDescription"),Client.text("permissions.cardHint"),0xFFB49AE8,()->minecraft.setScreen(new RolePreviewScreen(this)));
                 if(ServerMenuClient.admin())card(Client.text("server.history"),Client.text("ui.administration_history_fe068195"),Client.text("ui.who_changed_what_1b3846c2"),Client.text("ui.open_entries_and_details_11abebc8"),0xFF82B6F2,()->FeatureListScreen.open(this,"history"));
                 if(ServerMenuClient.admin()&&ServerMenuClient.supports("admin-tools"))card(Client.text("ui.community_data_5767255c"),Client.text("map.tool.export"),Client.text("ui.select_a_section_b85ade23"),Client.text("ui.export_server_data_613ac09c"),0xFFE2BE75,()->group("data"));
                 if(!summaries.isEmpty())section(Client.text("ui.administration_tools_08646444"));

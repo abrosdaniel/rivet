@@ -62,6 +62,48 @@ public final class AuthStore implements AutoCloseable {
         update("UPDATE auth_accounts SET official=NULL,generation=generation+1 WHERE lower(name)=lower(?)",a.name);
         revokeCredentials(a.name);audit(a.name,"official-unlinked",a.name,now);return account(a.name);
     });}
+    /** Rename the identity, never its UUID. Callers must exclude active game logins. */
+    public Account rename(String actor,String oldName,String newName,String expectedUuid,long now)throws Exception{
+        if(!validName(oldName)||!validName(newName))throw renameError("invalid");
+        if(database.inTransaction())throw new IllegalStateException("Rename requires its own transaction");
+        return database.transaction(()->{
+            // Same order for concurrent A→B / B→A and ordinary name-scoped auth operations.
+            var keys=new TreeSet<String>();keys.add(oldName.toLowerCase(Locale.ROOT));keys.add(newName.toLowerCase(Locale.ROOT));
+            for(String key:keys)database.lock("auth:"+key);
+            var previous=account(oldName);
+            if(previous==null)throw renameError("missing");
+            if(!previous.uuid().equals(expectedUuid))throw renameError("changed");
+            if(previous.name().equals(newName))throw renameError("same");
+            var occupied=account(newName);
+            if(occupied!=null&&!occupied.uuid().equals(previous.uuid()))throw renameError("occupied");
+            database.lock("person:"+previous.uuid());
+            try(var q=connection().prepareStatement("SELECT 1 FROM people WHERE lower(name)=lower(?) AND id<>?")){
+                bind(q,newName,previous.uuid());try(var rows=q.executeQuery()){if(rows.next())throw renameError("occupied");}
+            }
+            try(var q=connection().prepareStatement("SELECT 1 FROM records WHERE namespace='auth-rename' AND id=?")){
+                bind(q,previous.uuid());try(var rows=q.executeQuery()){if(rows.next())throw renameError("busy");}
+            }
+            revokeCredentials(previous.name());
+            update("DELETE FROM auth_failures WHERE lower(name)=lower(?) OR lower(name)=lower(?)",oldName,newName);
+            update("UPDATE auth_accounts SET name=?,generation=generation+1 WHERE uuid=?",newName,previous.uuid());
+            update("UPDATE people SET name=? WHERE id=?",newName,previous.uuid());
+            audit(actor,"rename",previous.name()+" -> "+newName+" ["+previous.uuid()+"]",now);
+            var recovery=new JsonObject();recovery.addProperty("oldName",previous.name());recovery.addProperty("newName",newName);
+            update("INSERT INTO records(namespace,id,body) VALUES('auth-rename',?,?::jsonb)",previous.uuid(),recovery.toString());
+            database.communityChanged();
+            return account(newName);
+        });
+    }
+    public record Rename(String uuid,String oldName,String newName){}
+    public List<Rename> pendingRenames()throws Exception{return database.transaction(()->{
+        var result=new ArrayList<Rename>();try(var q=connection().createStatement();var rows=q.executeQuery("SELECT id,body FROM records WHERE namespace='auth-rename' ORDER BY id")){
+            while(rows.next()){var body=dev.abros.rivet.core.Json.parse(rows.getString(2));result.add(new Rename(rows.getString(1),body.get("oldName").getAsString(),body.get("newName").getAsString()));}
+        }return List.copyOf(result);
+    });}
+    public void finishRename(Rename rename)throws Exception{database.transaction(()->{
+        update("DELETE FROM records WHERE namespace='auth-rename' AND id=? AND body->>'oldName'=? AND body->>'newName'=?",rename.uuid(),rename.oldName(),rename.newName());return null;
+    });}
+    private static IllegalArgumentException renameError(String code){return new IllegalArgumentException(dev.abros.rivet.core.Messages.text("rivet.auth.rename."+code));}
     public record Profile(String name,UUID uuid,UUID official){public Profile(String name,UUID uuid){this(name,uuid,null);}}
     public java.util.List<Profile> profiles()throws Exception{return database.transaction(()->{
         var result=new java.util.ArrayList<Profile>();try(var q=connection().createStatement();var rs=q.executeQuery("SELECT name,uuid,official FROM auth_accounts")){while(rs.next())result.add(new Profile(rs.getString(1),UUID.fromString(rs.getString(2)),rs.getString(3)==null?null:UUID.fromString(rs.getString(3))));}return java.util.List.copyOf(result);

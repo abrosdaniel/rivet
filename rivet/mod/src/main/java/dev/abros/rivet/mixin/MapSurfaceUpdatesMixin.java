@@ -10,5 +10,7 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 @Mixin(ClientLevel.class)
 abstract class MapSurfaceUpdatesMixin{
  @Inject(method="setBlocksDirty",at=@At("TAIL"))
- private void rivet$mapChanged(BlockPos position,BlockState previous,BlockState next,CallbackInfo info){if(previous!=next)dev.abros.rivet.client.WorldMapClient.changed(position);}
+ private void rivet$mapChanged(BlockPos position,BlockState previous,BlockState next,CallbackInfo info){if(previous!=next||next.hasBlockEntity())dev.abros.rivet.client.WorldMapClient.changed(position);}
+ @Inject(method="sendBlockUpdated",at=@At("TAIL"))
+ private void rivet$mapVisualChanged(BlockPos position,BlockState previous,BlockState next,int flags,CallbackInfo info){dev.abros.rivet.client.WorldMapClient.changed(position);}
 }

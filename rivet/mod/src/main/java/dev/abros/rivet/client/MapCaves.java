@@ -71,7 +71,7 @@ final class MapCaves {
    var chunk=level.getChunk((x+dx)>>4,(z+dz)>>4);boolean found=false;
    at.set(x+dx,start,z+dz);if(level.getBrightness(net.minecraft.world.level.LightLayer.SKY,at)>=15)return MapLayer.SURFACE;
    int end=Math.min(level.getMaxBuildHeight()-1,chunk.getHeight(net.minecraft.world.level.levelgen.Heightmap.Types.WORLD_SURFACE,(x+dx)&15,(z+dz)&15));
-   for(int y=start;y<=end;y++){at.set(x+dx,y,z+dz);var state=chunk.getBlockState(at);if(!state.isAir()&&state.getPistonPushReaction()!=net.minecraft.world.level.material.PushReaction.DESTROY&&!MapBlockColors.translucent(state)&&!(state.getBlock() instanceof net.minecraft.world.level.block.TransparentBlock)&&!state.is(BlockTags.LEAVES)&&state.getBlock()!=Blocks.BARRIER&&!(state.getBlock() instanceof net.minecraft.world.level.block.LiquidBlock)){found=true;if(dx==0&&dz==0)center=y;break;}}
+   for(int y=start;y<=end;y++){at.set(x+dx,y,z+dz);var state=chunk.getBlockState(at);if(!state.isAir()&&state.getPistonPushReaction()!=net.minecraft.world.level.material.PushReaction.DESTROY&&!MapBlockColors.translucent(level,at,state)&&!(state.getBlock() instanceof net.minecraft.world.level.block.TransparentBlock)&&!state.is(BlockTags.LEAVES)&&state.getBlock()!=Blocks.BARRIER&&!(state.getBlock() instanceof net.minecraft.world.level.block.LiquidBlock)){found=true;if(dx==0&&dz==0)center=y;break;}}
    if(!found)return MapLayer.SURFACE;
   }
   return Math.min(center,player.getBlockY()+4);

@@ -17,6 +17,19 @@ class CommunityStoreTest {
  JsonObject create(String section)throws Exception{var j=input(section,"create","");j.addProperty("title","Example");j.addProperty("description","Description");j.addProperty("days",14);j.addProperty("type","Команда");j.addProperty("startsAt",Instant.now().plusSeconds(120).toString());j.addProperty("endsAt",Instant.now().plusSeconds(60).toString());j.addProperty("capacity",1);var options=new JsonArray();options.add("One");options.add("Two");j.add("options",options);return db.request(Set.of("events","polls").contains(section)?admin:owner,j).getAsJsonObject("detail");}
  String id(JsonObject j){return Json.str(j,"id");}
  JsonObject detail(String section,String id,CommunityStore.Actor a)throws Exception{return db.request(a,input(section,"detail",id)).getAsJsonObject("detail");}
+ @Test void membershipRoleSurvivesPagingAndApplicationResultIsExplicit()throws Exception{
+  var group=create("groups");String id=id(group);
+  assertEquals("leader",detail("groups",id,owner).get("myRole").getAsString());assertEquals("",detail("groups",id,alice).get("myRole").getAsString());
+  for(boolean accepted:List.of(false,true)){
+   var apply=input("groups","apply",id);apply.addProperty("text","I would like to join");db.request(alice,apply);
+   var decision=input("groups","application",id);decision.addProperty("target",alice.id());decision.addProperty("accept",accepted);db.request(owner,decision);
+   String key="rivet.flow."+(accepted?"applicationAccepted":"applicationDeclined");
+   var notices=db.request(alice,input("notifications","list","")).getAsJsonArray("entries");assertTrue(notices.toString().contains(key));
+  }
+  var later=input("groups","detail",id);later.addProperty("page",1);var view=db.request(alice,later).getAsJsonObject("detail");assertEquals("member",view.get("myRole").getAsString());assertTrue(view.getAsJsonObject("members").isEmpty());
+  var role=input("groups","role",id);role.addProperty("target",alice.id());role.addProperty("role","assistant");db.request(owner,role);assertEquals("assistant",detail("groups",id,alice).get("myRole").getAsString());
+  db.request(alice,input("groups","leave",id));view=detail("groups",id,alice);assertEquals("",view.get("myRole").getAsString());assertFalse(view.get("manage").getAsBoolean());assertTrue(view.getAsJsonArray("groupItems").isEmpty());
+ }
  @Test void trashMetadataUsesConfiguredRetentionWithoutPersistingDerivedDeadline()throws Exception{
   for(int days:List.of(1,30,365)){
    owner=actor("Owner"+days,false);db.seen(owner);

@@ -13,14 +13,14 @@ public final class MenuCommands {
     private static final Set<String> READS = Set.of("players", "reports", "myReports", "myReport", "history", "menuData",
         "playerAdministration", "adminDashboard", "rolePreview", "diagnostics", "exportCommunity");
     private static final Set<String> WRITES = Set.of("report", "reply", "moderate", "reportManage", "announce", "scheduledAnnouncements",
-        "pinAnnouncement", "maintenance", "restart", "reloadMenu");
+        "pinAnnouncement", "maintenance", "restart", "reloadMenu", "rolePermission");
     private static final Map<String, String> PERMISSIONS = Map.of(
         "scheduledAnnouncements", "rivet.announce", "announce", "rivet.announce", "pinAnnouncement", "rivet.announce", "maintenance", "rivet.maintenance",
         "restart", "rivet.restart", "reports", "rivet.reports", "reply", "rivet.reports",
         "reportManage", "rivet.reports", "diagnostics", "rivet.diagnostics");
     private static final Set<String> ACTIONS = Set.of("state", "report", "reports", "diagnostics", "announce", "scheduledAnnouncements", "maintenance",
         "restart", "menuData", "myReports", "reply", "players", "moderate", "history", "reloadMenu", "community", "myReport",
-        "subscribe", "pinAnnouncement", "exportCommunity", "playerAdministration", "moderationVote", "adminDashboard", "reportManage", "serverConfig", "rolePreview");
+        "subscribe", "pinAnnouncement", "exportCommunity", "playerAdministration", "moderationVote", "adminDashboard", "reportManage", "serverConfig", "rolePreview", "rolePermission");
     public static boolean known(String action) { return ACTIONS.contains(action); }
     public static String administrativePermission(String action) { return PERMISSIONS.getOrDefault(action, "rivet.admin"); }
     public static Definition describe(JsonObject packet) {

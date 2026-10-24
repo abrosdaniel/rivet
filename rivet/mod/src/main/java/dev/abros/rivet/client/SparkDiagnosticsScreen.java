@@ -80,7 +80,7 @@ final class SparkDiagnosticsScreen extends ScrollScreen {
     });}
     private static String numberText(JsonObject data,String key){double value=SparkTimeline.number(data,key);return Double.isFinite(value)?String.format(Locale.ROOT,"%.0f",value):"—";}
     private void graph(GuiGraphics g,int x,int y,int w,String title,String key,double baseline){
-        UiKit.surface(g,x,y,w,40,UiKit.surface());Ui.text(g,font,UiKit.fit(font,title,w-16),x+8,y+6,UiKit.muted(),false);
+        UiKit.plate(g,x,y,w,40,UiKit.surface(UiKit.Surface.CONTROL));Ui.text(g,font,UiKit.fit(font,title,w-16),x+8,y+6,UiKit.muted(),false);
         var samples=array("samples");double max=baseline;int valid=0;for(var e:samples){double n=SparkTimeline.number(e.getAsJsonObject(),key);if(Double.isFinite(n)){max=Math.max(max,n);valid++;}}
         if(valid<2){Ui.text(g,font,Client.text("ui.collecting_dimensions_25e0a317"),x+8,y+26,UiKit.muted(),false);return;}
         int pixels=Math.max(1,w-16);for(int px=0;px<pixels;px++){int a=px*samples.size()/pixels,b=Math.max(a+1,(px+1)*samples.size()/pixels);double n=Double.NaN;for(int i=a;i<Math.min(b,samples.size());i++){double v=SparkTimeline.number(samples.get(i).getAsJsonObject(),key);if(Double.isFinite(v))n=Double.isNaN(n)?v:Math.max(n,v);}if(Double.isFinite(n)){int h=(int)Math.min(16,n*16/Math.max(1,max));g.fill(x+8+px,y+36-h,x+9+px,y+36,UiKit.accent());}}

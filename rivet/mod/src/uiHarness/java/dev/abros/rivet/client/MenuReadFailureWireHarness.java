@@ -16,7 +16,12 @@ public final class MenuReadFailureWireHarness {
  private static boolean started,done;private static long deadline;private static int phase;
  private static String correlation;private static Consumer<JsonObject> previous;
  @SubscribeEvent public static void tick(net.neoforged.neoforge.client.event.ClientTickEvent.Post event){
-  if(System.getenv("RIVET_MENU_READ_FAILURES")==null||done)return;
+  String address=System.getenv("RIVET_MENU_READ_FAILURE_ADDRESS");
+  if(System.getenv("RIVET_MENU_READ_FAILURES")==null&&address==null||done)return;
+  if(address!=null&&Minecraft.getInstance().screen instanceof net.minecraft.client.gui.screens.TitleScreen){
+   var mc=Minecraft.getInstance();net.minecraft.client.gui.screens.ConnectScreen.startConnecting(mc.screen,mc,
+    net.minecraft.client.multiplayer.resolver.ServerAddress.parseString(address),new net.minecraft.client.multiplayer.ServerData("Menu recovery",address,net.minecraft.client.multiplayer.ServerData.Type.OTHER),false,null);return;
+  }
   try{
    if(!started){if(!WorldMapClient.ready()||!ServerMenuClient.available())return;started=true;verifyPrivacyRetry();previous=Protocol.featureState;Protocol.featureState=MenuReadFailureWireHarness::receive;send();}
    if(System.currentTimeMillis()>deadline)throw new IllegalStateException("No correlated reply for phase "+phase);

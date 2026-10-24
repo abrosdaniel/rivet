@@ -53,7 +53,7 @@ final class ServerCommands {
    }catch(Exception ex){source.getServer().execute(Messages.capture(()->error(source,ex)));}});return 1;
   }catch(Exception ex){error(source,ex);return 0;}
  }
- private static List<String> sections(CommandSourceStack s){var out=new ArrayList<String>();out.add("menu");if(access(s,false))out.add("stats");for(String key:List.of("announce","maintenance","restart","reports","diagnostics"))if(allowed(s,"rivet."+key))out.add(key);if(AuthServer.enabled()&&(s.getEntity()==null&&s.hasPermission(4)||s.getEntity() instanceof ServerPlayer p&&AuthServer.mayReset(p)))out.add("auth");return out;}
+ private static List<String> sections(CommandSourceStack s){var out=new ArrayList<String>();out.add("menu");if(access(s,false))out.add("stats");for(String key:List.of("announce","maintenance","restart","reports","diagnostics"))if(allowed(s,"rivet."+key))out.add(key);if(AuthServer.enabled()&&(s.getEntity()==null&&s.hasPermission(4)||s.getEntity() instanceof ServerPlayer p&&AuthServer.mayReset(p)||AuthServer.mayRename(s)))out.add("auth");return out;}
  private static int help(CommandSourceStack s,String section){try(var locale=Messages.locale(s.getEntity() instanceof ServerPlayer player?player.clientInformation().language():"ru_ru")){return helpLocalized(s,section);}}
  private static int helpLocalized(CommandSourceStack s,String section){var available=sections(s);if(!section.isEmpty()&&!available.contains(section)){s.sendFailure(Component.translatable("rivet.core.section_unavailable_rivet_help_738432bc"));return 0;}
   var lines=new ArrayList<String>();for(String key:available){if(!section.isEmpty()&&!section.equals(key))continue;lines.add(switch(key){
@@ -63,7 +63,7 @@ final class ServerCommands {
    case "restart" -> dev.abros.rivet.core.Messages.text("rivet.core.rivet_restart_seconds_reason_rivet_restart_b86ecdf4");
    case "reports" -> dev.abros.rivet.core.Messages.text("rivet.core.rivet_reports_reports_c8ce6def");
    case "diagnostics" -> "/rivet status · /rivet project status";
-   case "auth" -> dev.abros.rivet.core.Messages.text("rivet.core.rivet_auth_reset_player_24808553")+(s.getEntity()==null?dev.abros.rivet.core.Messages.text("rivet.core.rivet_auth_reserve_block_unblock_player_06752364"):"");
+   case "auth" -> (AuthServer.mayRename(s)?"/rivet auth rename <player> <newName>\n":"")+dev.abros.rivet.core.Messages.text("rivet.core.rivet_auth_reset_player_24808553")+(s.getEntity()==null?dev.abros.rivet.core.Messages.text("rivet.core.rivet_auth_reserve_block_unblock_player_06752364"):"");
    default -> dev.abros.rivet.core.Messages.text("rivet.core.rivet_server_menu_rivet_help_section_d8a52605");});}reply(s,String.join("\n\n",lines));return 1;
  }
 }

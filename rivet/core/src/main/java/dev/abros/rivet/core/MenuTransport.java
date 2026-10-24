@@ -7,7 +7,7 @@ import java.util.*;
 public final class MenuTransport<O> {
     private static final int CAPACITY = 64, BACKGROUND_CAPACITY = 48;
     private static final long READ_TIMEOUT = 15000, ACTION_INTERVAL = 550;
-    private record Pending<O>(JsonObject packet, O owner, boolean read, long at) {}
+    private record Pending<O>(JsonObject packet, O owner, boolean read, boolean background, long at) {}
     private record Read<O>(JsonObject packet, O owner, long at) {}
     private final ArrayDeque<Pending<O>> outbound = new ArrayDeque<>();
     private final Map<String, Long> dispatched = new LinkedHashMap<>();
@@ -28,9 +28,10 @@ public final class MenuTransport<O> {
             outbound.removeIf(queued -> Json.opt(queued.packet, "action", "").equals("subscribe"));
         if (outbound.size() >= (background ? BACKGROUND_CAPACITY : CAPACITY)) return false;
         if (MenuRequests.mutation(prepared)) clearCache();
-        // A slower, older reply for the same query must not overwrite a newer cached snapshot.
-        if (read) reads.values().removeIf(previous -> previous.owner == owner && MenuRequests.sameRead(previous.packet, prepared));
-        outbound.add(new Pending<>(prepared, owner, read, now));
+        // Cache is connection-wide: background and screen owners share the same snapshot.
+        // Keep their requests independent, but never cache an older equivalent reply.
+        if (read) reads.values().removeIf(previous -> MenuRequests.sameRead(previous.packet, prepared));
+        outbound.add(new Pending<>(prepared, owner, read, background, now));
         if (read && prepared.has("request")) {
             reads.put(Json.str(prepared, "request"), new Read<>(prepared.deepCopy(), owner, now));
             while (reads.size() > CAPACITY) reads.remove(reads.keySet().iterator().next());
@@ -39,6 +40,10 @@ public final class MenuTransport<O> {
     }
     public List<JsonObject> dispatch(long now, O currentOwner) {
         var ready = new ArrayList<JsonObject>();
+        // Prefer the visible interaction over periodic background reads, preserving write order.
+        var ordered = new ArrayList<>(outbound);
+        ordered.sort(Comparator.comparingInt((Pending<O> item) -> item.read && item.background ? 1 : 0));
+        outbound.clear();outbound.addAll(ordered);
         var iterator = outbound.iterator();
         while (iterator.hasNext()) {
             var queued = iterator.next();

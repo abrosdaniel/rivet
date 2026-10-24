@@ -39,7 +39,7 @@ final class MapIntegrationLayers {
    glyph(g,m,x,y,size);occupied.add(new NativeLayout.Box(x-size/2,y-size/2,size,size));
    String label=UiKit.fit(font,m.name(),120);int w=font.width(label)+8;var box=new NativeLayout.Box(x-w/2,y+size/2+2,w,13);
    if(box.x()>=0&&box.right()<width&&box.bottom()<height&&!occupied.intersects(box)&&reserved.stream().noneMatch(b->b.x()<box.right()&&b.right()>box.x()&&b.y()<box.bottom()&&b.bottom()>box.y())){
-    g.fill(box.x(),box.y(),box.right(),box.bottom(),0xee10151a);g.drawString(font,label,box.x()+4,box.y()+2,UiKit.text(),false);occupied.add(box);
+    UiKit.control(g,box.x(),box.y(),box.width(),box.height(),UiKit.surface());g.drawString(font,label,box.x()+4,box.y()+2,UiKit.text(),false);occupied.add(box);
    }
   }
  }
@@ -50,6 +50,6 @@ final class MapIntegrationLayers {
    if(MinimapProjection.contains(x,y,radius,round))glyph(g,m,left+side/2+(int)Math.round(x),top+side/2+(int)Math.round(y),size);
   }
  }
- private static void glyph(GuiGraphics g,dev.abros.rivet.api.DomainData.Marker m,int x,int y,int size){int left=x-size/2,top=y-size/2;g.fill(left,top,left+size,top+size,0xee10151a);g.renderOutline(left,top,size,size,m.color());MapGlyphs.marker(g,MapGlyphs.MARKERS.contains(m.icon())?m.icon():"pin",left+1,top+1,Math.max(1,size-2));}
+ private static void glyph(GuiGraphics g,dev.abros.rivet.api.DomainData.Marker m,int x,int y,int size){int left=x-size/2,top=y-size/2;UiKit.rounded(g,left,top,size,size,3,UiKit.surface());UiKit.ring(g,left,top,size,size,3,m.color());MapGlyphs.marker(g,MapGlyphs.MARKERS.contains(m.icon())?m.icon():"pin",left+1,top+1,Math.max(1,size-2));}
  private MapIntegrationLayers(){}
 }

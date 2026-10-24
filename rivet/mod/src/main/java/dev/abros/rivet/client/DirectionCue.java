@@ -47,7 +47,7 @@ final class DirectionCue {
   String name=UiKit.fit(mc.font,point.name(),maxWidth-32);text=UiKit.fit(mc.font,text,maxWidth-32);
   int w=Math.min(maxWidth,Math.max(mc.font.width(text),mc.font.width(name))+32),h=32;bounds=HudPlacement.fit(g.guiWidth(),g.guiHeight(),(int)Math.ceil(w*scale),(int)Math.ceil(h*scale),settings.directionAnchorX,settings.directionAnchorY,settings.directionOffsetX,settings.directionOffsetY);g.pose().pushPose();g.pose().translate(bounds.x(),bounds.y(),0);g.pose().scale(scale,scale,1);int px=0,py=0;
   // Background opacity is independent of text contrast and does not add a hidden opaque shadow.
-  UiKit.surface(g,px,py,w,h,(UiKit.surface()&0xFFFFFF)|(Math.round(settings.directionOpacity*255)<<24));
+  UiHudSurface.panel(g,w,h,settings.directionOpacity);
   Ui.text(g,mc.font,name,px+8,py+6,UiKit.accent(),false);
   Ui.text(g,mc.font,text,px+8,py+18,UiKit.text(),false);
   if(!preview)Ui.text(g,mc.font,"×",px+w-12,py+6,UiKit.muted(),false);

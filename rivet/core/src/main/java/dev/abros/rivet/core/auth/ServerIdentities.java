@@ -13,6 +13,11 @@ public final class ServerIdentities {
   profiles.put(AuthStore.name(profile.name()).toLowerCase(Locale.ROOT),profile);
   if(profile.official()!=null)linked.put(profile.official(),profile);
  }
+ /** Late login/reserve results must not undo an explicit committed rename. */
+ public synchronized void rememberCurrent(AuthStore.Profile profile){
+  var current=ids.get(profile.uuid());if(current!=null&&!current.name().equals(profile.name()))return;
+  remember(profile);
+ }
  public synchronized Optional<AuthStore.Profile> known(String name){return Optional.ofNullable(profiles.get(AuthStore.name(name).toLowerCase(Locale.ROOT)));}
  public synchronized Optional<AuthStore.Profile> known(UUID uuid){return Optional.ofNullable(ids.get(uuid));}
  public synchronized Optional<AuthStore.Profile> verifiedAlias(UUID uuid){return Optional.ofNullable(linked.get(uuid));}

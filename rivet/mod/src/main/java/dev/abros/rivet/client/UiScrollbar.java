@@ -17,7 +17,7 @@ final class UiScrollbar {
  }
  static void draw(GuiGraphics g,dev.abros.rivet.core.NativeLayout.Box track,dev.abros.rivet.core.NativeLayout.Box thumb){
   if(thumb.x()<track.x()||thumb.right()>track.right()||thumb.y()<track.y()||thumb.bottom()>track.bottom())throw new IllegalArgumentException("Scrollbar thumb escaped track");
-  g.fill(track.x(),track.y(),track.right(),track.bottom(),UiPalette.scrollTrack());
-  int inset=track.width()>3?1:0;g.fill(thumb.x()+inset,thumb.y(),thumb.right()-inset,thumb.bottom(),UiTheme.mix(UiKit.surface(),UiKit.muted(),0.65f));
+  UiKit.rounded(g,track.x(),track.y(),track.width(),track.height(),3,UiPalette.scrollTrack());
+  int inset=track.width()>3?1:0;UiKit.rounded(g,thumb.x()+inset,thumb.y(),thumb.width()-2*inset,thumb.height(),2,UiTheme.mix(UiKit.surface(),UiKit.muted(),0.65f));
  }
 }

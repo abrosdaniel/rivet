@@ -28,6 +28,13 @@ import static org.junit.jupiter.api.Assertions.*;
   assertThrows(CommunityFailure.class,()->store.request(other,submit("Stolen",1)));
   store.request(admin,command("mapObjectReject",1));assertTrue(publicRows().isEmpty());
  }
+ @Test void personalQueueDoesNotIncludeOtherAuthorsForAdministrators()throws Exception{
+  store.request(owner,submit("Other author",0));var q=command("mapObjects",0);q.remove("id");q.addProperty("manage",true);q.addProperty("mine",true);
+  assertTrue(store.request(admin,q).getAsJsonArray("mapObjects").isEmpty());
+  assertEquals(1,store.request(owner,q).getAsJsonArray("mapObjects").size());
+  q.addProperty("mine",false);assertEquals(1,store.request(admin,q).getAsJsonArray("mapObjects").size());
+  assertTrue(store.request(other,q).getAsJsonArray("mapObjects").isEmpty());
+ }
  @Test void unchangedSnapshotsAreSmallAndWithdrawnIdsCannotReuseApprovalRevision()throws Exception{
   store.request(owner,submit("First",0));store.request(admin,command("mapObjectApprove",1));
   var q=command("mapObjects",0);var first=store.request(other,q);q.addProperty("snapshot",first.get("snapshot").getAsLong());

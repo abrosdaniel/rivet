@@ -50,6 +50,7 @@ public final class ServerMenuClient {
     }
     static void request(String action){if(action.equals("state")){request(stateRequest());return;}var j=new JsonObject();j.addProperty("action",action);request(j);}
 
+    private static boolean skinKeyHeld(){var key=SKINS.getKey();long window=Minecraft.getInstance().getWindow().getWindow();return key.getType()==com.mojang.blaze3d.platform.InputConstants.Type.MOUSE?GLFW.glfwGetMouseButton(window,key.getValue())==GLFW.GLFW_PRESS:key.getValue()>=0&&com.mojang.blaze3d.platform.InputConstants.isKeyDown(window,key.getValue());}
     static void open(){if(!available())return;request("state");Minecraft.getInstance().setScreen(new CommunityScreen(null,"home",""));}
     private static void tick(net.neoforged.neoforge.client.event.ClientTickEvent.Post e){CompatibilityClient.tick();
         var mc=Minecraft.getInstance();if(previewTransport!=null){RivetHud.tick();return;}Object current=mc.getConnection();
@@ -64,7 +65,7 @@ public final class ServerMenuClient {
         }
         if(current!=null){lastServerSupported=available();lastServer=mc.getCurrentServer();}
         if(!available()&&(mc.screen instanceof ServerMenuScreen||mc.screen instanceof ReportScreen))mc.setScreen(null);
-        while(SKINS.consumeClick())if(mc.player!=null&&(mc.screen==null||mc.screen instanceof CommunityScreen||mc.screen instanceof FeatureListScreen||mc.screen instanceof TaskScreen)&&SkinClient.available())mc.setScreen(new QuickSkinsScreen(mc.screen));
+        while(SKINS.consumeClick())if(mc.player!=null&&(mc.screen==null||mc.screen instanceof CommunityScreen||mc.screen instanceof FeatureListScreen||mc.screen instanceof TaskScreen)&&SkinClient.available())mc.setScreen(new QuickSkinsScreen(mc.screen,ServerMenuClient::skinKeyHeld));
         while(OPEN.consumeClick())if(mc.player!=null&&mc.screen==null)open();
 
     }
@@ -102,6 +103,13 @@ public final class ServerMenuClient {
     private static String permissions(JsonObject value){var snapshot=new JsonObject();for(String key:java.util.List.of("admin","staff","authReset","actions","capabilities","communityConfig","modules"))if(value.has(key))snapshot.add(key,value.get(key));if(value.has("profile")){var profile=value.getAsJsonObject("profile");if(profile.has("capabilities"))snapshot.add("profileCapabilities",profile.get("capabilities"));}return snapshot.toString();}
     static boolean supports(String feature){return state.has("features")&&state.getAsJsonArray("features").contains(new JsonPrimitive(feature));}
     static boolean staff(){return admin()||state.has("staff")&&state.get("staff").getAsBoolean();}
+    /** Leave unavailable workspaces without retaining them in Back navigation. */
+    static void leaveDisabledModule(Screen owner){
+        cancelReads(owner);
+        var mc=Minecraft.getInstance();
+        mc.setScreen(new CommunityScreen(null,"home",""));
+        UiNavigation.clear();
+    }
     static boolean module(String id){return !state.has("modules")||!state.getAsJsonObject("modules").has(id)||state.getAsJsonObject("modules").get(id).getAsBoolean();}
     static boolean may(String right){if((right.startsWith("rivet.report")||right.startsWith("rivet.moderat"))&&!module("reports"))return false;if((right.equals("rivet.restart")||right.equals("rivet.maintenance")||right.equals("rivet.announce")||right.equals("rivet.pinAnnouncement"))&&!module("server"))return false;return admin()||state.has("capabilities")&&state.getAsJsonObject("capabilities").has(right)&&state.getAsJsonObject("capabilities").get(right).getAsBoolean();}
     static boolean admin(){return state.has("admin")&&state.get("admin").getAsBoolean();}

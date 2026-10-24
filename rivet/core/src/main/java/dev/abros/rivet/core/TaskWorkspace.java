@@ -117,12 +117,14 @@ public final class TaskWorkspace {
             for (int n = tasks.size() - 1; n >= 0; n--) if (Json.str(tasks.get(n).getAsJsonObject(), "id").equals(id)) tasks.remove(n);
             clearSelection(); undo = null; return new Outcome(true, true, false, false, false);
         }
-        if(reply.has("tasksDelta")){try{reply=reply.deepCopy();reply.add("tasks",RowDelta.apply(tasks,reply.getAsJsonObject("tasksDelta")));}catch(RuntimeException invalid){notice=Messages.text("rivet.core.list_changed_refresh_tasks_38076dd8");listLoaded=false;return new Outcome(true,true,false,false,false);}}
+        if(reply.has("tasksDelta")){try{reply=reply.deepCopy();reply.add("tasks",RowDelta.apply(tasks,reply.getAsJsonObject("tasksDelta")));}catch(RuntimeException invalid){notice=Messages.text("rivet.core.list_changed_refresh_tasks_38076dd8");dirty|=listLoaded;listLoaded=false;return new Outcome(true,true,false,false,false);}}
         if (reply.has("tasks")) {
             boolean create = reply.has("canCreate") && reply.get("canCreate").getAsBoolean();
-            changed = !listLoaded || !tasks.equals(reply.get("tasks")) || !nextCursor.equals(Json.opt(reply, "nextCursor", "")) || canCreate != create;
+            boolean manage = reply.has("canManage") ? reply.get("canManage").getAsBoolean() : create;
+            String reason = Json.opt(reply,"createReason","");
+            changed = !listLoaded || !tasks.equals(reply.get("tasks")) || !nextCursor.equals(Json.opt(reply, "nextCursor", "")) || canCreate != create || canManage != manage || !createReason.equals(reason);
             tasks = reply.getAsJsonArray("tasks").deepCopy(); nextCursor = Json.opt(reply, "nextCursor", "");
-            listLoaded = true; canCreate = create;canManage=reply.has("canManage")?reply.get("canManage").getAsBoolean():create;createReason=Json.opt(reply,"createReason","");
+            listLoaded = true; canCreate = create; canManage = manage; createReason = reason;
             if (id.isEmpty() && selectFirst && !tasks.isEmpty()) { id = Json.str(tasks.get(0).getAsJsonObject(), "id"); changed = true; }
             if (!id.isEmpty()) return new Outcome(true, changed || redraw, false, false, true);
         }

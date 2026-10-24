@@ -25,7 +25,9 @@ final class MapRegionTextures {
     private static final Map<Key,Long> saved=new HashMap<>(),saveRetry=new HashMap<>();
     private static final Set<Key> pending=new HashSet<>();
     private static final Set<Key> previewReads=new LinkedHashSet<>(),previewPending=new HashSet<>();
-    private static long generation;
+    private static long generation,scanStart;
+    private static int scans;
+    private static final Set<Key> scanQueue=new LinkedHashSet<>();
     private static Set<Key> visible=Set.of();
     private static int textureLimit=2048;
     /** Geometric coverage is independent of the asynchronously loaded exploration index. */
@@ -51,15 +53,18 @@ final class MapRegionTextures {
         var missing=coverage(keys).stream().filter(k->!textures.containsKey(k)&&!prepared.containsKey(k)&&!previewReads.contains(k)).limit(capacity).toList();
         if(missing.isEmpty())return;long owner=generation;
         if(!WorldMapClient.previewIo(()->{
-            var read=new LinkedHashMap<Key,int[]>();
-            for(var key:missing)try{repo.previews().read(key.layer(),key.x(),key.z(),key.level()).ifPresent(p->read.put(key,p));}catch(java.io.IOException ignored){}
+            var read=new LinkedHashMap<Key,NativeImage>();
+            for(var key:missing)try{repo.previews().read(key.layer(),key.x(),key.z(),key.level()).ifPresent(p->{
+                var image=new NativeImage(64,64,false);
+                for(int z=0;z<64;z++)for(int x=0;x<64;x++)image.setPixelRGBA(x,z,p[z*64+x]);
+                read.put(key,image);
+            });}catch(java.io.IOException ignored){}
             Minecraft.getInstance().execute(()->{
-                if(owner!=generation)return;
+                if(owner!=generation){read.values().forEach(NativeImage::close);return;}
                 previewPending.removeAll(missing);
                 for(var entry:read.entrySet()){
-                    var key=entry.getKey();if(textures.containsKey(key)||prepared.containsKey(key))continue;
-                    var image=new NativeImage(64,64,false);var pixels=entry.getValue();
-                    for(int z=0;z<64;z++)for(int x=0;x<64;x++)image.setPixelRGBA(x,z,pixels[z*64+x]);
+                    var key=entry.getKey();var image=entry.getValue();
+                    if(textures.containsKey(key)||prepared.containsKey(key)){image.close();continue;}
                     prepared.put(key,new Prepared(image,key.level(),Long.MIN_VALUE,false,MapTerrainCache.styleEpoch()));
                 }
                 while(prepared.size()>512){var oldest=prepared.keySet().iterator().next();prepared.remove(oldest).image().close();previewReads.remove(oldest);}
@@ -77,11 +82,14 @@ final class MapRegionTextures {
         return true;
     }
     static void prepareView(Set<Key> keys){
+        scanStart=System.nanoTime();scans=0;
         visible=coverage(keys);
+        if(!keys.isEmpty())scanQueue.removeIf(k->!k.layer().equals(keys.iterator().next().layer()));
         // Retain a full high-resolution viewport; a 4K view can exceed 2048 small pages.
         textureLimit=Math.clamp(visible.size()+256,2048,8192);
         warm(keys);
-        for(var key:coverage(keys))if((keys.contains(key)&&previewReads.contains(key))||textures.containsKey(key)||prepared.containsKey(key))texture(key,key.level(),keys.contains(key));
+        for(var queued:List.copyOf(scanQueue)){texture(queued,queued.level(),true);if(scans>=8||System.nanoTime()-scanStart>=2_000_000)break;}
+        for(var key:coverage(keys))if((keys.contains(key)&&previewReads.contains(key))||textures.containsKey(key)||prepared.containsKey(key))texture(key,key.level(),keys.contains(key)||scanQueue.contains(key));
     }
     private static boolean preview(Key key){
         var repo=WorldMapClient.ownRepository();if(repo==null||previewReads.contains(key))return previewPending.contains(key);
@@ -115,7 +123,7 @@ final class MapRegionTextures {
     private static Texture texture(Key key,int level,boolean compose){
         if(key.level()!=level)throw new IllegalArgumentException("Region level mismatch");
         var existing=textures.get(key);var ready=prepared.get(key);
-        if(existing==null&&ready==null&&preview(key))return null;
+        if(existing==null&&ready==null&&preview(key)){scanQueue.remove(key);return null;}
         // Disk previews intentionally show the previous view until fresh terrain is composed.
         if(ready!=null&&ready.signature()!=Long.MIN_VALUE&&ready.styleEpoch()!=MapTerrainCache.styleEpoch()){prepared.remove(key);ready.image().close();checked.remove(key);ready=null;}
         if(ready!=null&&MapTerrainCache.uploadAllowed()){
@@ -127,9 +135,14 @@ final class MapRegionTextures {
     while(textures.size()>textureLimit){var oldest=textures.keySet().stream().filter(k->!visible.contains(k)).findFirst().orElseGet(()->textures.keySet().iterator().next());var removed=textures.remove(oldest);checked.remove(oldest);saved.remove(oldest);saveRetry.remove(oldest);Minecraft.getInstance().getTextureManager().release(removed.id());}
         }
         if(existing!=null)persist(key,existing);
-        if(!compose||pending.contains(key)||prepared.containsKey(key)||!WorldMapClient.indexed(key.layer()))return existing;
+        if(!compose||pending.contains(key)||prepared.containsKey(key)||!WorldMapClient.indexed(key.layer())){scanQueue.remove(key);return existing;}
         long stamp=MapTerrainCache.stateRevision()+WorldMapClient.terrainIndexRevision();
-        if(existing!=null&&Objects.equals(checked.get(key),stamp))return existing;
+        if(existing!=null&&Objects.equals(checked.get(key),stamp)){scanQueue.remove(key);return existing;}
+        // Bound source validation as well as uploads; overview pages span thousands of chunks.
+        if(scanQueue.size()>=1024&&!scanQueue.contains(key))return existing;
+        scanQueue.add(key);
+        if(!scanQueue.iterator().next().equals(key)||!MapTerrainCache.canWork()||scans>=8||(scans>0&&System.nanoTime()-scanStart>=2_000_000))return existing;
+        scanQueue.remove(key);scans++;
         int chunks=key.chunks();
         var images=new MapTerrainCache.Image[chunks*chunks];long signature=level;boolean any=false,complete=true;
         for(int z=0;z<chunks;z++)for(int x=0;x<chunks;x++){
@@ -183,6 +196,6 @@ final class MapRegionTextures {
         var matrix=g.pose().last().pose();var vertices=com.mojang.blaze3d.vertex.Tesselator.getInstance().begin(com.mojang.blaze3d.vertex.VertexFormat.Mode.QUADS,com.mojang.blaze3d.vertex.DefaultVertexFormat.POSITION_TEX);
         vertices.addVertex(matrix,left,top,0).setUv(u0,v0);vertices.addVertex(matrix,left,bottom,0).setUv(u0,v1);vertices.addVertex(matrix,right,bottom,0).setUv(u1,v1);vertices.addVertex(matrix,right,top,0).setUv(u1,v0);com.mojang.blaze3d.vertex.BufferUploader.drawWithShader(vertices.buildOrThrow());com.mojang.blaze3d.systems.RenderSystem.disableBlend();
     }
-    static void reset(){generation++;visible=Set.of();textureLimit=2048;for(var texture:textures.values())Minecraft.getInstance().getTextureManager().release(texture.id());textures.clear();for(var image:prepared.values())image.image().close();prepared.clear();pending.clear();checked.clear();saved.clear();saveRetry.clear();previewReads.clear();previewPending.clear();}
+    static void reset(){generation++;scanQueue.clear();visible=Set.of();textureLimit=2048;for(var texture:textures.values())Minecraft.getInstance().getTextureManager().release(texture.id());textures.clear();for(var image:prepared.values())image.image().close();prepared.clear();pending.clear();checked.clear();saved.clear();saveRetry.clear();previewReads.clear();previewPending.clear();}
     private MapRegionTextures(){}
 }

@@ -177,7 +177,7 @@ public final class WorldMapClient {
         if(!write(repo,key,snapshot,v->repo.write(key.layer(),key.x(),key.z(),(MapTile)v)))return false;
         dirty.remove(key);return true;
     }
-    private static void index(MapLayer dimension) {
+    static void index(MapLayer dimension) {
         if(repository!=null&&!indexed.contains(dimension)&&System.currentTimeMillis()>=indexRetries.getOrDefault(dimension,0L)&&indexing.add(dimension)) {
             var repo=repository;var received=receivedRepository;if(!submit(()->{try{var chunks=new HashSet<>(repo.chunks(dimension));chunks.addAll(received.chunks(dimension));Minecraft.getInstance().execute(()->{if(repository==repo){indexing.remove(dimension);indexRetries.remove(dimension);indexed.add(dimension);if(known.computeIfAbsent(dimension,d->new HashSet<>()).addAll(chunks)){knownRevision++;var spatial=knownSpatial.get(dimension);if(spatial!=null)spatial.addAll(chunks);}}});}catch(Exception ex){Minecraft.getInstance().execute(()->{if(repository==repo){indexing.remove(dimension);indexRetries.put(dimension,System.currentTimeMillis()+5000);failed(repo,ex);}});}}))indexing.remove(dimension);
         }
@@ -205,8 +205,11 @@ public final class WorldMapClient {
     public static void changed(BlockPos position){if(!ready())return;var mc=Minecraft.getInstance();String dim=mc.level.dimension().location().toString();int x=position.getX()>>4,z=position.getZ()>>4;
         // Do not commit a half-sampled tile across a block or light update.
         if(scanning!=null&&scanning.dimension().equals(dim)&&scanning.x()==x&&scanning.z()==z)finishScan();
+        var changed=new TileKey(MapCaves.layer(dim),x,z);
+        // Model refresh, visual update and packet delivery may describe the same edit.
+        if(changedChunks.contains(changed))return;
         scanned.keySet().removeIf(k->k.dimension().equals(dim)&&k.x()==x&&k.z()==z);
-        if(changedChunks.size()<4096)changedChunks.add(new TileKey(MapCaves.layer(dim),x,z));}
+        if(changedChunks.size()<4096)changedChunks.add(changed);}
     private static boolean sampleReady(net.minecraft.client.multiplayer.ClientLevel level,int x,int z){
         return !level.getLightEngine().hasLightWork()&&level.hasChunk(x,z)&&!level.getChunk(x,z).isEmpty()
             &&level.getLightEngine().lightOnInSection(net.minecraft.core.SectionPos.of(x,level.getMinSection(),z));

@@ -1,0 +1,80 @@
+package dev.abros.rivet.client;
+
+import com.google.gson.JsonObject;
+import dev.abros.rivet.core.Json;
+import net.minecraft.client.Minecraft;
+import net.minecraft.client.gui.components.*;
+import net.minecraft.client.gui.screens.*;
+import net.minecraft.client.multiplayer.ServerData;
+import net.minecraft.client.multiplayer.resolver.ServerAddress;
+import net.minecraft.network.chat.Component;
+import net.neoforged.api.distmarker.Dist;
+import net.neoforged.bus.api.SubscribeEvent;
+import net.neoforged.fml.common.EventBusSubscriber;
+import java.util.*;
+
+/** Auth UI, real command packets, menu transport, database and live contextual LuckPerms. */
+@EventBusSubscriber(modid="rivet",value=Dist.CLIENT)
+public final class RoleNetworkHarness {
+ private static final String[] ROLES={"visitor","member","assistant","leader","moderator","admin"};
+ private static final String[] MODULES={"groups","tasks","events","reports"};private static final List<VisualMatrixHarness.Frame> MODULE_FRAMES=VisualMatrixHarness.samples(4,0).stream().filter(f->System.getenv("RIVET_ROLE_MODULE_SCENE")==null||MODULES[f.scene()].equals(System.getenv("RIVET_ROLE_MODULE_SCENE"))).toList();private static int moduleIndex,permissionFrame;private static CommunityForm moduleForm;private static int phase=-1,role,checks;private static long deadline,next;private static boolean done,submitted;
+ private static String group="";private static CommunityScreen screen;private static JsonObject detail;private static Probe probe;
+ static final class Probe extends Screen implements CommunityScreen.Receiver{JsonObject response;String correlation;void send(JsonObject q){correlation=UUID.randomUUID().toString();q.addProperty("request",correlation);ServerMenuClient.request(q);}Probe(){super(Component.literal("Network permission probe"));}public void receiveCommunity(JsonObject j){if(Objects.equals(correlation,Json.opt(j,"request","")))response=j;}}
+ private static void check(boolean value,String message){checks++;if(!value)throw new AssertionError(message);}
+ private static Object field(Object value,String name)throws Exception{var f=value.getClass().getDeclaredField(name);f.setAccessible(true);return f.get(value);}
+ private static String ready(String mode){var mc=Minecraft.getInstance();for(var m:((dev.abros.rivet.mixin.ChatHistoryAccessor)mc.gui.getChat()).rivet$messages()){String s=m.content().getString();if(s.startsWith("ROLE_FAILED"))throw new AssertionError(s);if(s.startsWith("ROLE_READY "+mode+" "))return s.substring(("ROLE_READY "+mode+" ").length());}return null;}
+ private static void command(String value){Minecraft.getInstance().player.connection.sendCommand(value);next=System.currentTimeMillis()+900;}
+ private static void press(String key){String label=Client.text(key);var found=Minecraft.getInstance().screen.children().stream().filter(c->c instanceof Button b&&b.active&&b.getMessage().getString().equals(label)).map(c->(Button)c).findFirst();check(found.isPresent(),"Missing button "+label);found.orElseThrow().onPress();}
+ private static void write(){var mc=Minecraft.getInstance();probe=new Probe();mc.setScreen(probe);var q=new JsonObject();q.addProperty("action","community");q.addProperty("section","groups");q.addProperty("op","recruiting");q.addProperty("id",group);q.add("revision",detail.get("revision"));probe.send(q);}
+ @SubscribeEvent public static void tick(net.neoforged.neoforge.client.event.ClientTickEvent.Post event){String address=System.getenv("RIVET_ROLE_NETWORK_ADDRESS");if(address==null||done)return;var mc=Minecraft.getInstance();try{
+  if(phase<0){if(!(mc.screen instanceof TitleScreen))return;deadline=System.currentTimeMillis()+480000;ConnectScreen.startConnecting(mc.screen,mc,ServerAddress.parseString(address),new ServerData("Role network test",address,ServerData.Type.OTHER),false,null);phase=0;return;}
+  if(System.currentTimeMillis()>deadline)throw new AssertionError("Timeout phase="+phase+" role="+role+" screen="+(mc.screen==null?"none":mc.screen.getClass().getSimpleName()));
+  if(mc.screen instanceof AuthScreen auth&&!submitted){for(var c:auth.children())if(c instanceof EditBox box)box.setValue("role network test password");((Button)field(auth,"submit")).onPress();submitted=true;return;}
+  if(!WorldMapClient.ready()||!WorldMapClient.markersReady()||mc.player==null||System.currentTimeMillis()<next)return;next=System.currentTimeMillis()+150;
+  switch(phase){
+   case 0->{var authenticated=AuthClient.class.getDeclaredField("authenticated");authenticated.setAccessible(true);check(authenticated.getBoolean(null),"Not authenticated through Auth");check(ServerMenuClient.previewTransport==null,"Synthetic transport enabled");command("roleFixture "+ROLES[role]);phase=1;}
+   case 1->{String id=ready(ROLES[role]);if(id==null)return;group=id;boolean admin=role==5;if(ServerMenuClient.admin()!=admin)return;screen=new CommunityScreen(null,"groups",group);screen.groupTab="tasks";mc.setScreen(screen);phase=2;}
+   case 2->{if(!screen.data.has("detail"))return;detail=screen.data.getAsJsonObject("detail");boolean member=role>=1&&role<=3,manager=role==2||role==3||role==5;check(Json.opt(detail,"myRole","").equals(role==3?"leader":role==2?"assistant":role==1?"member":""),"Server own role "+ROLES[role]);check(detail.get("manage").getAsBoolean()==manager,"Group management "+ROLES[role]);check(screen.groupTab.equals(member||role==5?"tasks":"overview"),"Private tab leaked "+ROLES[role]);UiGeometryHarness.verify(screen);write();phase=3;next=System.currentTimeMillis()+700;}
+   case 3->{if(probe.response==null)return;boolean manager=role==2||role==3||role==5;check(probe.response.has("error")!=manager,"Write authorization mismatch "+ROLES[role]+": "+probe.response);if(manager)detail=probe.response.getAsJsonObject("detail");
+    if(role==0){command("rivet auth rename RenameBefore RenameAfter");phase=4;}else if(role==4){check(!ServerMenuClient.admin()&&MenuSidebar.sections().contains("admin"),"Reports-only moderator access");mc.setScreen(new ReportQueueScreen(null,"all"));phase=7;}else phase=8;
+   }
+   case 4->{command("roleFixture verifyDenied");phase=5;}
+   case 5->{if(ready("verifyDenied")==null)return;check(true,"Non-admin rename denied");phase=8;}
+   case 7->{if((boolean)field(mc.screen,"busy"))return;check(!(boolean)field(mc.screen,"failed"),"Moderator report load: "+field(mc.screen,"notice"));UiGeometryHarness.verify(mc.screen);phase=8;}
+   case 8->{System.out.println("RIVET_ROLE_NETWORK_ROLE_OK "+ROLES[role]);if(++role<ROLES.length){phase=0;break;}mc.setScreen(new WorldMapScreen(null));press("map.markers");press("map.myPublications");check(mc.screen instanceof MapPublicationsScreen,"Personal publication entry");phase=9;}
+   case 9->{if(!(boolean)field(mc.screen,"loaded")||(boolean)field(mc.screen,"busy"))return;check((boolean)field(mc.screen,"mine"),"Admin personal queue is not author-scoped");mc.screen.onClose();check(mc.screen instanceof WorldMapScreen,"Publication return");mc.setScreen(new ServerMenuScreen(null,"admin"));phase=20;}
+   case 20->{var menu=mc.screen;var entry=menu.children().stream().filter(c->c instanceof Button b&&b.active&&b.getMessage().getString().startsWith(Client.text("map.publications")+".")).map(c->(Button)c).findFirst();check(entry.isPresent(),"Admin publication entry missing");entry.orElseThrow().onPress();check(mc.screen instanceof MapPublicationsScreen,"Admin publication route");phase=21;}
+   case 21->{if(!(boolean)field(mc.screen,"loaded")||(boolean)field(mc.screen,"busy"))return;check(!(boolean)field(mc.screen,"mine")&&!(boolean)field(mc.screen,"loadFailed"),"Moderation queue scope/load");UiGeometryHarness.verify(mc.screen);mc.screen.onClose();check(mc.screen instanceof ServerMenuScreen,"Moderation return");command("rivet auth rename RenameBefore RenameOccupied");phase=10;}
+   case 10->{command("roleFixture verifyConflict");phase=11;}
+   case 11->{if(ready("verifyConflict")==null)return;command("rivet auth rename RivetMapTest OnlineRenamed");phase=12;}
+   case 12->{command("roleFixture verifyOnline");phase=13;}
+   case 13->{if(ready("verifyOnline")==null)return;command("rivet auth rename RenameBefore RenameAfter");phase=14;next=System.currentTimeMillis()+2500;}
+   case 14->{command("roleFixture verifyRename");phase=15;}
+   case 15->{if(ready("verifyRename")==null)return;screen=new CommunityScreen(null,"groups",group);screen.groupTab="requests";mc.setScreen(screen);phase=16;}
+   case 16->{if(!screen.data.has("detail"))return;detail=screen.data.getAsJsonObject("detail");mc.setScreen(new ChoicePopup(screen,"Permission change",List.of("Keep open"),n->{}));command("roleFixture revoke");phase=17;}
+   case 17->{if(ready("revoke")==null||ServerMenuClient.admin())return;mc.screen.onClose();phase=19;next=System.currentTimeMillis()+1500;}
+   case 30->{String id=ready("eventVisitor");if(id==null)return;screen=new CommunityScreen(null,"events",id);mc.setScreen(screen);phase=31;}
+   case 31->{if(!screen.data.has("detail"))return;boolean found=false;for(int row:List.of(0,4,8,12)){screen.revealRow(row);screen.rebuildWidgets();var button=screen.children().stream().filter(c->c instanceof Button b&&b.active&&b.getMessage().getString().equals(Client.text("flow.joinWaitlist"))).map(c->(Button)c).findFirst();if(button.isPresent()){button.orElseThrow().onPress();found=true;break;}}check(found,"Live full event waitlist action");phase=32;}
+   case 32->{if(!screen.data.getAsJsonObject("detail").get("isParticipant").getAsBoolean())return;check(screen.data.getAsJsonObject("detail").get("waitlistPosition").getAsInt()==1,"Waitlist position");command("roleFixture eventOwner");phase=33;}
+   case 33->{String id=ready("eventOwner");if(id==null)return;screen=new CommunityScreen(null,"events",id);mc.setScreen(screen);phase=34;}
+   case 34->{if(!screen.data.has("detail"))return;check(!ServerMenuClient.admin(),"Organizer is admin");detail=screen.data.getAsJsonObject("detail");probe=new Probe();mc.setScreen(probe);var q=new JsonObject();q.addProperty("action","community");q.addProperty("section","events");q.addProperty("op","cancel");q.addProperty("id",Json.str(detail,"id"));q.addProperty("reason","Live organizer cancellation");q.add("revision",detail.get("revision"));probe.send(q);phase=35;}
+   case 35->{if(probe.response==null)return;check(!probe.response.has("error")&&Json.str(probe.response.getAsJsonObject("detail"),"status").equals("cancelled"),"Organizer cancellation: "+probe.response);if(System.getenv("RIVET_PERMISSION_EDIT_TEST")!=null){command("roleFixture permissionSetup");phase=60;}else{command("roleFixture prepareModules");phase=39;}}
+   case 60->{if(ready("permissionSetup")==null)return;mc.setScreen(new RolePreviewScreen(null));phase=61;}
+   case 61->{if((boolean)field(mc.screen,"busy"))return;var roles=(com.google.gson.JsonArray)field(mc.screen,"roles");int selected=-1;for(int i=0;i<roles.size();i++)if(Json.str(roles.get(i).getAsJsonObject(),"name").equals("rivet_test"))selected=i;check(selected>=0,"Test role missing");var f=RolePreviewScreen.class.getDeclaredField("selected");f.setAccessible(true);f.setInt(mc.screen,selected);var editor=(RolePreviewScreen)mc.screen;editor.restoreScroll(5);editor.rebuildWidgets();var button=editor.children().stream().filter(c->c instanceof Button b&&b.active&&b.getMessage().getString().startsWith(Client.text("permissions.map.seeHiddenPlayers"))).map(c->(Button)c).findFirst().orElseThrow();button.onPress();phase=62;}
+   case 62->{check(mc.screen instanceof ChoicePopup,"Permission choices");press("permissions.true");phase=63;}
+   case 63->{check(mc.screen instanceof UiConfirmDialog,"Permission confirmation");press("ui.confirm_0467ae4b");phase=64;}
+   case 64->{if((boolean)field(mc.screen,"busy"))return;var roles=(com.google.gson.JsonArray)field(mc.screen,"roles");boolean saved=roles.asList().stream().anyMatch(e->Json.str(e.getAsJsonObject(),"name").equals("rivet_test")&&Json.opt(e.getAsJsonObject().getAsJsonObject("direct"),"rivet.map.seeHiddenPlayers","").equals("true"));if(!saved)return;command("roleFixture permissionCheck");phase=65;}
+   case 65->{if(ready("permissionCheck")==null||(boolean)field(mc.screen,"busy"))return;var roles=(com.google.gson.JsonArray)field(mc.screen,"roles");boolean external=roles.asList().stream().anyMatch(e->Json.str(e.getAsJsonObject(),"name").equals("rivet_test")&&Json.opt(e.getAsJsonObject().getAsJsonObject("direct"),"rivet.map.seeHiddenPlayers","").equals("false"));if(!external)return;phase=66;}
+   case 66->{var frames=VisualMatrixHarness.samples(1,0);if(permissionFrame>=frames.size()){System.out.println("RIVET_ROLE_NETWORK_OK permissions=true externalRefresh=true frames="+permissionFrame+" checks="+checks);done=true;mc.stop();break;}frames.get(permissionFrame).apply();mc.screen.resize(mc,mc.getWindow().getGuiScaledWidth(),mc.getWindow().getGuiScaledHeight());next=System.currentTimeMillis()+350;phase=67;}
+   case 67->{UiGeometryHarness.verify(mc.screen);permissionFrame++;phase=66;}
+   case 39->{if(!ServerMenuClient.admin())return;phase=40;}
+   case 40->{var frame=MODULE_FRAMES.get(moduleIndex);frame.apply();String module=MODULES[frame.scene()];moduleForm=null;Screen parent=module.equals("tasks")?new TaskScreen(null,"",""):module.equals("reports")?new ReportQueueScreen(null,"all"):new CommunityScreen(null,module,"");mc.setScreen(parent);if(module.equals("events")){var values=new JsonObject();values.addProperty("title","Preserved module draft");moduleForm=new CommunityForm((CommunityScreen)parent,"Module draft","create",List.of(new CommunityScreen.Field("title","Title",100)),values,v->{});mc.setScreen(moduleForm);}else mc.setScreen(new ChoicePopup(parent,"Module transition",List.of("Open"),n->{}));command("roleFixture disable_"+module);phase=41;}
+   case 41->{String module=MODULES[MODULE_FRAMES.get(moduleIndex).scene()];if(ready("disable_"+module)==null||ServerMenuClient.module(module))return;next=System.currentTimeMillis()+700;phase=42;}
+   case 42->{String module=MODULES[MODULE_FRAMES.get(moduleIndex).scene()];check(module.equals("reports")?!(mc.screen instanceof ChoicePopup)&&!(mc.screen instanceof ReportQueueScreen):mc.screen instanceof CommunityScreen c&&c.section.equals("home"),"Disabled module window remains: "+module);if(moduleForm!=null){var drafts=(dev.abros.rivet.core.DraftStore)field(moduleForm,"drafts");var saved=drafts.load((String)field(moduleForm,"server"),(String)field(moduleForm,"account"),(String)field(moduleForm,"draftKey"));check(Json.opt(saved,"title","").equals("Preserved module draft"),"Disabled form lost draft");}probe=new Probe();mc.setScreen(probe);var q=new JsonObject();q.addProperty("action",module.equals("reports")?"reports":"community");q.addProperty("section",module.equals("tasks")?"home":module);q.addProperty("op",module.equals("tasks")?"workList":"list");probe.send(q);phase=44;}
+   case 44->{if(probe.response==null)return;check(probe.response.has("error"),"Disabled module request accepted: "+probe.response);command("roleFixture restoreModules");phase=43;}
+   case 43->{if(!ServerMenuClient.module(MODULES[MODULE_FRAMES.get(moduleIndex).scene()]))return;if(++moduleIndex<MODULE_FRAMES.size()){phase=40;break;}System.out.println("RIVET_ROLE_NETWORK_OK checks="+checks+" roles=8 moduleFrames="+moduleIndex+" auth=true realTransport=true revoked=true");done=true;mc.stop();}
+   case 19->{if(screen.data.has("detail")&&screen.data.getAsJsonObject("detail").get("manage").getAsBoolean())throw new AssertionError("Revoked management remains visible after popup closes");check(screen.groupTab.equals("overview"),"Revoked requests tab remains visible");write();phase=18;next=System.currentTimeMillis()+700;}
+   case 18->{if(probe.response==null)return;check(probe.response.has("error"),"Revoked admin still mutates");command("roleFixture eventVisitor");phase=30;}
+  }
+ }catch(Throwable failure){System.out.println("RIVET_ROLE_NETWORK_FAILED phase="+phase+" role="+role);failure.printStackTrace();done=true;mc.stop();}}
+}
