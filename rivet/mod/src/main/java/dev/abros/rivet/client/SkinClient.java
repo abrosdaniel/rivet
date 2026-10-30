@@ -58,9 +58,27 @@ public final class SkinClient {
  static ResourceLocation texture(String hash){if(!hash.matches("[0-9a-f]{64}"))return null;var found=textures.get(hash);if(found==null&&(fetching.containsKey(hash)||fetching.size()<64)&&available()&&System.currentTimeMillis()-fetching.getOrDefault(hash,0L)>15000){fetching.put(hash,System.currentTimeMillis());incoming.remove(hash);int generation=epoch;var path=cache().resolve(hash+".png");DISK.execute(()->{byte[] cached=null;try{if(java.nio.file.Files.size(path)<=1024*1024){var bytes=java.nio.file.Files.readAllBytes(path);if(Hashes.sha256(bytes).equals(hash))cached=bytes;}}catch(Exception ignored){}final byte[] data=cached;Minecraft.getInstance().execute(()->{if(generation!=epoch)return;if(data!=null)try{register(hash,data);fetching.remove(hash);return;}catch(Exception ignored){}var j=new JsonObject();j.addProperty("op","blob");j.addProperty("hash",hash);send(j);});});}return found;}
  public static java.util.concurrent.CompletableFuture<Optional<com.mojang.authlib.GameProfile>> resolveProfile(String name,UUID id,java.util.concurrent.CompletableFuture<Optional<com.mojang.authlib.GameProfile>> original){
   var mc=Minecraft.getInstance();if(!mc.isSameThread()||!available()||!dev.abros.rivet.network.Protocol.supportedFeatures.contains("skin-profile-resolution"))return original;
-  String key=id==null?"name:"+name.toLowerCase(Locale.ROOT):"id:"+id;
-  return identities.resolve(key,System.currentTimeMillis(),(ignored,request)->{var packet=new JsonObject();packet.addProperty("op","resolveProfile");packet.addProperty("request",request);if(id==null)packet.addProperty("name",name);else packet.addProperty("owner",id.toString());send(packet);}).thenCompose(identity->identity.isPresent()?java.util.concurrent.CompletableFuture.completedFuture(Optional.of(new com.mojang.authlib.GameProfile(identity.get().id(),identity.get().name()))):original);
+  return lookupIdentity(name,id).thenCompose(identity->identity.isPresent()?java.util.concurrent.CompletableFuture.completedFuture(Optional.of(new com.mojang.authlib.GameProfile(identity.get().id(),identity.get().name()))):original);
  }
+ private static java.util.concurrent.CompletableFuture<Optional<dev.abros.rivet.core.skins.SkinProfileLookup.Identity>> lookupIdentity(String name,UUID id){
+  String key=id==null?"name:"+name.toLowerCase(Locale.ROOT):"id:"+id;
+  return identities.resolve(key,System.currentTimeMillis(),(ignored,request)->{var packet=new JsonObject();packet.addProperty("op","resolveProfile");packet.addProperty("request",request);if(id==null)packet.addProperty("name",name);else packet.addProperty("owner",id.toString());send(packet);});
+ }
+ /** Heads may already carry a resolved vanilla/default UUID. Never block rendering or trust that UUID by itself. */
+ public static PlayerSkin headSkin(com.mojang.authlib.GameProfile profile){
+  var fallback=vanillaSkin(profile);
+  // Explicit texture-bearing decorations must not turn into the account's current skin.
+  if(profile.getProperties().containsKey("textures")&&!profile.getProperties().containsKey("rivet:head_account")||!Minecraft.getInstance().isSameThread()||!available()||!dev.abros.rivet.network.Protocol.supportedFeatures.contains("skin-profile-resolution"))return fallback;
+  Optional<dev.abros.rivet.core.skins.SkinProfileLookup.Identity> identity=Optional.empty();
+  if(profile.getId()!=null&&!profile.getId().equals(net.minecraft.Util.NIL_UUID)){
+   var byId=lookupIdentity("",profile.getId());
+   if(!byId.isDone())return skin(profile.getId(),fallback);
+   identity=byId.getNow(Optional.empty());
+  }
+  if(identity.isEmpty()&&dev.abros.rivet.core.auth.AuthStore.validName(profile.getName()))identity=lookupIdentity(profile.getName(),null).getNow(Optional.empty());
+  return skin(identity.map(dev.abros.rivet.core.skins.SkinProfileLookup.Identity::id).orElse(profile.getId()),fallback);
+ }
+
  public static PlayerSkin skin(UUID owner,PlayerSkin original){if(owner==null||vanillaLookup.get()||!Minecraft.getInstance().isSameThread()||!available())return original;long now=System.currentTimeMillis();if(outgoing.size()<128&&(now-requested.getOrDefault(owner,0L)>60000||awaitingAppearance.containsKey(owner)&&now-awaitingAppearance.get(owner)>5000)){requested.put(owner,now);awaitingAppearance.put(owner,now);while(requested.size()>1024){UUID first=requested.keySet().iterator().next();requested.remove(first);awaitingAppearance.remove(first);}var j=new JsonObject();j.addProperty("op","appearance");j.addProperty("owner",owner.toString());send(j);}var p=profiles.get(owner);if(p==null)return original;String hash=Json.opt(p,"hash","");if(hash.isEmpty())return original;var texture=texture(hash);return texture==null?original:new PlayerSkin(texture,null,null,null,p.get("slim").getAsBoolean()?PlayerSkin.Model.SLIM:PlayerSkin.Model.WIDE,false);}
  private static void completeAwaited(){
   if(awaited.isEmpty())return;long now=System.currentTimeMillis();var ready=new ArrayList<Awaited>();

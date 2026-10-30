@@ -73,3 +73,11 @@ checks or repeat successful checks without a reason.
 When templates/resources change, force resource generation and test execution
 before packaging. Check generated resource content against tracked source; stale
 build resources must not hide failures that fresh CI checkouts will expose.
+
+# Regression scope
+
+For user-visible regressions, exercise the actual consumer path (for example the
+head renderer, not just a successful skin-cache lookup). Include persisted state
+and reconnect when relevant. A fixture passing a lower-level API alone is not
+proof that the reported user flow works; distinguish reproduced cases from
+uninspected production state.

@@ -10,5 +10,5 @@ import org.spongepowered.asm.mixin.injection.*;
 @Mixin(SkullBlockRenderer.class)
 abstract class SkullTextureMixin {
  @Redirect(method="getRenderType",at=@At(value="INVOKE",target="Lnet/minecraft/client/resources/SkinManager;getInsecureSkin(Lcom/mojang/authlib/GameProfile;)Lnet/minecraft/client/resources/PlayerSkin;"))
- private static PlayerSkin rivet$texture(SkinManager manager,GameProfile profile){return profile.getProperties().containsKey("textures")?SkinClient.vanillaSkin(profile):manager.getInsecureSkin(profile);}
+ private static PlayerSkin rivet$texture(SkinManager manager,GameProfile profile){return SkinClient.headSkin(profile);}
 }
