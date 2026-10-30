@@ -43,5 +43,18 @@ class MapNetwork(unittest.TestCase):
             self.assertEqual(15439, config['database']['port'])
             self.assertEqual('', config['database']['password'])
             ops = json.loads((work / 'server/ops.json').read_text())
-            self.assertEqual(['RivetMapTest'], [p['name'] for p in ops])
+            # Realtime has a separate identity so its notices cannot contaminate
+            # the following map overlay/pixel checks. Only these fixtures are OP.
+            self.assertEqual(['RivetMapTest', 'RivetDataTest'], [p['name'] for p in ops])
+            import hashlib
+            import uuid
+            for operator in ops:
+                identity = uuid.UUID(bytes=hashlib.md5(('OfflinePlayer:' + operator['name']).encode()).digest(), version=3)
+                self.assertEqual(str(identity), operator['uuid'])
+                self.assertEqual(4, operator['level'])
+            realtime = next(s for s in m.SCENARIOS if s[0] == 'realtime')
+            self.assertEqual('RivetDataTest', realtime[2])
+            self.assertNotIn(realtime[2], [s[2] for s in m.SCENARIOS if s[0] != 'realtime'])
+            for scenario in m.SCENARIOS:
+                self.assertRegex(scenario[2], r'^[A-Za-z0-9_]{1,16}$')
             self.assertNotIn('RivetMapGuest', (work / 'server/ops.json').read_text())
