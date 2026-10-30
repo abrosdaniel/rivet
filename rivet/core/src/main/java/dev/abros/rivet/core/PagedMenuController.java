@@ -31,7 +31,7 @@ public final class PagedMenuController {
     public JsonObject reply() { return reply.deepCopy(); }
     public void invalidate() { if (dirtyAt == 0) dirtyAt = clock.getAsLong(); }
     public boolean refreshDue() { return !busy && !failed && window.refreshDue(clock.getAsLong()); }
-    public boolean dirtyDue() { return !busy && !failed && dirtyAt > 0 && clock.getAsLong() - sent > 750; }
+    public boolean dirtyDue() { return !busy && !failed && dirtyAt > 0 && clock.getAsLong() - sent >= 550; }
     public boolean nextAllowed() { return !busy && !failed && more() && !window.refreshing() && clock.getAsLong() - sent > 600; }
     public void reset() { if (busy) return; window.reset(); entries = new JsonArray(); page = 0; dirtyAt = 0; }
     public void refresh() { if (busy) return; window.refresh(); dirtyAt = 0; page = 0; }

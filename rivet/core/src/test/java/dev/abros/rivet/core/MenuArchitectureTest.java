@@ -19,6 +19,26 @@ class MenuArchitectureTest {
         assertTrue(queue.dispatch(549,owner).isEmpty());
         assertEquals("background",Json.str(queue.dispatch(550,owner).getFirst(),"request"));
     }
+    @Test void negotiatedMapReadsDoNotBlockMenuAndEachLaneRemainsThrottled() {
+        for(boolean negotiated:new boolean[]{false,true}){
+            var queue=new MenuTransport<Object>();queue.pageDeltas(negotiated);var owner=new Object();
+            var positions=read("positions");positions.addProperty("op","groupMap");
+            queue.enqueue(positions,null,true,0);assertEquals(1,queue.dispatch(0,owner).size());
+            queue.enqueue(read("menu"),owner,false,1);
+            assertEquals(negotiated?1:0,queue.dispatch(1,owner).size());
+            positions.addProperty("request","positions2");queue.enqueue(positions,null,true,2);
+            assertTrue(queue.dispatch(549,owner).isEmpty());
+            assertEquals(1,queue.dispatch(550,owner).size());
+        }
+    }
+    @Test void mapLanesAreBoundedAndDoNotBypassMutationLimits() {
+        for(String op:List.of("groupMap","mapActivities","mapObjects","toolsPlaces"))for(int i=0;i<100;i++){
+            var query=read("request"+i);query.addProperty("op",op);query.addProperty("id","object"+i);
+            assertEquals("mapData",MenuRequestLane.key(query,true));assertEquals("community",MenuRequestLane.key(query,false));
+        }
+        var write=read("write");write.addProperty("op","mapObjectSave");assertEquals("community",MenuRequestLane.key(write,true));
+        write.addProperty("op","untrustedRead");assertEquals("community",MenuRequestLane.key(write,true));
+    }
     @Test void invalidationDuringReadSurvivesResponseAndTriggersRefresh() {
         var now=new AtomicLong(1);var sent=new ArrayList<JsonObject>();
         var model=new CommunityWorkspace("board","",sent::add,now::get);

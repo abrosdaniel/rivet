@@ -29,7 +29,7 @@ Rivet — мод для Minecraft с NeoForge. Он устанавливает �
 - Серверный рендер поверхности, пещер и изометрической карты.
 
 Интеграции с LuckPerms, Plasmo Voice, Simple Voice Chat, Waystones, Create: Access Denied,
-Create: Numismatics и spark
+Create: Numismatics, Envelope и spark
 подключаются автоматически при наличии совместимого мода.
 [Возможности и проверенные версии](docs/server/integrations.md).
 Сборку публикует сервер Rivet; игрок получает её при подключении.

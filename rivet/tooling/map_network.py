@@ -13,7 +13,10 @@ from module_smoke import configuration
 
 LP_URL = "https://cdn.modrinth.com/data/Vebnzrzj/versions/dKAPoPGd/LuckPerms-NeoForge-5.4.150.jar"
 LP_SHA = "26de0e74d87b91acf3b71050ed1880a50ffd1809b3a1309a2e24bee5413193f27a5056e13b69d8f39085e28711244c02bc5fc329be13174abb520008a0ca9682"
+REALTIME_PLAYER = "RivetDataTest"
 SCENARIOS = (
+    ("realtime", "RIVET_REALTIME_ADDRESS", REALTIME_PLAYER, "RIVET_REALTIME_OK", 240),
+    ("skins", "RIVET_OFFLINE_HEAD_ADDRESS", "RivetMapTest", "RIVET_OFFLINE_HEAD_OK", 180),
     ("integrations", "RIVET_MAP_INTEGRATION_ADDRESS", "RivetMapTest", "RIVET_MAP_INTEGRATION_OK", 180),
     ("notifications", "RIVET_NOTIFICATION_ADDRESS", "RivetMapTest", "RIVET_NOTIFICATIONS_OK", 240),
     ("terrain", "RIVET_MAP_TERRAIN_ADDRESS", "RivetMapTest", "RIVET_TERRAIN_OK", 300),
@@ -69,7 +72,9 @@ def prepare(root, work, db_port, db_name, game_port):
     (server / "server.properties").write_text(f"server-ip=127.0.0.1\nserver-port={game_port}\nonline-mode=false\ngamemode=creative\nlevel-seed=424242\nview-distance=3\nsimulation-distance=3\nspawn-protection=0\n")
     player = "RivetMapTest"
     identity = uuid.UUID(bytes=hashlib.md5(("OfflinePlayer:" + player).encode()).digest(), version=3)
-    (server / "ops.json").write_text(json.dumps([dict(uuid=str(identity), name=player, level=4, bypassesPlayerLimit=True)]))
+    realtime = REALTIME_PLAYER
+    realtime_id = uuid.UUID(bytes=hashlib.md5(("OfflinePlayer:" + realtime).encode()).digest(), version=3)
+    (server / "ops.json").write_text(json.dumps([dict(uuid=str(identity), name=player, level=4, bypassesPlayerLimit=True), dict(uuid=str(realtime_id), name=realtime, level=4, bypassesPlayerLimit=True)]))
     (client / "options.txt").write_text("onboardAccessibility:false\nlang:ru_ru\nguiScale:2\npauseOnLostFocus:false\n")
     base = str(work / "build").replace("\\", "\\\\").replace("'", "\\'")
     init = work / "runs.init.gradle"
@@ -92,12 +97,15 @@ def command(work, java, side):
     return [java, "@" + str(cp), "@" + str(dev / (side + "RunVmArgs.txt")), "@" + str(dev / (side + "RunProgramArgs.txt"))]
 
 def main():
+    if any(not re.fullmatch(r"[A-Za-z0-9_]{1,16}", scenario[2]) for scenario in SCENARIOS):
+        raise ValueError("Scenario player name must be valid for Minecraft (1–16 characters)")
     parser = argparse.ArgumentParser()
     parser.add_argument("work", type=Path)
     parser.add_argument("--database-port", type=int, default=5432)
     parser.add_argument("--database", default="rivet_test")
     parser.add_argument("--game-port", type=int, default=25579)
     parser.add_argument("--scenario", choices=[s[0] for s in SCENARIOS], action="append")
+    parser.add_argument("--auth", action="store_true", help="Exercise scenarios with Rivet Auth base")
     parser.add_argument("--ingress-cycles", type=int, default=1)
     args = parser.parse_args()
     if not 1 <= args.ingress_cycles <= 50:
@@ -106,10 +114,16 @@ def main():
     work = args.work.resolve()
     work.mkdir(parents=True, exist_ok=True)
     init = prepare(root, work, args.database_port, args.database, args.game_port)
+    if args.auth:
+        config = work / "server/config/rivet-server.toml"
+        config.write_text(re.sub(r'^mode = "false"$', 'mode = "base"', config.read_text(), flags=re.M))
     with (work / "prepare.log").open("w") as log:
         subprocess.run([str(root / "gradlew"), "-I", str(init), "--project-cache-dir", str(work / "gradle"), "-PrivetUiHarness", ":mod:classes", ":mod:compileUiHarnessJava", ":mod:prepareClientRun", ":mod:prepareServerRun", "--no-daemon", "--console=plain"], cwd=root, stdout=log, stderr=subprocess.STDOUT, check=True, timeout=900)
     download_lp(work / "server/mods/LuckPerms-NeoForge-5.4.150.jar")
     env = os.environ.copy()
+    env["RIVET_REALTIME_FIXTURE"] = "true" if not args.scenario or "realtime" in args.scenario else "false"
+    env["RIVET_OFFLINE_HEAD_FIXTURE"] = "true" if not args.scenario or "skins" in args.scenario else "false"
+    env["RIVET_NOTIFICATION_FIXTURE"] = "true" if not args.scenario or "notifications" in args.scenario else "false"
     env["MOD_CLASSES"] = os.pathsep.join("rivet%%" + str(work / "build" / part) for part in ("mod/classes/java/main", "mod/resources/main", "mod/classes/java/uiHarness", "core/classes/java/main", "core/resources/main", "api/classes/java/main"))
     java = str(Path(env["JAVA_HOME"]) / "bin/java") if "JAVA_HOME" in env else "java"
     address = "127.0.0.1:" + str(args.game_port)

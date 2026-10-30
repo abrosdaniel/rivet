@@ -13,6 +13,11 @@ public final class MenuTransport<O> {
     private final Map<String, Long> dispatched = new LinkedHashMap<>();
     private final Map<String, Read<O>> reads = new LinkedHashMap<>();
     private final MenuReadCache cache = new MenuReadCache();
+    private record DeltaRead<O>(Read<O> read,JsonObject baseline,boolean retried){}
+    private final Map<String,DeltaRead<O>> deltaReads=new LinkedHashMap<>();
+    private final MenuReadCache baselines=new MenuReadCache();
+    private boolean pageDeltas;
+    public void pageDeltas(boolean enabled){pageDeltas=enabled;if(!enabled)baselines.clear();}
 
     public boolean enqueue(JsonObject packet, O owner, boolean background, long now) {
         var prepared = MenuCommands.prepare(packet, now);
@@ -39,6 +44,9 @@ public final class MenuTransport<O> {
         return true;
     }
     public List<JsonObject> dispatch(long now, O currentOwner) {
+        reads.values().removeIf(read -> now - read.at >= READ_TIMEOUT);
+        deltaReads.values().removeIf(read -> now-read.read.at>=READ_TIMEOUT);
+        if (outbound.isEmpty()) return List.of();
         var ready = new ArrayList<JsonObject>();
         // Prefer the visible interaction over periodic background reads, preserving write order.
         var ordered = new ArrayList<>(outbound);
@@ -50,18 +58,40 @@ public final class MenuTransport<O> {
             if (queued.read && (queued.owner != null && queued.owner != currentOwner || now - queued.at >= READ_TIMEOUT)) {
                 iterator.remove(); forget(queued.packet); continue;
             }
-            String action = Json.opt(queued.packet, "action", "");
+            String action = MenuRequestLane.key(queued.packet,pageDeltas);
             if (now - dispatched.getOrDefault(action, -ACTION_INTERVAL) < ACTION_INTERVAL) continue;
             iterator.remove(); dispatched.put(action, now);
             while (dispatched.size() > CAPACITY) dispatched.remove(dispatched.keySet().iterator().next());
-            ready.add(queued.packet.deepCopy());
+            var packet=queued.packet.deepCopy();
+            if(pageDeltas&&queued.read&&MenuPageDelta.eligible(packet)&&packet.has("request")){
+                String request=Json.str(packet,"request");var prior=deltaReads.get(request);
+                var baseline=prior!=null&&prior.retried?null:baselines.get(packet,now);var known=MenuPageDelta.known(baseline);
+                if(known!=null)packet.add("knownPage",known);
+                deltaReads.put(request,new DeltaRead<>(prior!=null&&prior.retried?prior.read:new Read<>(queued.packet,queued.owner,now),baseline,prior!=null&&prior.retried));
+                while(deltaReads.size()>CAPACITY)deltaReads.remove(deltaReads.keySet().iterator().next());
+            }
+            ready.add(packet);
+            PerformanceMetrics.record("client.menu.queue",Math.max(0,now-queued.at)*1000000L,false);
         }
-        reads.values().removeIf(read -> now - read.at >= READ_TIMEOUT);
         return List.copyOf(ready);
     }
-    public void receive(JsonObject reply, long now) {
+    public JsonObject receive(JsonObject reply, long now) {
+        String request=Json.opt(reply,"request","");var delta=deltaReads.remove(request);
+        if(reply.has("pageDelta")){
+            if(delta==null||now-delta.read.at>=READ_TIMEOUT)return null; // Closed/expired connection or an unsolicited response.
+            try{reply=MenuPageDelta.apply(delta.baseline,reply);}
+            catch(RuntimeException invalid){
+                if(!delta.retried&&now-delta.read.at<READ_TIMEOUT&&outbound.size()<CAPACITY){
+                    var retry=delta.read.packet.deepCopy();retry.remove("knownPage");
+                    deltaReads.put(request,new DeltaRead<>(delta.read,null,true));
+                    outbound.addFirst(new Pending<>(retry,delta.read.owner,true,false,delta.read.at));return null;
+                }
+                reply=new JsonObject();reply.addProperty("request",request);reply.addProperty("kind",Json.opt(delta.read.packet,"action","").equals("community")?"community":"result");reply.addProperty("error",true);reply.addProperty("code","UNAVAILABLE");reply.addProperty("text",Messages.text("rivet.core.no_response_click_retry_c724443a"));
+            }
+        }
         var original = reads.remove(Json.opt(reply, "request", ""));
-        if (original != null && now - original.at < READ_TIMEOUT) cache.put(original.packet, reply, now);
+        if (original != null && now - original.at < READ_TIMEOUT){cache.put(original.packet, reply, now);if(pageDeltas&&MenuPageDelta.eligible(original.packet))baselines.put(original.packet,reply,now);}
+        return reply;
     }
     public JsonObject cached(JsonObject packet, long now) { return cache.get(packet, now); }
     public void cancel(O owner) {
@@ -70,10 +100,11 @@ public final class MenuTransport<O> {
             return false;
         });
         reads.values().removeIf(read -> read.owner == owner);
+        deltaReads.values().removeIf(read -> read.read.owner == owner);
     }
     public void invalidate(String section, String id) { reads.clear(); cache.invalidate(section, id); }
-    public void clearCache() { cache.clear(); reads.clear(); }
-    public void clear() { outbound.clear(); dispatched.clear(); clearCache(); }
+    public void clearCache() { cache.clear(); baselines.clear(); reads.clear(); }
+    public void clear() { outbound.clear(); dispatched.clear(); deltaReads.clear(); clearCache(); }
     public int queued() { return outbound.size(); }
     public int trackedReads() { return reads.size(); }
     private void forget(JsonObject packet) { reads.remove(Json.opt(packet, "request", "")); }

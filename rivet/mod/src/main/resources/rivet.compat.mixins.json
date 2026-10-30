@@ -13,6 +13,9 @@
     "defaultRequire": 0
   },
   "mixins": [
-    "NumismaticsIdentityMixin"
+    "NumismaticsIdentityMixin",
+    "EnvelopeAddressMixin",
+    "EnvelopeKnownPlayersMixin",
+    "EnvelopeMailServiceMixin"
   ]
 }

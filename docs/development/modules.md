@@ -115,7 +115,7 @@ Rivet устанавливается одним JAR. Клиентские и с�
 Серверные адаптеры регистрируют провайдеры `IntegrationApi`; игровые потребители
 обращаются к ним через `ServerProviders`. `CompatibilityRegistry` управляет
 жизненным циклом и диагностикой, `ClientCompatibilityRegistry` — клиентскими
-интеграциями. Идентичность для Create: Access Denied и Numismatics предоставляет
+интеграциями. Идентичность для Create: Access Denied, Numismatics и Envelope предоставляет
 провайдер Rivet `IDENTITY`. Слой Waystones сохраняет собственную сетевую
 синхронизацию и текстуры, получая разрешённые точки через провайдер.
 

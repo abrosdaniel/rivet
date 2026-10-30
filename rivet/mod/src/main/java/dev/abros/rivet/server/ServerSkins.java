@@ -39,11 +39,25 @@ public final class ServerSkins {
   final SkinStore current=store;final Object connection=p.connection.getConnection();final var server=p.server;
   final var configuration=settings;final var fallback=fallbackWork;final var database=ServerDatabase.get();final var attempts=fallbackAttempts;
   try{
+   if(op.equals("resolveProfile")){
+    if(!ServerIntegration.supports(p,"skin-profile-resolution"))return;
+    String name=Json.opt(j,"name","");UUID id=j.has("owner")?UUID.fromString(Json.str(j,"owner")):null;
+    if(id==null&&!dev.abros.rivet.core.auth.AuthStore.validName(name))throw new IllegalArgumentException(dev.abros.rivet.core.Messages.text("rivet.core.player_not_found_on_this_server_7c3ea4bb"));
+    boolean auth=AuthServer.enabled();var known=id==null?AuthServer.knownIdentity(name):AuthServer.knownIdentity(id);
+    requests.execute(p.getUUID(),()->{try{
+     var identity=known.map(value->new com.mojang.authlib.GameProfile(value.uuid(),value.name()));
+     if(identity.isEmpty()&&!auth)identity=id==null?server.getProfileCache().get(name):server.getProfileCache().get(id);
+     var result=new JsonObject();result.addProperty("kind","identity");result.addProperty("request",request);
+     identity.ifPresent(value->{result.addProperty("owner",value.getId().toString());result.addProperty("name",value.getName());});
+     server.execute(()->{if(store==current&&p.connection.getConnection()==connection)send(p,result);});
+    }catch(Exception failure){server.execute(()->{if(store==current&&p.connection.getConnection()==connection)error(p,request,dev.abros.rivet.core.Messages.text("rivet.core.could_not_process_skin_try_again_cd61cc29"));});}});
+    return;
+   }
    byte[] uploaded=null;
    if(op.equals("begin")){uploads.entrySet().removeIf(e->e.getValue().expires<now);int size=j.get("size").getAsInt();if(size<33||size>settings.maxBytes())throw new IllegalArgumentException(dev.abros.rivet.core.Messages.text("rivet.core.png_exceeds_the_size_limit_611c557b"));if(now-uploadTimes.getOrDefault(p.getUUID(),0L)<3000)throw new IllegalArgumentException(dev.abros.rivet.core.Messages.text("rivet.core.wait_before_uploading_f009da93"));int reserved=uploads.values().stream().mapToInt(Upload::size).sum();if(reserved+size>32*1024*1024)throw new IllegalArgumentException(dev.abros.rivet.core.Messages.text("rivet.core.server_busy_with_downloads_b5bbc810"));String name=Json.str(j,"name");if(name.length()>40||name.isBlank())throw new IllegalArgumentException(dev.abros.rivet.core.Messages.text("rivet.core.name_1_40_characters_2e10bd2e"));uploads.put(p.getUUID(),new Upload(connection,request,name,j.get("slim").getAsBoolean(),j.deepCopy(),size,new ByteArrayOutputStream(size),now+60000));uploadTimes.put(p.getUUID(),now);return;}
    if(op.equals("chunk")){var u=uploads.get(p.getUUID());if(u==null||u.connection!=connection||!u.request.equals(request)||now>u.expires)throw new IllegalArgumentException(dev.abros.rivet.core.Messages.text("rivet.core.upload_expired_ee473c38"));byte[] part=Base64.getDecoder().decode(Json.str(j,"data"));if(part.length>4096||part.length==0||j.get("offset").getAsInt()!=u.bytes.size()||part.length>u.size-u.bytes.size()){uploads.remove(p.getUUID());throw new IllegalArgumentException(dev.abros.rivet.core.Messages.text("rivet.core.invalid_upload_chunk_04dd4c4b"));}u.bytes.writeBytes(part);if(u.bytes.size()<u.size)return;uploads.remove(p.getUUID());uploaded=u.bytes.toByteArray();j=u.metadata.deepCopy();j.addProperty("name",u.name);j.addProperty("slim",u.slim);op="upload";}
    final String operation=op;final JsonObject input=j;final byte[] bytes=uploaded;
-   UUID lookup=op.equals("appearance")?UUID.fromString(Json.str(j,"owner")):p.getUUID();var online=server.getPlayerList().getPlayer(lookup);String nickname=online==null?null:online.getGameProfile().getName();boolean official=server.usesAuthentication();
+   UUID lookup=op.equals("appearance")?UUID.fromString(Json.str(j,"owner")):p.getUUID();var online=server.getPlayerList().getPlayer(lookup);String nickname=online==null?AuthServer.knownIdentity(lookup).map(dev.abros.rivet.core.auth.AuthStore.Profile::name).orElseGet(()->server.getProfileCache().get(lookup).map(com.mojang.authlib.GameProfile::getName).orElse(null)):online.getGameProfile().getName();boolean official=server.usesAuthentication();
    requests.execute(p.getUUID(),()->{try{
     if(store!=current||!server.submit(()->p.connection.getConnection()==connection&&p.connection.getConnection().isConnected()&&AuthServer.authenticated(p)).get(2,TimeUnit.SECONDS))return;
     JsonObject receipt=null;
@@ -60,9 +74,9 @@ public final class ServerSkins {
  }
  private static boolean refreshFallback(SkinStore s,SkinSettings configuration,PgDatabase database,Map<UUID,Long> attempts,UUID owner,String name,boolean onlineMode)throws Exception{
   String mode=configuration.mojangFallback();UUID official=null;if(mode.equals("UUID")){official=database.transaction(()->{try(var q=database.connection().prepareStatement("SELECT official FROM auth_accounts WHERE uuid=?")){q.setString(1,owner.toString());try(var r=q.executeQuery()){return r.next()&&r.getString(1)!=null?UUID.fromString(r.getString(1)):null;}}});if(official==null&&onlineMode)official=owner;}
-  if(name==null&&!mode.equals("false"))return false;String source=mode+":"+(mode.equals("UUID")?official:name);long now=System.currentTimeMillis();if(now-s.checked(owner,source)<86400000)return false;
+  if(name==null&&mode.equals("nickname"))return false;String source=mode+":"+(mode.equals("UUID")?official:name);long now=System.currentTimeMillis();if(now-s.checked(owner,source)<86400000)return false;
   if(mode.equals("false")||mode.equals("UUID")&&official==null){if(store!=s)return false;s.fallback(owner,source,null,false,now);return true;}
-  if(now-attempts.getOrDefault(owner,0L)<60000)return false;attempts.put(owner,now);
+  if(now-attempts.getOrDefault(owner,0L)<60000)return false;if(!attempts.containsKey(owner)&&attempts.size()>=4096){attempts.entrySet().removeIf(entry->now-entry.getValue()>=60000);if(attempts.size()>=4096)return false;}attempts.put(owner,now);
   try{var result=MojangSkins.find(name,official);if(store!=s||Thread.currentThread().isInterrupted())return false;s.fallback(owner,source,result.png(),result.slim(),now);return true;}catch(Exception unavailable){com.mojang.logging.LogUtils.getLogger().debug("Rivet Mojang skin fallback unavailable ({})",unavailable.getClass().getSimpleName());return false;}
  }
 }

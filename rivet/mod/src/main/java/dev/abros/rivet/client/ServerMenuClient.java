@@ -39,13 +39,13 @@ public final class ServerMenuClient {
     }
     static boolean available(){if(previewTransport!=null)return true;var c=Minecraft.getInstance().getConnection();return !Minecraft.getInstance().hasSingleplayerServer()&&c!=null&&Protocol.supportedFeatures.contains("menu")&&c.hasChannel(Protocol.FeatureRequest.TYPE);}
     static void request(JsonObject packet){
-        long now=System.currentTimeMillis();if(previewTransport!=null){if(MenuRequests.mutation(packet))transport.clearCache();previewTransport.accept(MenuCommands.prepare(packet,now));return;}
+        transport.pageDeltas(Protocol.supportedFeatures.contains(MenuPageDelta.FEATURE));long now=System.currentTimeMillis();if(previewTransport!=null){if(MenuRequests.mutation(packet))transport.clearCache();previewTransport.accept(MenuCommands.prepare(packet,now));return;}
         if(available()&&!transport.enqueue(packet,requestOwner(Minecraft.getInstance().screen),false,now))result=Client.text("ui.too_many_requests_wait_for_the_861728e7");
     }
     private static Screen requestOwner(Screen screen){while(screen instanceof ChoicePopup popup)screen=popup.parentScreen();return screen;}
 
     static void cancelReads(Screen owner){transport.cancel(owner);}
-    static void requestBackground(JsonObject packet){if(previewTransport!=null){previewTransport.accept(packet.deepCopy());return;}if(available())transport.enqueue(packet,null,true,System.currentTimeMillis());}
+    static void requestBackground(JsonObject packet){transport.pageDeltas(Protocol.supportedFeatures.contains(MenuPageDelta.FEATURE));if(previewTransport!=null){previewTransport.accept(packet.deepCopy());return;}if(available())transport.enqueue(packet,null,true,System.currentTimeMillis());}
     private static JsonObject stateRequest(){var j=new JsonObject();j.addProperty("action","state");j.addProperty("menuProtocol",MenuProtocol.VERSION);var info=new JsonObject();info.addProperty("coreVersion",dev.abros.rivet.Rivet.VERSION);info.addProperty("packHash",Client.hub==null?"":Client.hub.activeHash());j.add("client",info);return j;
     }
     static void request(String action){if(action.equals("state")){request(stateRequest());return;}var j=new JsonObject();j.addProperty("action",action);request(j);}
@@ -71,7 +71,7 @@ public final class ServerMenuClient {
     }
     static void receive(JsonObject j){
         if(CompatibilityClient.receive(j))return;
-        var mc=Minecraft.getInstance();if(!available())return;String kind=Json.opt(j,"kind","");transport.receive(j,System.currentTimeMillis());if(ClientChat.receive(j)||SocialClient.receive(j)||ClientMap.receive(j)||RivetHud.receive(j))return;
+        var mc=Minecraft.getInstance();if(!available())return;j=transport.receive(j,System.currentTimeMillis());if(j==null)return;String kind=Json.opt(j,"kind","");if(ClientChat.receive(j)||SocialClient.receive(j)||ClientMap.receive(j)||RivetHud.receive(j))return;
         if(kind.equals("incompatible")||kind.equals("state")&&(!j.has("menuProtocol")||j.get("menuProtocol").getAsInt()!=MenuProtocol.VERSION)){stateBootstrap.confirm();result=kind.equals("incompatible")?Json.opt(j,"text",Client.text("ui.this_server_s_menu_is_temporarily_43cf0ca3")):Client.text("ui.this_server_s_menu_is_temporarily_43cf0ca3");if(mc.screen instanceof CommunityScreen||mc.screen instanceof FeatureListScreen)mc.setScreen(new TextScreen(null,Client.tr("ui.rivet_update_5591c964"),result));return;}
         if(kind.equals("moderationVoteStatus")){if(moderationVote.equals(j.getAsJsonObject("vote")))return;moderationVote=j.getAsJsonObject("vote").deepCopy();if(mc.screen instanceof CommunityScreen screen)screen.refreshUi();if(mc.screen instanceof NotificationPopup popup)popup.refreshVote();if(mc.screen instanceof ModerationVoteScreen screen)screen.invalidate();return;}
         if(kind.equals("moderationVote")){if(mc.screen instanceof ModerationVoteScreen screen)screen.receiveCommunity(j);return;}

@@ -33,7 +33,7 @@ public final class CommunityWorkspace {
     public JsonObject data() { return data.deepCopy(); }
     public boolean matches(JsonObject reply) { return request.equals(Json.opt(reply, "request", "")); }
     public void invalidate() { if (dirtyAt == 0) dirtyAt = clock.getAsLong(); }
-    public boolean dirtyDue() { return !busy && !uncertain && dirtyAt > 0 && clock.getAsLong() - sent > 750; }
+    public boolean dirtyDue() { return !busy && !uncertain && dirtyAt > 0 && clock.getAsLong() - sent >= 550; }
     public boolean reading() { return Set.of("list", "detail").contains(operation); }
     public boolean leave() { if (busy && !reading()) return false; if (busy) { session.cancel(); busy = false; invalidate(); } return true; }
     public void close() { session.cancel(); busy = false; }

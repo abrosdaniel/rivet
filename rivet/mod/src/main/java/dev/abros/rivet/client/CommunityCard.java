@@ -9,8 +9,11 @@ import java.time.*;
 import java.time.format.DateTimeFormatter;
 /** One focusable card, with section-specific hierarchy rather than a wall of buttons. */
 final class CommunityCard extends Button {
+ private final UiTitleLayout titleLayout=new UiTitleLayout();
+ private final Component heading;
+ private static final DateTimeFormatter DATE=DateTimeFormatter.ofPattern("dd.MM"),TIME=DateTimeFormatter.ofPattern("HH:mm");
  boolean selected;private final JsonObject item;private final String section;private final net.minecraft.client.gui.components.Tooltip titleTooltip;
- CommunityCard(int x,int y,int w,int h,JsonObject item,Runnable action){super(x,y,w,h,Component.literal(Json.opt(item,"title","")+". "+Json.opt(item,"preview","")),b->action.run(),DEFAULT_NARRATION);this.item=item;titleTooltip=net.minecraft.client.gui.components.Tooltip.create(Component.literal(Json.opt(item,"title","")));setTooltipDelay(java.time.Duration.ofMillis(400));section=Json.opt(item,"section","home");}
+ CommunityCard(int x,int y,int w,int h,JsonObject item,Runnable action){super(x,y,w,h,Component.literal(Json.opt(item,"title","")+". "+Json.opt(item,"preview","")),b->action.run(),DEFAULT_NARRATION);this.item=item;heading=Component.literal(Json.opt(item,"title","")).withStyle(net.minecraft.ChatFormatting.BOLD);titleTooltip=net.minecraft.client.gui.components.Tooltip.create(Component.literal(Json.opt(item,"title","")));setTooltipDelay(java.time.Duration.ofMillis(400));section=Json.opt(item,"section","home");}
  static int height(net.minecraft.client.gui.Font font,JsonObject item,int width,int minimum){
   int textWidth=Math.max(40,width-36-((Json.opt(item,"section","").equals("events")||Json.opt(item,"section","").equals("ideas"))&&width>=230?56:0));
   int lines=Math.min(2,font.split(Component.literal(Json.opt(item,"title","")).withStyle(net.minecraft.ChatFormatting.BOLD),textWidth).size());
@@ -30,10 +33,10 @@ final class CommunityCard extends Button {
   if(UiTheme.keyboardFocus(this))UiKit.focus(g,x,y,w,h);
 
   g.enableScissor(x+4,y+3,x+w-4,y+h-3);
-  if(section.equals("events")&&w>=230){UiKit.control(g,x+7,y+7,48,h-14,UiTheme.mix(surface,color(),0.08f));if(item.has("startsAt")){var time=Instant.ofEpochMilli(item.get("startsAt").getAsLong()).atZone(AccessibilityScreen.zone());line(g,time.format(DateTimeFormatter.ofPattern("dd.MM")),x+12,y+13,48,UiKit.text());line(g,time.format(DateTimeFormatter.ofPattern("HH:mm")),x+12,y+29,48,color());}left=x+64;}
+  if(section.equals("events")&&w>=230){UiKit.control(g,x+7,y+7,48,h-14,UiTheme.mix(surface,color(),0.08f));if(item.has("startsAt")){var time=Instant.ofEpochMilli(item.get("startsAt").getAsLong()).atZone(AccessibilityScreen.zone());line(g,time.format(DATE),x+12,y+13,48,UiKit.text());line(g,time.format(TIME),x+12,y+29,48,color());}left=x+64;}
   else if(section.equals("ideas")&&w>=230){UiKit.control(g,x+7,y+7,48,h-14,UiTheme.mix(surface,color(),0.08f));line(g,count("supportersCount"),x+12,y+13,48,color());line(g,Client.text("ui.votes_01d7da0a"),x+12,y+29,48,UiKit.muted());left=x+64;}
   String eyebrow=switch(section){case "groups"->value("type")+" · "+(item.has("recruiting")&&item.get("recruiting").getAsBoolean()?Client.text("ui.registration_open_4bd5a5ce"):Client.text("ui.registration_closed_a0d3acee"));case "polls"->Client.text("ui.poll_view_options_dc0d1096");case "board"->value("author")+" · "+count("responsesCount")+Client.text("ui.responses_512bda6e");case "events"->eventTime();case "ideas"->(w>=230?"":count("supportersCount")+Client.text("ui.votes_d3af9d47"))+CommunityScreen.statusLabel(value("status"));default->CommunityScreen.name(section);};
-  var font=Minecraft.getInstance().font;var titleLines=font.split(Component.literal(value("title")).withStyle(net.minecraft.ChatFormatting.BOLD),Math.max(1,x+w-left-26));int lineCount=Math.min(h>=78?2:1,titleLines.size());
+  var font=Minecraft.getInstance().font;var titleLines=titleLayout.lines(font,heading,Math.max(1,x+w-left-26));int lineCount=Math.min(h>=78?2:1,titleLines.size());
   var tooltip=titleLines.size()>lineCount?titleTooltip:null;if(getTooltip()!=tooltip)setTooltip(tooltip);
   for(int n=0;n<lineCount;n++)g.drawString(font,titleLines.get(n),left,y+8+n*11,UiKit.text(),false);
   int extra=Math.max(0,lineCount-1)*11;

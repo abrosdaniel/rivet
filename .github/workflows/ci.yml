@@ -328,8 +328,10 @@ jobs:
         timeout-minutes: 10
         run: bash rivet/tooling/prepare_gradle.sh
       - run: sudo apt-get update && sudo apt-get install -y xvfb libgl1-mesa-dri libglx-mesa0 libopenal1
-      - name: Verify public maps, lighting and contextual teleport permissions
+      - name: Verify realtime, notifications, public maps and permissions
         run: xvfb-run -a -s '-screen 0 1280x1024x24' python3 rivet/tooling/map_network.py map-network
+      - name: Verify Envelope identity routing and restart recovery
+        run: python3 rivet/tooling/envelope_smoke.py envelope-native
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
         if: failure()
         with:
@@ -340,6 +342,9 @@ jobs:
             map-network/server/crash-reports/
             map-network/client/logs/
             map-network/client/crash-reports/
+            envelope-native/*.log
+            envelope-native/server/logs/
+            envelope-native/server/crash-reports/
 
   permissions:
     needs: plan

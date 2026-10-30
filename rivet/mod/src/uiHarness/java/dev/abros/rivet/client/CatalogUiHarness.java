@@ -12,6 +12,7 @@ public final class CatalogUiHarness {
  @SubscribeEvent public static void tick(net.neoforged.neoforge.client.event.ClientTickEvent.Post e)throws Exception {
   var mc=Minecraft.getInstance();if(System.getenv("RIVET_CATALOG_UI_CHECK")==null||done||!(mc.screen instanceof TitleScreen))return;done=true;
   try{
+   UiTextLayoutCheck.run();
    var serverFile=mc.gameDirectory.toPath().resolve("servers.dat");byte[] original=java.nio.file.Files.readAllBytes(serverFile);
    try{java.nio.file.Files.writeString(serverFile,"invalid nbt");BundledServers.sync(mc);if(!java.nio.file.Files.readString(serverFile).equals("invalid nbt"))throw new IllegalStateException("Damaged server list overwritten");}finally{java.nio.file.Files.write(serverFile,original);}
    var brands=new java.util.ArrayList<String>();net.neoforged.neoforge.internal.BrandingControl.forEachLine(true,true,(index,value)->brands.add(value));

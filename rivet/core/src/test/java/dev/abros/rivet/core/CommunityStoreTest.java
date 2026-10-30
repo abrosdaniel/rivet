@@ -188,10 +188,33 @@ class CommunityStoreTest {
   db.reminders(System.currentTimeMillis()+120000);assertEquals(0,db.unread(alice.id()));db.purgeDeleted(System.currentTimeMillis()+29L*86400000);assertEquals("deleted",Json.str(detail("polls",id(poll),admin),"status"));
   db.purgeDeleted(System.currentTimeMillis()+31L*86400000);assertThrows(IllegalArgumentException.class,()->detail("polls",id(poll),admin));
  }
+ @Test void notificationReadsAndPreferencesPublishPrivateCommittedChanges()throws Exception{
+  var idea=create("ideas");var status=input("ideas","status",id(idea));status.addProperty("status","planned");status.addProperty("text","Soon");db.request(admin,status);
+  var notices=db.request(owner,input("notifications","list","")).getAsJsonArray("entries");assertFalse(notices.isEmpty());
+  db.acknowledgeChanges(db.pendingChanges());
+  var read=input("notifications","read",id(notices.get(0).getAsJsonObject()));read.addProperty("exact",true);
+  assertThrows(Exception.class,()->db.transaction(()->{db.request(owner,read);throw new Exception("rollback");}));
+  assertTrue(db.pendingChanges().isEmpty());assertEquals(1,db.unread(owner.id()));
+  db.request(owner,read);assertEquals(0,db.unread(owner.id()));
+  var events=db.pendingChanges();assertEquals(1,events.size());assertEquals("notifications",Json.str(events.get(0).getAsJsonObject(),"topic"));assertEquals(owner.id(),Json.str(events.get(0).getAsJsonObject(),"recipient"));
+  db.acknowledgeChanges(events);
+  var preferences=input("home","preferences","");var body=new JsonObject();body.add("muted",new JsonArray());preferences.add("preferences",body);db.request(owner,preferences);
+  events=db.pendingChanges();assertEquals(1,events.size());assertEquals(owner.id(),Json.str(events.get(0).getAsJsonObject(),"recipient"));
+ }
  @Test void transactionalEventsRollbackAndAcknowledgeExactlyTheBatch()throws Exception{
   var before=db.pendingChanges();db.acknowledgeChanges(before);assertTrue(db.pendingChanges().isEmpty());
   assertThrows(Exception.class,()->db.transaction(()->{create("board");throw new Exception("rollback");}));assertTrue(db.pendingChanges().isEmpty());
   create("board");var batch=db.pendingChanges();assertFalse(batch.isEmpty());create("ideas");db.acknowledgeChanges(batch);var remaining=db.pendingChanges();assertFalse(remaining.isEmpty());for(var event:remaining)assertEquals("ideas",Json.str(event.getAsJsonObject(),"topic"));
+ }
+ @Test void pendingEventsAndPrivateSnapshotsRecoverWithANewDatabasePool()throws Exception{
+  db.acknowledgeChanges(db.pendingChanges());db.externalNotice(owner.id(),"Saved private notice");db.externalNotice(alice.id(),"Other private notice");
+  var before=db.pendingChanges();assertEquals(2,before.size());
+  try(var connection=new PgDatabase(TestDatabase.settings())){
+   assertEquals(0,connection.communityRevision());var schedule=new ChangeDeliverySchedule();assertTrue(schedule.due(connection.communityRevision(),1));
+   var restored=new CommunityStore(connection,CommunityStore.defaults());assertEquals(before,restored.pendingChanges());
+   var page=restored.request(owner,input("notifications","list",""));assertTrue(page.toString().contains("Saved private notice"));assertFalse(page.toString().contains("Other private notice"));
+   restored.acknowledgeChanges(before);assertTrue(db.pendingChanges().isEmpty());assertEquals(1,restored.unread(owner.id()));
+  }
  }
 
  @Test void privateLocationsAreNotSentToOutsidersAndSurviveTrash()throws Exception{
