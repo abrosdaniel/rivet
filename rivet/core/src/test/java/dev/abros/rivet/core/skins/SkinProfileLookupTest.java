@@ -25,4 +25,21 @@ class SkinProfileLookupTest {
   lookup.receive(ids.getLast(),Optional.empty(),5002);assertTrue(retry.join().isEmpty());
   lookup.resolve("one",6000,(k,r)->fail());lookup.resolve("one",7002,(k,r)->ids.add(r));assertEquals(66,ids.size());
  }
+ @Test void successfulIdentityRemainsAvailableThroughoutBackgroundRefresh(){
+  var lookup=new SkinProfileLookup();var requests=new ArrayList<String>();var identity=new SkinProfileLookup.Identity(UUID.randomUUID(),"Player");
+  lookup.resolve("name:player",0,(k,r)->requests.add(r));lookup.receive(requests.getFirst(),Optional.of(identity),1);
+  var refreshed=lookup.resolve("name:player",60001,(k,r)->requests.add(r));
+  assertTrue(refreshed.isDone(),"Rendering must not lose a known identity during refresh");assertEquals(identity,refreshed.join().orElseThrow());
+  for(int frame=0;frame<120;frame++)assertEquals(identity,lookup.resolve("name:player",60002+frame,(k,r)->fail("Duplicate refresh")).join().orElseThrow());
+  assertEquals(2,requests.size());var changed=new SkinProfileLookup.Identity(UUID.randomUUID(),"Player");lookup.receive(requests.getLast(),Optional.of(changed),60150);
+  assertEquals(changed,lookup.resolve("name:player",60151,(k,r)->fail()).join().orElseThrow());
+ }
+ @Test void staleIdentityDoesNotSurviveConfirmedRemovalOrReconnect(){
+  var lookup=new SkinProfileLookup();var requests=new ArrayList<String>();var identity=new SkinProfileLookup.Identity(UUID.randomUUID(),"Player");
+  lookup.resolve("name:player",0,(k,r)->requests.add(r));lookup.receive(requests.getLast(),Optional.of(identity),1);
+  lookup.resolve("name:player",60001,(k,r)->requests.add(r));lookup.receive(requests.getLast(),Optional.empty(),60002);
+  assertTrue(lookup.resolve("name:player",60003,(k,r)->fail()).join().isEmpty());
+  lookup.clear();assertFalse(lookup.resolve("name:player",60004,(k,r)->requests.add(r)).isDone());
+ }
+
 }

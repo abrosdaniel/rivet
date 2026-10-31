@@ -12,11 +12,13 @@ public final class SkinProfileLookup {
  private final Map<String,Pending> pending=new HashMap<>();
  private final Map<String,Cached> cache=new LinkedHashMap<>(256,.75f,true);
  public CompletableFuture<Optional<Identity>> resolve(String key,long now,BiConsumer<String,String> sender){
-  tick(now);var cached=cache.get(key);if(cached!=null){if(cached.expires>now)return CompletableFuture.completedFuture(cached.identity);cache.remove(key);}
-  var existing=pending.get(key);if(existing!=null)return existing.future;
-  if(pending.size()>=64)return CompletableFuture.completedFuture(Optional.empty());
+  tick(now);var cached=cache.get(key);if(cached!=null&&cached.expires>now)return CompletableFuture.completedFuture(cached.identity);
+  // Keep a confirmed identity visible until its refresh completes; a pending request is not a deletion.
+  Optional<Identity> previous=cached==null?Optional.empty():cached.identity;if(previous.isEmpty())cache.remove(key);
+  var existing=pending.get(key);if(existing!=null)return previous.isPresent()?CompletableFuture.completedFuture(previous):existing.future;
+  if(pending.size()>=64)return CompletableFuture.completedFuture(previous);
   var item=new Pending(key,UUID.randomUUID().toString(),now+5000,new CompletableFuture<>());pending.put(key,item);
-  try{sender.accept(key,item.request);}catch(RuntimeException failure){pending.remove(key);item.future.complete(Optional.empty());}return item.future;
+  try{sender.accept(key,item.request);}catch(RuntimeException failure){pending.remove(key);item.future.complete(Optional.empty());}return previous.isPresent()?CompletableFuture.completedFuture(previous):item.future;
  }
  public boolean receive(String request,Optional<Identity> identity,long now){
   var item=pending.values().stream().filter(p->p.request.equals(request)).findFirst().orElse(null);if(item==null)return false;

@@ -26,6 +26,10 @@ public final class OfflineHeadFixture {
     player.server.execute(()->{net.neoforged.neoforge.network.PacketDistributor.sendToPlayer(player,new dev.abros.rivet.network.SkinWire.Response(Json.GSON.toJson(own)));player.server.getProfileCache().add(new GameProfile(OWNER,NAME));
      player.getInventory().clearContent();
      var command=player.server.createCommandSourceStack().withEntity(player).withPosition(player.position());player.server.getCommands().performPrefixedCommand(command,"give "+player.getGameProfile().getName()+" minecraft:player_head[minecraft:profile={name:\""+NAME+"\"}]");
+     player.server.getCommands().performPrefixedCommand(command,"give "+player.getGameProfile().getName()+" minecraft:player_head[minecraft:profile={name:\""+player.getGameProfile().getName()+"\"}]");
+     var ownPos=new net.minecraft.core.BlockPos(2,100,0);player.serverLevel().setBlockAndUpdate(ownPos,net.minecraft.world.level.block.Blocks.PLAYER_HEAD.defaultBlockState());
+     ((net.minecraft.world.level.block.entity.SkullBlockEntity)player.serverLevel().getBlockEntity(ownPos)).setOwner(new net.minecraft.world.item.component.ResolvableProfile(player.getGameProfile()));
+     player.serverLevel().sendBlockUpdated(ownPos,player.serverLevel().getBlockState(ownPos),player.serverLevel().getBlockState(ownPos),3);
      player.teleportTo(0.5,101,0.5);
      var pos=new net.minecraft.core.BlockPos(1,100,0);
      if(player.serverLevel().getBlockEntity(pos) instanceof net.minecraft.world.level.block.entity.SkullBlockEntity saved&&saved.getOwnerProfile()!=null){
