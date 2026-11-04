@@ -70,6 +70,9 @@ public final class MapTerrainHarness {
   MapRegionTextures.prepareView(Set.of(key));
   return ((Set<?>)field(MapRegionTextures.class,"pending")).contains(key);
  }
+ private static String raceState()throws Exception{
+  return "worker="+((java.util.concurrent.ThreadPoolExecutor)field(MapTerrainCache.class,"WORKER")).getQueue().size()+" sourcePending="+((Set<?>)field(MapTerrainCache.class,"pending")).size()+" changes="+((Map<?,?>)field(MapTerrainCache.class,"changes")).size()+" deferred="+deferredAttempts;
+ }
  @SubscribeEvent public static void frame(net.neoforged.neoforge.client.event.RenderFrameEvent.Pre event){
   if(ADDRESS==null||done||phase!=10)return;long now=System.nanoTime();
   long gc=java.lang.management.ManagementFactory.getGarbageCollectorMXBeans().stream().mapToLong(b->Math.max(0,b.getCollectionTime())).sum();
@@ -138,13 +141,38 @@ public final class MapTerrainHarness {
    }else if(phase==4){check(settled(),"Reopening map lost terrain");for(var entry:retained.entrySet())check(MapRegionTextures.texture(entry.getKey(),3).texture()==entry.getValue().texture(),"Reopening discarded GPU cache");map.view.zoomAt(30,0,0,0,0);phase=5;ticks=0;
    }else if(phase==5){var key=new MapRegionTextures.Key(DIM,0,0);var texture=MapRegionTextures.texture(key,0);if(texture==null)return;var pixels=texture.texture().getPixels();for(int z=0;z<64;z++)for(int x=0;x<64;x++){int c=expected(x,z),rgba=c&0xff00ff00|(c&255)<<16|(c>>>16&255);if(pixels.getPixelRGBA(x,z)!=rgba)return;}check(pixels.getWidth()==64,"Detailed texture size wrong");map.view.zoomAt(-30,0,0,0,0);phase=6;}
    else if(phase==6){check(settled(),"Returning to overview lost pixels");
-    // Stop map rendering from adding work while the test establishes its worker barrier.
-    mc.setScreen(null);
-    if(!MapTerrainCache.work(()->{mc.execute(oldPageHeld::countDown);try{holdOldPage.await();}catch(InterruptedException ex){Thread.currentThread().interrupt();}}))return;
-    phase=12;ticks=0;
+    // Closing to the world would enable the minimap on the same worker we are about to hold.
+    mc.setScreen(new PauseScreen(false));
+    check(!Minimap.visible(),"Minimap must not submit work during the page race");
+    // Cold HUD caches and a late source invalidation must not depend on earlier fixture frames.
+    for(String cache:List.of("images","overview"))((Map<WorldMapClient.TileKey,?>)field(MapTerrainCache.class,cache)).keySet().removeIf(k->!k.dimension().equals(DIM));
+    MapTerrainCache.changed(new WorldMapClient.TileKey(DIM,31,31));
+    phase=13;ticks=0;
+   }else if(phase==13){
+    if(ticks>100)throw new IllegalStateException("Page race sources did not settle: "+raceState());
+    check(!Minimap.visible(),"Minimap resumed during source preparation");
+    var key=new MapRegionTextures.Key(DIM,0,0,3);
+    // Finish source work before blocking its executor. A complete GPU texture alone
+    // does not imply its source cache is current after a late disk-read callback.
+    boolean ready=true;
+    for(int z=0;z<32;z++)for(int x=0;x<32;x++){
+     var source=new WorldMapClient.TileKey(DIM,x,z);
+     if(MapTerrainCache.image(source,3)==null||MapTerrainCache.waiting(source))ready=false;
+    }
+    if(!ready||((Set<WorldMapClient.TileKey>)field(WorldMapClient.class,"loading")).stream().anyMatch(k->k.dimension().equals(DIM)))return;
+    if(((Set<?>)field(MapRegionTextures.class,"pending")).contains(key))return;
+    if(((Map<?,?>)field(MapRegionTextures.class,"prepared")).containsKey(key)){MapRegionTextures.texture(key,3);return;}
+    if(deferredAttempts<3){check(!queueOldPage(),"Page queued before the deferred-budget checks");return;}
+    var worker=(java.util.concurrent.ThreadPoolExecutor)field(MapTerrainCache.class,"WORKER");
+    if(worker.getQueue().remainingCapacity()<2)return;
+    check(MapTerrainCache.work(()->{mc.execute(oldPageHeld::countDown);try{holdOldPage.await();}catch(InterruptedException ex){Thread.currentThread().interrupt();}}),"Page worker barrier rejected");
+    // Queue the sampled page in this same client tick, before any other rendering can submit work.
+    check(queueOldPage(),"Prepared page did not queue: "+raceState());
+    phase=12;
    }else if(phase==12){
+    if(ticks>100)throw new IllegalStateException("Page worker barrier did not start: "+raceState());
     if(oldPageHeld.getCount()!=0)return;
-    if(!queueOldPage()){if(ticks>100)throw new IllegalStateException("Old page did not queue within the existing worker barrier");return;}
+    check(((Set<?>)field(MapRegionTextures.class,"pending")).contains(new MapRegionTextures.Key(DIM,0,0,3)),"Delayed page escaped its worker barrier");
     check(deferredAttempts==3,"Delayed-page regression did not exercise deferred scheduling");
     System.out.println("RIVET_TERRAIN_DEFERRED_PAGE_OK ticks="+ticks);
     edited=true;var tile=new MapTile();for(int z=0;z<16;z++)for(int x=0;x<16;x++)tile.set(x,z,color(496+x,496+z),height(496+x,496+z));var key=new WorldMapClient.TileKey(DIM,31,31);((Map<WorldMapClient.TileKey,MapTile>)field(WorldMapClient.class,"tiles")).put(key,tile);MapTerrainCache.changed(key);check(((Map<?,?>)field(MapRegionTextures.class,"invalidated")).containsKey(new MapRegionTextures.Key(DIM,0,0,3)),"In-flight page was not invalidated by edit");holdOldPage.countDown();mc.setScreen(map);phase=7;ticks=0;}
