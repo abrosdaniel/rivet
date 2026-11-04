@@ -6,9 +6,11 @@ import java.util.*;
 public final class CompatibilityMixinPlugin implements IMixinConfigPlugin {
  public void onLoad(String p){} public String getRefMapperConfig(){return null;}
  public boolean shouldApplyMixin(String target,String mixin){
+  if(mixin.contains("BrewinChat"))return brewinSupported(target);
   if(mixin.contains("Envelope"))return envelopeSupported();
   return getClass().getClassLoader().getResource(target.replace('.','/')+".class")!=null;
  }
+ private boolean brewinSupported(String target){try{return shape(target.replace('.','/')).methods.stream().anyMatch(m->m.name.equals("iCanHear")&&m.desc.equals("(Lnet/neoforged/neoforge/client/event/ClientChatReceivedEvent$Player;)V"));}catch(Exception absent){return false;}}
  private boolean envelopeSupported(){try{
   String base="io/github/mortuusars/envelope/world/";
   var address=shape(base+"mail/address/type/PlayerAddress");var known=shape(base+"KnownPlayers");var service=shape(base+"mail/MailService");

@@ -830,5 +830,7 @@
   "rivet.permissions.cardDescription": "Назначения групп LuckPerms",
   "rivet.permissions.cardHint": "Просмотр, описание и изменение прав",
   "rivet.permissions.noProvider": "Без LuckPerms доступен только просмотр стандартных ролей Minecraft.",
-  "rivet.core.update_disk_space": "Недостаточно свободного места для обновления и резервной копии. Освободите место и повторите попытку."
+  "rivet.core.update_disk_space": "Недостаточно свободного места для обновления и резервной копии. Освободите место и повторите попытку.",
+  "rivet.pack.routesUnavailable": "Не удалось подключиться ни к одному адресу раздачи сборки.",
+  "rivet.pack.switchingRoute": "Соединение с раздачей прервано. Пробуем резервный адрес…"
 }

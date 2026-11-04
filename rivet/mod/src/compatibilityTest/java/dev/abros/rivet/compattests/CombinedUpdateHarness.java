@@ -43,7 +43,7 @@ public final class CombinedUpdateHarness {
     if(observed!=mc.screen){observed=mc.screen;settling=0;return;}if(++settling<3)return;
     last=mc.screen;String name=last==null?"world":last.getClass().getSimpleName();System.out.println("RIVET_COMBINED_SCREEN "+name);
     if(last!=null)for(var child:last.children())if(child instanceof AbstractWidget w)check(w.getX()>=0&&w.getY()>=0&&w.getX()+w.getWidth()<=last.width&&w.getY()+w.getHeight()<=last.height,"Control outside viewport: "+name+" "+w.getMessage());
-    if(name.equals("UiConfirmDialog")){check(phase.equals("install"),"Trust not retained");press("Подтвердить");}
+    if(name.equals("UiConfirmDialog")){check(phase.equals("install")||phase.equals("alias"),"Trust not retained");press("Подтвердить");}
     else if(name.equals("ServerPackScreen")){check(phase.equals("install"),"Repeated pack installation");press("Проверить изменения");}
     else if(name.equals("ReviewScreen")){
      check(phase.equals("install"),"Repeated update review");String text=text(last);
@@ -55,7 +55,7 @@ public final class CombinedUpdateHarness {
      System.out.println("RIVET_COMBINED_INSTALL_OK transaction="+Client.pending);press(Client.tr("restart.close").getString());
     }else if(name.equals("TextScreen")||name.equals("DisconnectedScreen"))throw new IllegalStateException("Flow failed: "+name+" "+(name.equals("TextScreen")?text(last):last.getTitle().getString()));
    }
-   if(phase.equals("connect")&&mc.level!=null&&mc.player!=null){
+   if(!phase.equals("install")&&mc.level!=null&&mc.player!=null){
     check(net.neoforged.fml.ModList.get().isLoaded("combined_addon"),"Updated pack mod not loaded");
     check(Files.readString(mc.gameDirectory.toPath().resolve("config/preview.toml")).equals("personal=true\n"),"Personal config replaced");
     check(!Files.exists(mc.gameDirectory.toPath().resolve("rivet/pending.json")),"Update still pending");

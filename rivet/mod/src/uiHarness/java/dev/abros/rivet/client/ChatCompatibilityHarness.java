@@ -11,25 +11,35 @@ import net.neoforged.neoforge.client.event.ClientChatReceivedEvent;
 /** Checks chat policies on native components and the actual command receive path. */
 @EventBusSubscriber(modid="rivet",value=Dist.CLIENT)
 public final class ChatCompatibilityHarness {
+ private static boolean connecting,submitted;
  private static int stage;private static long sentAt;
  @SubscribeEvent public static void tick(net.neoforged.neoforge.client.event.ClientTickEvent.Post ignored){
-  if(System.getenv("RIVET_CHAT_COMPAT_CHECK")==null||stage==2)return;
-  var mc=Minecraft.getInstance();if(mc.player==null||!SocialClient.available()||!ServerMenuClient.state.has("chatFormat"))return;
+  if((System.getenv("RIVET_CHAT_COMPAT_CHECK")==null&&System.getenv("RIVET_CHAT_COMPAT_ADDRESS")==null)||stage==99)return;
+  var mc=Minecraft.getInstance();String address=System.getenv("RIVET_CHAT_COMPAT_ADDRESS");
+  if(address!=null&&!connecting&&mc.screen instanceof net.minecraft.client.gui.screens.TitleScreen){connecting=true;net.minecraft.client.gui.screens.ConnectScreen.startConnecting(mc.screen,mc,net.minecraft.client.multiplayer.resolver.ServerAddress.parseString(address),new net.minecraft.client.multiplayer.ServerData("Chat compatibility",address,net.minecraft.client.multiplayer.ServerData.Type.OTHER),false,null);}
+  if(mc.screen instanceof AuthScreen auth&&!submitted){try{for(var child:auth.children())if(child instanceof net.minecraft.client.gui.components.EditBox box)box.setValue("isolated chat TLS test password");var field=AuthScreen.class.getDeclaredField("submit");field.setAccessible(true);((net.minecraft.client.gui.components.Button)field.get(auth)).onPress();submitted=true;}catch(Exception failure){throw new IllegalStateException(failure);}return;}
+  if(stage==2&&mc.screen instanceof net.minecraft.client.gui.screens.DisconnectedScreen){stage=3;submitted=false;net.minecraft.client.gui.screens.ConnectScreen.startConnecting(mc.screen,mc,net.minecraft.client.multiplayer.resolver.ServerAddress.parseString(address),new net.minecraft.client.multiplayer.ServerData("TLS reconnect",address,net.minecraft.client.multiplayer.ServerData.Type.OTHER),false,null);return;}
+  if(mc.player==null||!SocialClient.available()||!ServerMenuClient.state.has("chatFormat"))return;
+  if(stage==3){System.out.println("RIVET_TLS_CLOSE_OK timeout then authenticated reconnect");stage=99;mc.stop();return;}
+  if(stage==2)return;
   try{
    if(stage==0){
     var state=ServerMenuClient.state.deepCopy();boolean dedupe=SocialSettings.INSTANCE.dedupe;
     try{ServerMenuClient.state.addProperty("chatEnabled",true);SocialSettings.INSTANCE.dedupe=true;verify();}
     finally{ServerMenuClient.state=state;SocialSettings.INSTANCE.dedupe=dedupe;ClientChat.reset();}
+    mc.player.connection.sendChat("!RIVET_PUBLIC_PROBE");
     mc.player.connection.sendCommand("tell "+mc.player.getGameProfile().getName()+" RIVET_PRIVATE_PROBE");
     mc.player.connection.sendCommand("me RIVET_EMOTE_PROBE");stage=1;sentAt=System.currentTimeMillis();return;
    }
-   if(System.currentTimeMillis()-sentAt<2500)return;
    var rows=((dev.abros.rivet.mixin.ChatHistoryAccessor)mc.gui.getChat()).rivet$messages();
+   boolean arrived=rows.stream().anyMatch(row->row.content().getString().contains("RIVET_PUBLIC_PROBE"))&&rows.stream().anyMatch(row->nativeMessage(row.content(),"RIVET_PRIVATE_PROBE","commands.message.display.incoming"))&&rows.stream().anyMatch(row->nativeMessage(row.content(),"RIVET_PRIVATE_PROBE","commands.message.display.outgoing"))&&rows.stream().anyMatch(row->nativeMessage(row.content(),"RIVET_EMOTE_PROBE","chat.type.emote"));
+   if(!arrived&&System.currentTimeMillis()-sentAt<15000)return;
+   check(rows.stream().anyMatch(row->row.content().getString().contains("RIVET_PUBLIC_PROBE")),"Actual public packet lost");
    check(rows.stream().anyMatch(row->nativeMessage(row.content(),"RIVET_PRIVATE_PROBE","commands.message.display.incoming")),"Actual incoming whisper lost its native type");
    check(rows.stream().anyMatch(row->nativeMessage(row.content(),"RIVET_PRIVATE_PROBE","commands.message.display.outgoing")),"Actual outgoing whisper lost its native type");
    check(rows.stream().anyMatch(row->nativeMessage(row.content(),"RIVET_EMOTE_PROBE","chat.type.emote")),"Actual /me lost its native type");
-   System.out.println("RIVET_CHAT_COMPAT_OK public + private + team + emote + say + foreign formatting + rich duplicate identity + actual tell/me commands");stage=2;mc.stop();
-  }catch(Throwable failure){System.out.println("RIVET_CHAT_COMPAT_FAILED");failure.printStackTrace();stage=2;mc.stop();}
+   System.out.println("RIVET_CHAT_COMPAT_OK public + private + team + emote + say + foreign formatting + rich duplicate identity + actual tell/me commands");if(System.getenv("RIVET_TLS_CLOSE_CHECK")!=null){stage=2;mc.player.connection.sendCommand("rivet_test_tls_timeout");}else{stage=99;mc.stop();}
+  }catch(Throwable failure){System.out.println("RIVET_CHAT_COMPAT_FAILED");failure.printStackTrace();stage=99;mc.stop();}
  }
  private static boolean nativeMessage(Component message,String probe,String key){return message.getString().contains(probe)&&message.getContents() instanceof net.minecraft.network.chat.contents.TranslatableContents translated&&translated.getKey().equals(key);}
  private static void verify(){
@@ -47,6 +57,22 @@ public final class ChatCompatibilityHarness {
   check(access.rivet$messages().size()==2&&access.rivet$messages().getFirst().content().getString().equals("Live message")&&access.rivet$messages().getLast().signature()==null,"Replay duplicated, reordered live chat or forged signature");
   SocialSettings.INSTANCE.history=oldLimit;ClientChat.reset();
 
+  var adapted=player(ChatType.CHAT);ClientChat.chat(adapted);var formatted=adapted.getMessage();
+  dev.abros.rivet.compat.BrewinChatAdapter.receive(adapted,event->{
+   var envelope=(net.minecraft.network.chat.contents.TranslatableContents)event.getMessage().getContents();
+   check(envelope.getArgs()[1] instanceof Component,"Adapter did not restore vanilla body");
+  });check(adapted.getMessage().equals(formatted),"Sober chat changed by adapter");
+  dev.abros.rivet.compat.BrewinChatAdapter.receive(adapted,event->event.setMessage(Component.literal("prefix").append(link("Tipsy body","/help"))));
+  check(adapted.getMessage().getString().contains("Tipsy body"),"Tipsy effect lost");check(ClientChat.formatted(adapted.getMessage()),"Rivet formatting lost");
+  if(net.neoforged.fml.ModList.get().isLoaded("brewinandchewin")){
+   try{
+    var type=Class.forName("umpaz.brewinandchewin.neoforge.client.TipsyEffects");var listener=type.getMethod("iCanHear",ClientChatReceivedEvent.Player.class);
+    var real=player(ChatType.CHAT);ClientChat.chat(real);var sober=real.getMessage();listener.invoke(null,real);check(real.getMessage().equals(sober),"Actual B&C sober adapter changed message");
+    var utils=Class.forName("umpaz.brewinandchewin.client.utility.BnCClientTextUtils");utils.getField("tipsyMessageLevel").setInt(null,4);utils.getField("randomSeed").setLong(null,12345L);listener.invoke(null,real);
+    check(ClientChat.formatted(real.getMessage()),"Actual B&C tipsy effect lost Rivet format");check(!real.getMessage().equals(sober),"Actual B&C effect was not applied");
+    System.out.println("RIVET_BREWIN_ADAPTER_OK actual 4.5.0 sober/tipsy");
+   }catch(ReflectiveOperationException failure){throw new IllegalStateException(failure);}
+  }
   var normal=player(ChatType.CHAT);var before=normal.getMessage();ClientChat.chat(normal);check(!normal.getMessage().equals(before),"Public chat not formatted");
   for(var type:java.util.List.of(ChatType.MSG_COMMAND_INCOMING,ChatType.MSG_COMMAND_OUTGOING,ChatType.TEAM_MSG_COMMAND_INCOMING,ChatType.TEAM_MSG_COMMAND_OUTGOING,ChatType.EMOTE_COMMAND,ChatType.SAY_COMMAND)){
    var event=player(type);var original=event.getMessage();ClientChat.chat(event);check(event.getMessage().equals(original)&&!event.isCanceled(),"Command type modified: "+type);

@@ -7,7 +7,8 @@
   "client": [
     "AccessDeniedScreenMixin",
     "AccessDeniedProfileMixin",
-    "NumismaticsClientIdentityMixin"
+    "NumismaticsClientIdentityMixin",
+    "BrewinChatMixin"
   ],
   "injectors": {
     "defaultRequire": 0

@@ -2830,5 +2830,7 @@
   "rivet.update.coreRequired": "Connecting requires a Rivet update: %s → %s. Restart the game once after installation.",
   "rivet.update.combined": "Rivet: %s → %s. Rivet and the modpack will be installed together, with one restart.",
   "rivet.update.partialCatalog": "Some versions could not be checked. Select a version or retry.",
-  "rivet.core.update_disk_space": "Not enough free space for the update and its backup. Free some space and retry."
+  "rivet.core.update_disk_space": "Not enough free space for the update and its backup. Free some space and retry.",
+  "rivet.pack.routesUnavailable": "Could not connect to any pack distribution address.",
+  "rivet.pack.switchingRoute": "Pack connection interrupted. Trying a backup address…"
 }

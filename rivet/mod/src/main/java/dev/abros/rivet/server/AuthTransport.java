@@ -17,6 +17,7 @@ public final class AuthTransport {
                 engine.setEnabledCipherSuites(new String[]{"TLS_AES_128_GCM_SHA256","TLS_AES_256_GCM_SHA384"});
                 var handler=new SslHandler(engine);handler.setHandshakeTimeoutMillis(15000);
                 handler.handshakeFuture().addListener(future->{if(future.isSuccess())result.complete(null);else{channel.close();result.completeExceptionally(future.cause());}});
+                channel.pipeline().addBefore("packet_handler","rivet_auth_failure",new AuthTransportFailureHandler(failure->com.mojang.logging.LogUtils.getLogger().warn("Rivet TLS connection closed: {}",failure.toString())));
                 channel.pipeline().addFirst("rivet_auth_tls",handler);
             }catch(Exception ex){channel.close();result.completeExceptionally(ex);}
         });return result;

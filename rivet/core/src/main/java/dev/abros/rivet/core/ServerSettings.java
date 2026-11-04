@@ -157,6 +157,7 @@ public final class ServerSettings {
     public ServerSettings liveFrom(ServerSettings next){var merged=new HashMap<>(values);next.values.forEach((key,value)->{if(key.startsWith("menu.")||key.startsWith("community."))merged.put(key,value);});return new ServerSettings(merged);}
     public String text(String key){return (String)values.get(key);}
     public boolean flag(String key){return (Boolean)values.get(key);}
+    public java.util.List<dev.abros.rivet.core.pack.PackRoutes.Route> packRoutes(){return dev.abros.rivet.core.pack.PackRoutes.config((java.util.List<?>)values.get("pack.network.routes"));}
     public java.util.List<String> strings(String key){var result=new java.util.ArrayList<String>();for(Object item:(java.util.List<?>)values.get(key)){if(!(item instanceof String value))throw invalid(key+": ожидаются строки");result.add(value);}return java.util.List.copyOf(result);}
     public java.util.List<dev.abros.rivet.core.api.TerrainProfiles.Spec> terrainProfiles(){return dev.abros.rivet.core.api.TerrainProfiles.parse((java.util.List<?>)values.get("api.terrain.profiles"));}
     public int number(String key){return Math.toIntExact(((Number)values.get(key)).longValue());}
@@ -174,7 +175,7 @@ public final class ServerSettings {
         range("api.keyLimit",1,4096);range("api.appKeyLimit",1,64);range("api.requestsPerMinute",1,100000);range("api.maxKeyDays",1,3650);range("api.keyRetentionDays",1,365);range("api.auditEntries",100,100000);
         modules();range("map.nearbyRadius",1,4096);
         range("pack.protection.connectionsPerAddress",1,64);range("pack.protection.requestsPerSecond",1,1000);range("pack.protection.idleSeconds",1,300);range("pack.protection.queueSeconds",1,600);
-        range("pack.network.port",1,65535);range("pack.network.publicPort",1,65535);
+        packRoutes();range("pack.network.port",1,65535);range("pack.network.publicPort",1,65535);
         range("pack.downloads.totalMiB",0,1000000);range("pack.downloads.clientMiB",0,1000000);range("pack.downloads.concurrent",0,Integer.MAX_VALUE);
         String packDirectory=text("pack.directory");
         if(packDirectory.isBlank()||Path.of(packDirectory).isAbsolute()||Path.of(packDirectory).normalize().startsWith(".."))throw invalid("pack.directory: ожидается относительная папка внутри сервера");

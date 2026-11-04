@@ -335,6 +335,7 @@ jobs:
           ./gradlew -I map-network/runs.init.gradle :bootstrap:verifyBundle :mod:compatibilityTestJar --no-daemon --console=plain
           version=$(sed -n 's/^rivetVersion=//p' gradle.properties | tr -d '\r')
           xvfb-run -a -s '-screen 0 1280x1024x24' python3 rivet/tooling/combined_update.py combined-update --runtime map-network --fixtures map-network/build/mod/compatibility-tests/rivet-compatibility-tests.jar --bundle "rivet/mod/build/libs/rivet-$version-mc1.21.1-neoforge.jar" --version "$version"
+          xvfb-run -a -s '-screen 0 1280x1024x24' python3 rivet/tooling/combined_update.py combined-routes --runtime map-network --fixtures map-network/build/mod/compatibility-tests/rivet-compatibility-tests.jar --bundle "rivet/mod/build/libs/rivet-$version-mc1.21.1-neoforge.jar" --version "$version" --routes direct proxy fallback --scales 3 --profiles default --alias-reconnect
       - name: Verify Envelope identity routing and restart recovery
         run: python3 rivet/tooling/envelope_smoke.py envelope-native
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
@@ -354,6 +355,11 @@ jobs:
             combined-update/client-*/crash-reports/
             combined-update/client-*/rivet/runtime/helper.log
             combined-update/client-*/rivet/transactions/*/journal.json
+            combined-routes/*.log
+            combined-routes/server/logs/
+            combined-routes/client-*/logs/
+            combined-routes/client-*/rivet/runtime/helper.log
+            combined-routes/client-*/rivet/transactions/*/journal.json
             envelope-native/*.log
             envelope-native/server/logs/
             envelope-native/server/crash-reports/

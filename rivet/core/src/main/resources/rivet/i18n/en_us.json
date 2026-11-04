@@ -830,5 +830,7 @@
   "rivet.permissions.cardDescription": "LuckPerms group permissions",
   "rivet.permissions.cardHint": "Inspect, understand and edit permissions",
   "rivet.permissions.noProvider": "Without LuckPerms, only the standard Minecraft roles can be inspected.",
-  "rivet.core.update_disk_space": "Not enough free space for the update and its backup. Free some space and retry."
+  "rivet.core.update_disk_space": "Not enough free space for the update and its backup. Free some space and retry.",
+  "rivet.pack.routesUnavailable": "Could not connect to any pack distribution address.",
+  "rivet.pack.switchingRoute": "Pack connection interrupted. Trying a backup address…"
 }

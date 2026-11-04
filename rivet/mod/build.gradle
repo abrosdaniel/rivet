@@ -188,4 +188,6 @@ repositories { maven { url = 'https://maven.maxhenkel.de/repository/public'; con
 dependencies {
     compileOnly 'de.maxhenkel.voicechat:voicechat-api:2.5.0'
     testImplementation 'de.maxhenkel.voicechat:voicechat-api:2.5.0'
+    // Match Minecraft's transport in isolated TLS failure tests; never package it.
+    testImplementation 'io.netty:netty-handler:4.1.97.Final'
 }

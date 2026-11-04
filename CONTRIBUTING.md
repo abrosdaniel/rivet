@@ -34,7 +34,8 @@ python3 -m unittest discover -s rivet/tooling/tests
 
 ```sh
 ./gradlew -I /tmp/rivet-native/runs.init.gradle :bootstrap:verifyBundle :mod:compatibilityTestJar
-python3 rivet/tooling/combined_update.py /tmp/rivet-update --runtime /tmp/rivet-native --fixtures /tmp/rivet-native/build/mod/compatibility-tests/rivet-compatibility-tests.jar --bundle rivet/mod/build/libs/rivet-2.6.0-mc1.21.1-neoforge.jar --version 2.6.0
+version=$(sed -n 's/^rivetVersion=//p' gradle.properties)
+python3 rivet/tooling/combined_update.py /tmp/rivet-update --runtime /tmp/rivet-native --fixtures /tmp/rivet-native/build/mod/compatibility-tests/rivet-compatibility-tests.jar --bundle "rivet/mod/build/libs/rivet-$version-mc1.21.1-neoforge.jar" --version "$version"
 ```
 
 Укажите версию проверяемого кандидата и отдельную тестовую PostgreSQL через
@@ -46,6 +47,8 @@ python3 rivet/tooling/combined_update.py /tmp/rivet-update --runtime /tmp/rivet-
 helper и запускает игру снова. Проверяются единая транзакция для Rivet и сборки,
 точные файлы, сохранность личного конфига и подключение без повторной установки.
 По умолчанию проверяются GUI 1/2/3 и обычный, светлый и контрастный профили.
+
+Для проверки маршрутов добавьте `--routes direct proxy fallback --scales 3 --profiles default --alias-reconnect`. Сценарий создаёт настоящие TCP-прокси игры и раздачи, отключает прокси раздачи для проверки резерва и меняет игровой адрес после установки. Внешние туннели провайдера проверяются отдельно.
 `--scales` и `--profiles` ограничивают локальный прогон.
 
 Исходный тестовый JAR содержит код кандидата с более старым номером версии:
