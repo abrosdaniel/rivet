@@ -7,12 +7,73 @@ import os
 import re
 import shutil
 import subprocess
+import sys
+import time
 import zipfile
 from pathlib import Path
 
 
+ATTEMPTS = 4
+
+
+def transient(error):
+    message = (error.stderr or "") + (error.output or "")
+    return bool(re.search(r"HTTP (?:429|500|502|503|504)\b", message) or
+                re.search(r"connection reset|unexpected EOF|TLS handshake timeout|i/o timeout", message, re.I))
+
+
+def backoff(attempt):
+    delay = 5 * 2 ** attempt
+    print(f"Temporary GitHub failure; retry in {delay}s ({attempt + 2}/{ATTEMPTS})", file=sys.stderr)
+    time.sleep(delay)
+
+
 def run(*args):
-    return subprocess.check_output(args, text=True).strip()
+    # Only reads retry here. Release mutations reconcile remote state separately.
+    writes = ("-X", "--method", "-f", "-F", "--field", "--raw-field", "--input")
+    api_read = args[:2] == ("gh", "api") and not any(
+        arg == flag or arg.startswith(flag + "=") for arg in args[2:] for flag in writes)
+    readable = api_read or args[:3] == ("gh", "release", "download")
+    for attempt in range(ATTEMPTS):
+        try:
+            return subprocess.check_output(args, text=True, stderr=subprocess.PIPE).strip()
+        except subprocess.CalledProcessError as error:
+            if error.stderr:
+                print(error.stderr.rstrip(), file=sys.stderr)
+            if not readable or not transient(error) or attempt == ATTEMPTS - 1:
+                raise
+            backoff(attempt)
+
+
+def releases(repository):
+    pages = json.loads(run("gh", "api", f"repos/{repository}/releases", "--paginate", "--slurp"))
+    return [release for page in pages for release in page]
+
+
+def change_release(repository, tag, commit, *args):
+    """A failed POST may already have succeeded. Reconcile before retrying writes."""
+    operation = args[2]
+    for attempt in range(ATTEMPTS):
+        try:
+            return run(*args)
+        except subprocess.CalledProcessError as error:
+            if not transient(error) and not (operation == "create" and "HTTP 422" in (error.stderr or "")):
+                raise
+            existing = next((r for r in releases(repository) if r["tag_name"] == tag), None)
+            if existing:
+                if existing["target_commitish"] != commit:
+                    raise ValueError("Release belongs to another commit; refusing retry") from error
+                if not existing["draft"]:
+                    if operation == "edit":
+                        return ""  # Publication succeeded; only its response was lost.
+                    raise ValueError("Release is already published; refusing to overwrite assets") from error
+                if operation == "create":
+                    return ""  # Resume the matching draft without a duplicate POST.
+            elif operation != "create":
+                raise ValueError("Release disappeared; refusing mutation retry") from error
+            if not transient(error) or attempt == ATTEMPTS - 1:
+                raise
+            backoff(attempt)
 
 
 def version(root):
@@ -68,8 +129,8 @@ def publish(root, artifact, output):
     commit = os.environ["GITHUB_SHA"]
     if run("git", "rev-parse", "HEAD") != commit:
         raise ValueError("Checkout does not match the tested commit")
-    pages = json.loads(run("gh", "api", f"repos/{repository}/releases", "--paginate", "--slurp"))
-    existing = next((r for page in pages for r in page if r["tag_name"] == tag), None)
+    available = releases(repository)
+    existing = next((r for r in available if r["tag_name"] == tag), None)
     if existing and not existing["draft"]:
         print(f"{tag} is already published; nothing to do")
         return
@@ -85,7 +146,7 @@ def publish(root, artifact, output):
         raise ValueError("Fill rivet/RELEASE_NOTES.md before publishing")
     files = package(root, artifact, output)
     current = json.loads((output / "core.json").read_text())
-    same_major = [r for page in pages for r in page if not r["draft"] and not r.get("prerelease", False)
+    same_major = [r for r in available if not r["draft"] and not r.get("prerelease", False)
                   and re.fullmatch(r"v[0-9]+\.[0-9]+\.[0-9]+", r["tag_name"])
                   and r["tag_name"][1:].split(".")[0] == number.split(".")[0]]
     if same_major:
@@ -99,16 +160,16 @@ def publish(root, artifact, output):
                 "--title", "Rivet " + number, "--draft", "--notes-file", str(notes)]
         if "-" in number:
             args.append("--prerelease")
-        run(*args)
-    run("gh", "release", "upload", tag, *map(str, files), "--repo", repository, "--clobber")
+        change_release(repository, tag, commit, *args)
+    change_release(repository, tag, commit, "gh", "release", "upload", tag, *map(str, files), "--repo", repository, "--clobber")
     # A retry can resume a draft, but published releases are never overwritten.
     import tempfile
     with tempfile.TemporaryDirectory() as temp:
         for path in files:
-            run("gh", "release", "download", tag, "--repo", repository, "--pattern", path.name, "--dir", temp)
+            run("gh", "release", "download", tag, "--repo", repository, "--pattern", path.name, "--dir", temp, "--clobber")
             if (Path(temp) / path.name).read_bytes() != path.read_bytes():
                 raise ValueError("Uploaded asset differs: " + path.name)
-    run("gh", "release", "edit", tag, "--repo", repository, "--draft=false")
+    change_release(repository, tag, commit, "gh", "release", "edit", tag, "--repo", repository, "--draft=false")
     print(f"Published {tag}")
 
 
