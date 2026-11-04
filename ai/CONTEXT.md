@@ -14,6 +14,22 @@
 
 ## Текущая работа
 
+2026-11-04: исправлена единственная упавшая job CI41812171502 (commit440d995):
+combined-routes/direct/alias. ReviewScreen был экраном сетевой ошибки, harness
+скрывал её как Repeated update review. Тестовый TCP relay слушал только IPv4;
+Minecraft VM args preferIPv6Addresses=system на Linux выбирают ::1 для localhost.
+Linux Java21 подтвердил порядок ::1,127.0.0.1. Старый relay в нативном клиенте
+с принудительным IPv6 воспроизвёл Connection refused на alias; исправленный
+слушает обе loopback-семьи. Диагностика теперь включает текст экрана.
+После исправления: прямой/proxy/fallback + alias,3 цикла/9 процессов, все OK;
+одна транзакция и точные файлы сохранены. Linux Docker:2 relay-теста OK;
+Python36, strict docs, actionlint и diff-check OK. CI route-команда явно включает
+--prefer-ipv6, чтобы регрессия не зависела от системного порядка адресов.
+Изменены только fixtures/tooling/CI/документация; release JAR и установленный
+клиент не менялись. Все остальные jobs указанного CI успешны, Envelope-шаг
+после сбоя пропущен; удалённый CI самого исправления пока не выполнен.
+
+
 2026-11-04: кандидат2.7.0 проверен и упакован. Полный build с
 refresh-dependencies и принудительными Test:750 Java тестов без ошибок/пропусков;
 затем11 route-тестов, включая отказ подмены публикации; Python35 и strict docs OK.

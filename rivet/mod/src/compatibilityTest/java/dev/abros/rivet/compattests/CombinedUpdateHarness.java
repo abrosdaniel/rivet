@@ -46,7 +46,7 @@ public final class CombinedUpdateHarness {
     if(name.equals("UiConfirmDialog")){check(phase.equals("install")||phase.equals("alias"),"Trust not retained");press("Подтвердить");}
     else if(name.equals("ServerPackScreen")){check(phase.equals("install"),"Repeated pack installation");press("Проверить изменения");}
     else if(name.equals("ReviewScreen")){
-     check(phase.equals("install"),"Repeated update review");String text=text(last);
+     String text=text(last);check(phase.equals("install"),"Unexpected review during "+phase+": "+text);
      check(text.contains("rivet-"+target)&&text.contains("combined-addon.jar"),"Review missing one of the updates: "+text);
      reviewed=true;System.out.println("RIVET_COMBINED_REVIEW_OK");press("Установить");
     }else if(name.equals("RestartScreen")){

@@ -23,18 +23,33 @@ class TcpRelay:
     """Real byte-transparent tunnel; the client still authenticates the origin TLS key."""
     def __init__(self, target):
         self.target = target
-        self.listener = socket.create_server(('127.0.0.1', 0))
-        self.port = self.listener.getsockname()[1]
+        ipv4 = socket.create_server(('127.0.0.1', 0))
+        self.port = ipv4.getsockname()[1]
+        self.listeners = [ipv4]
+        # Minecraft may resolve localhost to ::1 on Linux. Listen on both
+        # loopback families, without exposing the test relay on LAN interfaces.
+        try:
+            families = {entry[0] for entry in socket.getaddrinfo('localhost', self.port, type=socket.SOCK_STREAM)}
+            if socket.AF_INET6 in families:
+                self.listeners.append(socket.create_server(('::1', self.port), family=socket.AF_INET6))
+        except Exception:
+            for listener in self.listeners:
+                listener.close()
+            raise
         self.bytes = 0
         self.closed = threading.Event()
         self.connections = set()
         self.lock = threading.Lock()
-        threading.Thread(target=self.accept, daemon=True).start()
+        for listener in self.listeners:
+            listener.settimeout(0.5)
+            threading.Thread(target=self.accept, args=(listener,), daemon=True).start()
 
-    def accept(self):
+    def accept(self, listener):
         while not self.closed.is_set():
             try:
-                client, _ = self.listener.accept()
+                client, _ = listener.accept()
+            except socket.timeout:
+                continue
             except OSError:
                 return
             threading.Thread(target=self.forward, args=(client,), daemon=True).start()
@@ -76,7 +91,8 @@ class TcpRelay:
 
     def close(self):
         self.closed.set()
-        self.listener.close()
+        for listener in self.listeners:
+            listener.close()
         with self.lock:
             for connection in self.connections:
                 try:
@@ -122,6 +138,7 @@ def main():
     parser.add_argument('--pack-port', type=int, default=25588)
     parser.add_argument('--scales', type=int, nargs='+', default=[1, 2, 3])
     parser.add_argument('--profiles', nargs='+', choices=['default', 'light', 'contrast'], default=['default', 'light', 'contrast'])
+    parser.add_argument('--prefer-ipv6', action='store_true', help='Prefer IPv6 in client JVMs to cover localhost resolution independently of host defaults')
     parser.add_argument('--alias-reconnect', action='store_true', help='Also reconnect through the other game address without reinstalling')
     parser.add_argument('--routes', nargs='+', choices=['direct', 'proxy', 'fallback'], default=['direct'])
     args = parser.parse_args()
@@ -198,7 +215,11 @@ def main():
                     print(f'Running {route} {profile} GUI {scale}: {phase}', flush=True)
                     log = work / f'client-{route}-{profile}-{scale}-{phase}.log'
                     with log.open('w') as client_log:
-                        client = subprocess.Popen(command(work, java, 'client') + ['--username', 'RivetMapTest', '--width', '1280', '--height', '1024'], cwd=game, env=dict(client_env, RIVET_COMBINED_FLOW=phase), stdout=client_log, stderr=subprocess.STDOUT)
+                        client_command = command(work, java, 'client')
+                        if args.prefer_ipv6:
+                            # After VM args (which set 'system'), before the main-class args.
+                            client_command.insert(-1, '-Djava.net.preferIPv6Addresses=true')
+                        client = subprocess.Popen(client_command + ['--username', 'RivetMapTest', '--width', '1280', '--height', '1024'], cwd=game, env=dict(client_env, RIVET_COMBINED_FLOW=phase), stdout=client_log, stderr=subprocess.STDOUT)
                         try:
                             result = client.wait(timeout=180)
                             verify(log, marker)

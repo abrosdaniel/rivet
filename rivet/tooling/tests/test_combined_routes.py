@@ -43,3 +43,32 @@ class CombinedRoutes(unittest.TestCase):
             finally:
                 relay.close()
                 relay.close()
+
+    def test_every_localhost_address_reaches_same_origin(self):
+        addresses = list(dict.fromkeys((entry[0], entry[4][0]) for entry in
+                         socket.getaddrinfo('localhost', 0, type=socket.SOCK_STREAM)))
+        with socket.create_server(('127.0.0.1', 0)) as origin:
+            origin.settimeout(5)
+            errors = []
+            def serve():
+                try:
+                    for _ in addresses:
+                        with origin.accept()[0] as client:
+                            client.sendall(b'origin')
+                except Exception as failure:
+                    errors.append(failure)
+            worker = threading.Thread(target=serve, daemon=True)
+            worker.start()
+            relay = TcpRelay(origin.getsockname())
+            try:
+                for family, host in addresses:
+                    with self.subTest(address=host), socket.socket(family, socket.SOCK_STREAM) as client:
+                        client.settimeout(5)
+                        client.connect((host, relay.port))
+                        with client.makefile('rb') as stream:
+                            self.assertEqual(b'origin', stream.read())
+                worker.join(5)
+                self.assertFalse(worker.is_alive())
+                self.assertEqual([], errors)
+            finally:
+                relay.close()
