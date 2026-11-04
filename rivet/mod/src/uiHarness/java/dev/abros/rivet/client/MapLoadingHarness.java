@@ -30,7 +30,7 @@ public final class MapLoadingHarness {
         var mc=Minecraft.getInstance();WorldMapClient.flush();
         var repo=WorldMapClient.class.getDeclaredField("repository");repo.setAccessible(true);
         repo.set(null,new MapRepository(java.nio.file.Files.createTempDirectory("rivet-map-loading-"),UUID.randomUUID(),mc.player.getUUID()));
-        for(String name:List.of("tiles","loading","dirty","known","windows","indexing","indexed","retries","changedChunks")){
+        for(String name:List.of("tiles","loading","dirty","known","regions","regionLoading","regionRetries","windows","indexing","indexed","retries","changedChunks")){
             var value=field(name);if(value instanceof Map<?,?> values)values.clear();else ((Set<?>)value).clear();
         }
         WorldMapClient.resample();MapTerrainCache.reset();MapRegionTextures.reset();Minimap.invalidate();

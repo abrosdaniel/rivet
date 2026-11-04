@@ -2823,5 +2823,12 @@
   "rivet.permissions.cardAction": "Открыть права",
   "rivet.permissions.cardDescription": "Назначения групп LuckPerms",
   "rivet.permissions.cardHint": "Просмотр, описание и изменение прав",
-  "rivet.permissions.noProvider": "Без LuckPerms доступен только просмотр стандартных ролей Minecraft."
+  "rivet.permissions.noProvider": "Без LuckPerms доступен только просмотр стандартных ролей Minecraft.",
+  "rivet.update.noCompatibleRelease": "Для этого сервера пока нет доступного совместимого выпуска Rivet. Повторите проверку позже.",
+  "rivet.update.helperIncompatible": "Для выбранной версии требуется другой механизм установки. Автоматическое обновление не подготовлено.",
+  "rivet.update.required": "Обновление для подключения",
+  "rivet.update.coreRequired": "Для подключения требуется обновить Rivet: %s → %s. После установки понадобится один перезапуск игры.",
+  "rivet.update.combined": "Rivet: %s → %s. Rivet и сборка установятся вместе — потребуется один перезапуск.",
+  "rivet.update.partialCatalog": "Список загружен не полностью. Можно выбрать версию или повторить проверку.",
+  "rivet.core.update_disk_space": "Недостаточно свободного места для обновления и резервной копии. Освободите место и повторите попытку."
 }

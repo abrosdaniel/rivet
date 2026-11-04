@@ -9,7 +9,9 @@ import java.util.function.Consumer;
 
 /** Reviews current files, owns only explicitly installed paths and stages the common helper transaction. */
 public final class PackInstaller {
- public record Review(Planner.Plan plan,PackManifest manifest,JsonObject state,String server,JsonObject configurations,Map<String,String> activeConfigurations){}
+ public record Review(Planner.Plan plan,PackManifest manifest,JsonObject state,String server,JsonObject configurations,Map<String,String> activeConfigurations,CoreUpdater.Update coreUpdate){
+  public Review(Planner.Plan plan,PackManifest manifest,JsonObject state,String server,JsonObject configurations,Map<String,String> activeConfigurations){this(plan,manifest,state,server,configurations,activeConfigurations,null);}
+ }
  private final Path game;private final Cache cache;private final String rivetVersion,installedLoader;
  public PackInstaller(Path game,Cache cache){this(game,cache,null);}
  public PackInstaller(Path game,Cache cache,String rivetVersion){this(game,cache,rivetVersion,null);}
@@ -41,25 +43,38 @@ public final class PackInstaller {
   for(var e:old.entrySet())if(!desired.contains(e.getKey())){String current=Planner.hash(SafePaths.resolve(game,e.getKey()));if(current==null)continue;if(!current.equals(e.getValue().hash()))conflicts.add(dev.abros.rivet.core.Messages.text("rivet.core.delete_modified_file_464bc3ca")+e.getKey());changes.add(new Planner.Change(e.getKey(),current,null));}
   var plan=new Planner.Plan(UUID.randomUUID().toString(),Hashes.sha256(server.getBytes(java.nio.charset.StandardCharsets.UTF_8)),List.copyOf(changes),Map.copyOf(owned),Set.copyOf(choices),List.copyOf(conflicts),downloads);return new Review(plan,manifest,state,server,configurations,Map.copyOf(activeConfigurations));
  }
+ public Review withCore(Review review,Path loadedJar,CoreUpdater.Update update)throws IOException{
+  if(review.coreUpdate()!=null)throw new IOException("Rivet update already selected");
+  var changes=new ArrayList<>(review.plan().changes());var core=CoreUpdater.changes(game,loadedJar,update);
+  var paths=new HashSet<String>();for(var c:changes)paths.add(SafePaths.key(c.path()));
+  for(var c:core){if(!paths.add(SafePaths.key(c.path()))||review.plan().ownership().containsKey(c.path()))throw new IOException("Server pack cannot own the Rivet update");changes.add(c);}
+  var plan=review.plan();long bytes=plan.downloadBytes()+(cache.contains(update.artifact().sha256())?0:update.artifact().size());
+  return new Review(new Planner.Plan(plan.id(),plan.projectKey(),List.copyOf(changes),plan.ownership(),plan.selection(),plan.conflicts(),bytes),review.manifest(),review.state(),review.server(),review.configurations(),review.activeConfigurations(),update);
+ }
  public String stage(Review review,PackClient client,AtomicBoolean cancel,Consumer<String> progress)throws IOException{
   return stage(review,client,cancel,progress,event->{});
  }
  public String stage(Review review,PackClient client,AtomicBoolean cancel,Consumer<String> progress,Consumer<InstallProgress> observer)throws IOException{
   observer.accept(InstallProgress.phase("checking"));validateReview(review);
-  var hashes=new HashSet<String>();for(var c:review.plan().changes())if(c.after()!=null)hashes.add(c.after());for(var hash:List.copyOf(hashes))if(!review.manifest().files().stream().anyMatch(f->f.hash().equals(hash))){Path source=configurationObject(hash);Path object=cache.path(hash);Files.createDirectories(object.getParent());Files.copy(source,object,StandardCopyOption.REPLACE_EXISTING);hashes.remove(hash);}
+  var sizes=new HashMap<String,Long>();for(var file:review.manifest().files())sizes.put(file.hash(),file.size());if(review.coreUpdate()!=null)sizes.put(review.coreUpdate().artifact().sha256(),review.coreUpdate().artifact().size());
+  for(var change:review.plan().changes())if(change.after()!=null&&!sizes.containsKey(change.after()))sizes.put(change.after(),Files.size(configurationObject(change.after())));
+  UpdateSpace.check(game,review.plan(),sizes,review.plan().downloadBytes());
+  var hashes=new HashSet<String>();for(var c:review.plan().changes())if(c.after()!=null)hashes.add(c.after());
+  if(review.coreUpdate()!=null){try{CoreUpdater.obtain(review.coreUpdate(),cache,cancel,observer);}catch(InterruptedException interrupted){Thread.currentThread().interrupt();throw new IOException("Update interrupted",interrupted);}hashes.remove(review.coreUpdate().artifact().sha256());}
+for(var hash:List.copyOf(hashes))if(!review.manifest().files().stream().anyMatch(f->f.hash().equals(hash))){Path source=configurationObject(hash);Path object=cache.path(hash);Files.createDirectories(object.getParent());Files.copy(source,object,StandardCopyOption.REPLACE_EXISTING);hashes.remove(hash);}
   var pending=new LinkedHashMap<String,PackManifest.Entry>();for(var file:review.manifest().files())if(hashes.contains(file.hash()))pending.putIfAbsent(file.hash(),file);
   long total=pending.values().stream().mapToLong(PackManifest.Entry::size).sum(),completed=0;int done=0;
   for(var file:pending.values()){
    if(cancel.get())throw new IOException(dev.abros.rivet.core.Messages.text("rivet.core.upload_cancelled_13f622b6"));
    long base=completed;int finished=done;
    observer.accept(new InstallProgress("downloading",file.path(),base,total,finished,pending.size()));
-   cache.write(file.hash(),cancel,object->client.download(review.manifest().hash(),file,object,cancel,progress,(position,received)->observer.accept(new InstallProgress("downloading",file.path(),base+position,total,finished,pending.size()))));
+   cache.write(file.hash(),cancel,object->{if(!cache.contains(file.hash()))client.download(review.manifest().hash(),file,object,cancel,progress,(position,received)->observer.accept(new InstallProgress("downloading",file.path(),base+position,total,finished,pending.size())));});
    completed+=file.size();done++;hashes.remove(file.hash());observer.accept(new InstallProgress("downloading",file.path(),completed,total,done,pending.size()));
   }
   if(!hashes.isEmpty())throw new IOException(dev.abros.rivet.core.Messages.text("rivet.core.the_manifest_is_missing_required_files_f9ada0c2"));if(cancel.get())throw new IOException(dev.abros.rivet.core.Messages.text("rivet.core.upload_cancelled_13f622b6"));
   observer.accept(InstallProgress.phase("verifying"));validateMods(review);
   observer.accept(InstallProgress.phase("preparing"));var plan=review.plan();var accepted=new Planner.Plan(plan.id(),plan.projectKey(),plan.changes(),plan.ownership(),plan.selection(),List.of(),plan.downloadBytes());
-  new Transactions(game).prepare(accepted,review.manifest().bytes(),nextState(review));return plan.id();
+  new Transactions(game).prepare(accepted,review.manifest().bytes(),nextState(review),review.state());return plan.id();
  }
  public void saveSelection(Review review)throws IOException{
   if(!review.plan().changes().isEmpty())throw new IOException("Selection requires a file transaction");
@@ -78,7 +93,7 @@ public final class PackInstaller {
  }
  private JsonObject nextState(Review review)throws IOException{
   var plan=review.plan();
-  var next=review.state().deepCopy();next.remove("lock");next.remove("lockSha256");next.remove("repository");next.add("serverConfigurations",review.configurations());next.add("ownership",Json.GSON.toJsonTree(plan.ownership()));next.addProperty("packServer",review.server());next.addProperty("packHash",review.manifest().hash());next.add("serverPack",Json.parse(new String(review.manifest().bytes(),java.nio.charset.StandardCharsets.UTF_8)));var choices=next.has("serverChoices")?next.getAsJsonObject("serverChoices"):new JsonObject();var selected=new JsonObject();for(var c:review.manifest().components())selected.addProperty(c.id(),!c.optional()||plan.selection().contains(c.id()));choices.add(review.server(),selected);next.add("serverChoices",choices);return next;
+  var next=review.state().deepCopy();if(review.coreUpdate()!=null)next.addProperty("coreVersion",review.coreUpdate().version());next.remove("lock");next.remove("lockSha256");next.remove("repository");next.add("serverConfigurations",review.configurations());next.add("ownership",Json.GSON.toJsonTree(plan.ownership()));next.addProperty("packServer",review.server());next.addProperty("packHash",review.manifest().hash());next.add("serverPack",Json.parse(new String(review.manifest().bytes(),java.nio.charset.StandardCharsets.UTF_8)));var choices=next.has("serverChoices")?next.getAsJsonObject("serverChoices"):new JsonObject();var selected=new JsonObject();for(var c:review.manifest().components())selected.addProperty(c.id(),!c.optional()||plan.selection().contains(c.id()));choices.add(review.server(),selected);next.add("serverChoices",choices);return next;
  }
 
  private Path configurationPath(String hash)throws IOException{
@@ -100,7 +115,7 @@ public final class PackInstaller {
   }
   var duplicates=ModDuplicates.scanFiles(projected);if(!duplicates.isEmpty())throw new IOException(dev.abros.rivet.core.Messages.text("rivet.core.duplicate_mods_after_installation_abf4e1fa")+String.join("; ",duplicates)+dev.abros.rivet.core.Messages.text("rivet.core.remove_the_personal_duplicate_manually_and_c322f7e8"));
   var inputs=new ArrayList<PackModAudit.Input>();for(var entry:projected.entrySet())inputs.add(new PackModAudit.Input("mods/"+entry.getKey(),entry.getValue(),""));
-  try{PackModAudit.validateInstalled(inputs,review.manifest().minecraft(),installedLoader==null?review.manifest().loader():installedLoader,rivetVersion);}
+  try{PackModAudit.validateInstalled(inputs,review.manifest().minecraft(),installedLoader==null?review.manifest().loader():installedLoader,review.coreUpdate()==null?rivetVersion:review.coreUpdate().version());}
   catch(IOException incompatible){throw new IOException(dev.abros.rivet.core.Messages.text("rivet.core.installed_mod_set_is_incompatible_18ba71db")+incompatible.getMessage()+dev.abros.rivet.core.Messages.text("rivet.core.change_your_selected_components_or_personal_5dcd8279"),incompatible);}
  }
  public String installedHash()throws IOException{var state=state();if(!state.has("serverPack"))return "";var manifest=PackManifest.parse(Json.GSON.toJson(state.get("serverPack")).getBytes(java.nio.charset.StandardCharsets.UTF_8));for(var f:manifest.selected(Set.of()))if(f.policy().equals("replace")&&!f.hash().equals(Planner.hash(SafePaths.resolve(game,f.path()))))return "invalid";return Json.opt(state,"packHash","");}

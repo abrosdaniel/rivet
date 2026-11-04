@@ -1,6 +1,7 @@
 package dev.abros.rivet.core;
 import com.google.gson.*;
 import java.nio.file.*;
+import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.util.*;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -8,7 +9,11 @@ import java.util.concurrent.atomic.AtomicBoolean;
 public final class CoreUpdater {
     public static final String REPOSITORY="https://github.com/abrosdaniel/rivet";
     public static final String RELEASES="https://api.github.com/repos/abrosdaniel/rivet/releases?per_page=100";
-    public record Update(String version,Cache.Artifact artifact,boolean preservesProtocols){}
+    public record Update(String version,Cache.Artifact artifact,boolean preservesProtocols,JsonObject protocols){
+        public Update(String version,Cache.Artifact artifact,boolean preservesProtocols){this(version,artifact,preservesProtocols,WireProtocols.current());}
+        public Update{protocols=protocols.deepCopy();}
+        @Override public JsonObject protocols(){return protocols.deepCopy();}
+    }
     private static final java.util.concurrent.ExecutorService METADATA=new java.util.concurrent.ThreadPoolExecutor(4,4,0,java.util.concurrent.TimeUnit.SECONDS,
         new java.util.concurrent.ArrayBlockingQueue<>(100),r->{var t=new Thread(r,"Rivet release metadata");t.setDaemon(true);return t;},new java.util.concurrent.ThreadPoolExecutor.AbortPolicy());
     private final Remote remote;
@@ -26,6 +31,10 @@ public final class CoreUpdater {
         return releases(runningVersion,minecraft,neoForge,limit,includeOlder,false);
     }
     public List<Update> releases(String runningVersion,String minecraft,String neoForge,int limit,boolean includeOlder,boolean refresh)throws Exception{
+        return catalog(runningVersion,minecraft,neoForge,limit,includeOlder,refresh).updates();
+    }
+    public record Catalog(List<Update> updates,boolean partial){public Catalog{updates=List.copyOf(updates);}}
+    public Catalog catalog(String runningVersion,String minecraft,String neoForge,int limit,boolean includeOlder,boolean refresh)throws Exception{
         if(limit<1||limit>100)throw new IllegalArgumentException("Release list limit");
         var versions=new java.util.TreeSet<String>((a,b)->Versions.compare(b,a));
         for(int page=1;page<=100;page++){
@@ -58,7 +67,7 @@ public final class CoreUpdater {
         }catch(InterruptedException interrupted){Thread.currentThread().interrupt();throw interrupted;}
         finally{for(var job:jobs)if(!job.isDone())job.cancel(true);}
         if(found.isEmpty()&&failure!=null)throw new java.io.IOException(dev.abros.rivet.core.Messages.text("rivet.core.could_not_load_available_rivet_versions_8ab41b79"),failure);
-        return found.stream().sorted((a,b)->Versions.compare(b.version(),a.version())).limit(limit).toList();
+        return new Catalog(found.stream().sorted((a,b)->Versions.compare(b.version(),a.version())).limit(limit).toList(),failure!=null||candidates.hasNext()&&found.size()<limit);
     }
     private Optional<Update> descriptor(String version,String minecraft,String neoForge,boolean refresh)throws Exception{
         String base=REPOSITORY+"/releases/download/v"+version+"/";
@@ -70,7 +79,7 @@ public final class CoreUpdater {
             if(artifact.get("java").getAsInt()>Runtime.version().feature())continue;
             String url=Json.str(artifact,"url");
             if(!officialArtifact(url,version,minecraft))throw new IllegalArgumentException("Update must belong to its official release");
-            return Optional.of(new Update(version,new Cache.Artifact("mods/rivet-"+version+"-mc"+minecraft+"-neoforge.jar",List.of(url),Json.str(artifact,"sha256"),artifact.get("size").getAsLong()),WireProtocols.compatible(descriptor.getAsJsonObject("protocols"))));
+            return Optional.of(new Update(version,new Cache.Artifact("mods/rivet-"+version+"-mc"+minecraft+"-neoforge.jar",List.of(url),Json.str(artifact,"sha256"),artifact.get("size").getAsLong()),WireProtocols.compatible(descriptor.getAsJsonObject("protocols")),descriptor.getAsJsonObject("protocols")));
         }
         return Optional.empty();
     }
@@ -82,21 +91,39 @@ public final class CoreUpdater {
         String[] actual=installed.split("\\."),required=minimum.split("\\.");
         return actual.length==3&&required.length==3&&actual[0].equals(required[0])&&actual[1].equals(required[1])&&Versions.compare(installed,minimum)>=0;
     }
+    public static List<Planner.Change> changes(Path game,Path loadedJar,Update update)throws IOException{
+        validateUpdate(update);String destination=update.artifact().path();
+        Path root=game.toRealPath(),jar=loadedJar.toRealPath();if(!jar.startsWith(root.resolve("mods"))||!Files.isRegularFile(jar))throw new IOException("Loaded Rivet JAR is outside the mods directory");
+        String relative=root.relativize(jar).toString().replace('\\','/');SafePaths.validate(relative);
+        if(!relative.equals(destination)&&Files.exists(SafePaths.resolve(root,destination)))throw new IOException("The selected Rivet JAR already exists");
+        if(relative.equals(destination))return List.of(new Planner.Change(relative,Hashes.sha256(jar),update.artifact().sha256()));
+        return List.of(new Planner.Change(relative,Hashes.sha256(jar),null),new Planner.Change(destination,null,update.artifact().sha256()));
+    }
+    private static void validateUpdate(Update update)throws IOException{
+        if(!Versions.isRelease(update.version())||update.artifact().urls().isEmpty()||update.artifact().urls().stream().anyMatch(url->!officialArtifact(url,update.version(),"1.21.1")))throw new IOException("Update is not an official Rivet release");
+        String destination=update.artifact().path();if(!destination.equals("mods/rivet-"+update.version()+"-mc1.21.1-neoforge.jar"))throw new IOException("Invalid Rivet update destination");
+        if(!update.protocols().has("helper")||!update.protocols().get("helper").equals(WireProtocols.current().get("helper")))throw new IOException("Incompatible update helper protocol");
+        try{Hashes.check(update.artifact().sha256());}catch(IllegalArgumentException bad){throw new IOException("Invalid update checksum",bad);}
+        if(update.artifact().size()<1)throw new IOException("Invalid update size");
+    }
+    public static void obtain(Update update,Cache cache,AtomicBoolean cancel,java.util.function.Consumer<InstallProgress> progress)throws IOException,InterruptedException{
+        validateUpdate(update);progress.accept(new InstallProgress("downloading",update.artifact().path(),0,update.artifact().size(),0,1));
+        cache.obtain(update.artifact(),cancel,index->{},(position,received)->progress.accept(new InstallProgress("downloading",update.artifact().path(),position,update.artifact().size(),0,1)));
+    }
     public String stage(Path game,Path loadedJar,Update update,Cache cache,JsonObject currentState)throws Exception{
         return stage(game,loadedJar,update,cache,currentState,event->{});
     }
     public String stage(Path game,Path loadedJar,Update update,Cache cache,JsonObject currentState,java.util.function.Consumer<InstallProgress> progress)throws Exception{
-        progress.accept(InstallProgress.phase("checking"));Path root=game.toRealPath(),jar=loadedJar.toRealPath();if(!jar.startsWith(root.resolve("mods"))||!Files.isRegularFile(jar))throw new IllegalArgumentException(dev.abros.rivet.core.Messages.text("rivet.message.error_4069e968e817"));
-        String relative=root.relativize(jar).toString().replace('\\','/');SafePaths.validate(relative);
-        String destination=update.artifact().path();
-        if(!relative.equals(destination)&&Files.exists(SafePaths.resolve(root,destination)))throw new IllegalArgumentException(dev.abros.rivet.core.Messages.text("rivet.core.the_selected_version_is_already_in_ae7767c6"));
-        progress.accept(new InstallProgress("downloading",update.artifact().path(),0,update.artifact().size(),0,1));
-        cache.obtain(update.artifact(),new AtomicBoolean(),index->{},(position,received)->progress.accept(new InstallProgress("downloading",update.artifact().path(),position,update.artifact().size(),0,1)));
+        return stage(game,loadedJar,update,cache,currentState,progress,new AtomicBoolean());
+    }
+    public String stage(Path game,Path loadedJar,Update update,Cache cache,JsonObject currentState,java.util.function.Consumer<InstallProgress> progress,AtomicBoolean cancel)throws Exception{
+        progress.accept(InstallProgress.phase("checking"));var changes=changes(game,loadedJar,update);
+        var spacePlan=new Planner.Plan(UUID.randomUUID().toString(),"rivet-core",changes,Map.of(),Set.of(),List.of(),0);
+        UpdateSpace.check(game,spacePlan,Map.of(update.artifact().sha256(),update.artifact().size()),cache.contains(update.artifact().sha256())?0:update.artifact().size());
+        obtain(update,cache,cancel,progress);
+        if(cancel.get())throw new IOException("Cancelled");
         progress.accept(InstallProgress.phase("preparing"));
-        var changes=new ArrayList<Planner.Change>();
-        if(relative.equals(destination))changes.add(new Planner.Change(relative,Hashes.sha256(jar),update.artifact().sha256()));
-        else {changes.add(new Planner.Change(relative,Hashes.sha256(jar),null));changes.add(new Planner.Change(destination,null,update.artifact().sha256()));}
         var plan=new Planner.Plan(UUID.randomUUID().toString(),"rivet-core",List.copyOf(changes),Map.of(),Set.of(),List.of(),update.artifact().size());
-        JsonObject next=currentState.deepCopy();next.addProperty("coreVersion",update.version());new Transactions(game).prepare(plan,new byte[0],next);return plan.id();
+        JsonObject next=currentState.deepCopy();next.addProperty("coreVersion",update.version());new Transactions(game).prepare(plan,new byte[0],next,currentState);return plan.id();
     }
 }

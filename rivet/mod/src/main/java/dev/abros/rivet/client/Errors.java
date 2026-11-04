@@ -2,6 +2,7 @@ package dev.abros.rivet.client;
 import dev.abros.rivet.core.Remote;
 final class Errors {
  static String message(Exception error){
+  if("INSUFFICIENT_DISK_SPACE".equals(error.getMessage()))return Client.tr("core.update_disk_space").getString();
   if(error.getCause() instanceof Exception cause && (error instanceof java.util.concurrent.ExecutionException || error instanceof java.util.concurrent.CompletionException))return message(cause);
   if(error.getMessage()!=null && error.getMessage().startsWith("All download sources failed: "))return Client.tr("error.sources",error.getMessage().substring("All download sources failed: ".length())).getString();
   if(error instanceof Remote.HttpFailure http){

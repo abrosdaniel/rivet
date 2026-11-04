@@ -12,5 +12,5 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 @Mixin(ClientboundStatusResponsePacket.class)
 abstract class PackStatusMixin {
  @Inject(method="write",at=@At("HEAD"),cancellable=true)
- private void rivet$packStatus(FriendlyByteBuf buffer,CallbackInfo ci){var pack=ServerPack.advertisement();if(pack==null)return;var packet=(ClientboundStatusResponsePacket)(Object)this;JsonObject status=ServerStatus.CODEC.encodeStart(JsonOps.INSTANCE,packet.status()).getOrThrow().getAsJsonObject();status.add("rivetPack",pack);buffer.writeUtf(Json.GSON.toJson(status));ci.cancel();}
+ private void rivet$packStatus(FriendlyByteBuf buffer,CallbackInfo ci){var pack=ServerPack.advertisement();var packet=(ClientboundStatusResponsePacket)(Object)this;JsonObject status=ServerStatus.CODEC.encodeStart(JsonOps.INSTANCE,packet.status()).getOrThrow().getAsJsonObject();if(pack!=null)status.add("rivetPack",pack);var rivet=new JsonObject();rivet.addProperty("preflight",1);rivet.addProperty("version",dev.abros.rivet.Rivet.VERSION);rivet.add("protocols",dev.abros.rivet.core.WireProtocols.current());status.add("rivet",rivet);buffer.writeUtf(Json.GSON.toJson(status));ci.cancel();}
 }

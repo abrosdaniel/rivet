@@ -148,4 +148,18 @@ class CoreUpdaterTest {
         assertThrows(IOException.class,()->updater.releases("1.0.0","1.21.1","21.1.250",100,true));
         assertEquals("1.1.0",updater.releases("1.0.0","1.21.1","21.1.250",100,true,true).getFirst().version());
     }
+
+    @Test void partialCatalogRemainsUsableAndExplicit()throws Exception{
+        var remote=source();var releases=JsonParser.parseString(new String(remote.data.get(CoreUpdater.RELEASES),StandardCharsets.UTF_8)).getAsJsonArray();
+        var missing=new JsonObject();missing.addProperty("draft",false);missing.addProperty("tag_name","v1.2.0");releases.add(missing);remote.put(CoreUpdater.RELEASES,releases);
+        var catalog=new CoreUpdater(remote).catalog("1.0.0","1.21.1","21.1.250",100,false,false);
+        assertTrue(catalog.partial());assertEquals(List.of("1.1.0"),catalog.updates().stream().map(CoreUpdater.Update::version).toList());
+        remote.put(base("1.2.0")+"core.json",descriptor("1.2.0","21.1.250"));assertFalse(new CoreUpdater(remote).catalog("1.0.0","1.21.1","21.1.250",100,false,true).partial());
+    }
+    @Test void incompatibleHelperCannotPrepareUpdate()throws Exception{
+        var remote=source();var info=descriptor("1.1.0","21.1.250");info.getAsJsonObject("protocols").addProperty("helper",999);remote.put(base("1.1.0")+"core.json",info);
+        var updater=new CoreUpdater(remote);var update=updater.check("1.0.0","1.21.1","21.1.250").orElseThrow();
+        var jar=game.resolve("mods/rivet.jar");Files.createDirectories(jar.getParent());Files.writeString(jar,"old");
+        assertThrows(IOException.class,()->updater.stage(game,jar,update,new Cache(game,remote),new JsonObject()));assertEquals("old",Files.readString(jar));assertFalse(Files.exists(game.resolve("rivet/pending.json")));
+    }
 }

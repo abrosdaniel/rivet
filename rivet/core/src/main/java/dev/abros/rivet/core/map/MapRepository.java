@@ -12,6 +12,13 @@ import java.util.*;
 public final class MapRepository {
     private final Path root;
     private final MapPreviewCache previews;
+    private final java.util.concurrent.ConcurrentMap<MapLayer,MapRegionIndex> indexes=new java.util.concurrent.ConcurrentHashMap<>();
+    private volatile boolean indexClosed;
+    private MapRegionIndex index(MapLayer layer){return indexes.computeIfAbsent(layer,key->MapRegionIndex.open(layer(key)));}
+    public void prepareIndex(MapLayer layer)throws IOException{index(layer).prepare(()->indexClosed);}
+    public BitSet region(MapLayer layer,int x,int z)throws IOException{return index(layer).region(x,z);}
+    public void closeIndex(){indexClosed=true;}
+
     public MapRepository(Path maps,UUID world,UUID player) {
         root=maps.resolve(world.toString()).resolve(player.toString());
         previews=new MapPreviewCache(root);
@@ -62,7 +69,8 @@ public final class MapRepository {
     }
     public void write(String dimension,int x,int z,MapTile tile)throws IOException {write(MapLayer.surface(dimension),x,z,tile);}
     public void write(MapLayer layer,int x,int z,MapTile tile)throws IOException {
-        Path file=tile(layer,x,z);Files.createDirectories(file.getParent());
+        Path file=tile(layer,x,z);boolean added=!Files.exists(file);Files.createDirectories(file.getParent());
+        Path indexMarker=added?index(layer).beginningTile():null;
         Path pending=Files.createTempFile(file.getParent(),".tile-",".tmp");
         try {
             try(var out=new DataOutputStream(new BufferedOutputStream(Files.newOutputStream(pending)))) {
@@ -70,7 +78,8 @@ public final class MapRepository {
                 for(int z0=0;z0<16;z0++)for(int x0=0;x0<16;x0++){out.writeInt(tile.color(x0,z0));out.writeInt(tile.height(x0,z0));out.writeInt(tile.groundHeight(x0,z0));out.writeInt(tile.overlay(x0,z0));out.writeBoolean(tile.glowing(x0,z0));var layers=tile.layers(x0,z0);out.writeByte(layers==null?255:layers.size());if(layers!=null)for(var overlay:layers){out.writeInt(overlay.color());out.writeByte(overlay.light());out.writeByte(overlay.opacity());out.writeByte(overlay.skyLight());}out.writeUTF(tile.biome(x0,z0));out.writeByte(tile.blockLight(x0,z0));out.writeByte(tile.skyLight(x0,z0));}
             }
             replace(pending,file);
-        }finally{Files.deleteIfExists(pending);}
+            if(added)try{index(layer).added(x,z);}catch(IOException failure){index(layer).invalidate();}
+        }finally{Files.deleteIfExists(pending);if(indexMarker!=null)index(layer).finishedTile(indexMarker);}
     }
     public List<MapMarker> markers()throws IOException {
         Path file=root.resolve("markers.json");if(!Files.exists(file))return List.of();

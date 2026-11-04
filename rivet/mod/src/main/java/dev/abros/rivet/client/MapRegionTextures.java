@@ -149,7 +149,7 @@ final class MapRegionTextures {
     while(textures.size()>textureLimit){var oldest=textures.keySet().stream().filter(k->!visible.contains(k)).findFirst().orElseGet(()->textures.keySet().iterator().next());var removed=textures.remove(oldest);checked.remove(oldest);saved.remove(oldest);saveRetry.remove(oldest);Minecraft.getInstance().getTextureManager().release(removed.id());}
         }
         if(existing!=null)persist(key,existing);
-        if(!compose||pending.contains(key)||prepared.containsKey(key)||!WorldMapClient.indexed(key.layer())){scanQueue.remove(key);return existing;}
+        if(!compose||pending.contains(key)||prepared.containsKey(key)||!WorldMapClient.indexAreaReady(key.layer(),key.x()*key.chunks()-1,(key.x()+1)*key.chunks()-1,key.z()*key.chunks()-1,(key.z()+1)*key.chunks()-1)){scanQueue.remove(key);return existing;}
         long stamp=MapTerrainCache.stateRevision()+WorldMapClient.terrainIndexRevision();
         if(existing==null&&Objects.equals(empty.get(key),WorldMapClient.terrainIndexRevision())){scanQueue.remove(key);return null;}
         if(existing!=null&&Objects.equals(checked.get(key),stamp)){scanQueue.remove(key);return existing;}

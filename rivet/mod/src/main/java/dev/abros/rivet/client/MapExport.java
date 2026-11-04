@@ -19,9 +19,8 @@ final class MapExport {
   var mc=net.minecraft.client.Minecraft.getInstance();var style=MapRenderSettings.INSTANCE.style(layer.dimension());boolean legible=MapCaves.view(layer.dimension()).legible();int top=layer.band()==MapLayer.FULL?MapLayer.FULL:!layer.cave()?MapLayer.SURFACE:layer.equals(MapCaves.layer(layer.dimension()))?MapCaves.top(layer.dimension()):layer.band()*16+15,depth=MapCaves.view(layer.dimension()).depth(),worldHeight=mc.level==null?384:mc.level.dimensionType().logicalHeight();
   var folder=mc.gameDirectory.toPath().resolve("rivet/exports");var job=new Job();running=job;
   IO.execute(()->{Path pending=null;try{
-   var known=new HashSet<>(source.repository().chunks(layer));known.addAll(source.received().chunks(layer));known.addAll(source.recent().keySet());
    var tiles=new LinkedHashMap<MapRepository.Chunk,MapTile>(128,.75f,true);var images=new LinkedHashMap<MapRepository.Chunk,int[][]>(128,.75f,true);
-   java.util.function.Function<MapRepository.Chunk,MapTile> load=k->{if(!known.contains(k))return null;var recent=source.recent().get(k);if(tiles.containsKey(k))return tiles.get(k);try{var tile=MapTileMerge.merge(recent!=null?recent:source.repository().read(layer,k.x(),k.z()).orElse(null),source.received().read(layer,k.x(),k.z()).orElse(null));tiles.put(k,tile);if(tiles.size()>512)tiles.remove(tiles.keySet().iterator().next());return tile;}catch(java.io.IOException e){throw new java.io.UncheckedIOException(e);}};
+   java.util.function.Function<MapRepository.Chunk,MapTile> load=k->{var recent=source.recent().get(k);if(tiles.containsKey(k))return tiles.get(k);try{var tile=MapTileMerge.merge(recent!=null?recent:source.repository().read(layer,k.x(),k.z()).orElse(null),source.received().read(layer,k.x(),k.z()).orElse(null));tiles.put(k,tile);if(tiles.size()>512)tiles.remove(tiles.keySet().iterator().next());return tile;}catch(java.io.IOException e){throw new java.io.UncheckedIOException(e);}};
    int step=area.step(),detail=Math.min(4,Integer.numberOfTrailingZeros(step));
    try(var output=new NativeImage(area.pixelsX(),area.pixelsZ(),false)){
     for(int py=0;py<output.getHeight();py++){

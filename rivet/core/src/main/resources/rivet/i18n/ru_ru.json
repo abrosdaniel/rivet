@@ -829,5 +829,6 @@
   "rivet.permissions.cardAction": "Открыть права",
   "rivet.permissions.cardDescription": "Назначения групп LuckPerms",
   "rivet.permissions.cardHint": "Просмотр, описание и изменение прав",
-  "rivet.permissions.noProvider": "Без LuckPerms доступен только просмотр стандартных ролей Minecraft."
+  "rivet.permissions.noProvider": "Без LuckPerms доступен только просмотр стандартных ролей Minecraft.",
+  "rivet.core.update_disk_space": "Недостаточно свободного места для обновления и резервной копии. Освободите место и повторите попытку."
 }

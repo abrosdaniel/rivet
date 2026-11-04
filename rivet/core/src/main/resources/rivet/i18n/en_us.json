@@ -829,5 +829,6 @@
   "rivet.permissions.cardAction": "Open permissions",
   "rivet.permissions.cardDescription": "LuckPerms group permissions",
   "rivet.permissions.cardHint": "Inspect, understand and edit permissions",
-  "rivet.permissions.noProvider": "Without LuckPerms, only the standard Minecraft roles can be inspected."
+  "rivet.permissions.noProvider": "Without LuckPerms, only the standard Minecraft roles can be inspected.",
+  "rivet.core.update_disk_space": "Not enough free space for the update and its backup. Free some space and retry."
 }

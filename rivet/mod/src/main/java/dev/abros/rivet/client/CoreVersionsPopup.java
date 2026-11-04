@@ -14,7 +14,7 @@ final class CoreVersionsPopup extends ScrollScreen {
     private final String requirement;
     private List<CoreUpdater.Update> versions=List.of();
     private CoreUpdater.Update selected;
-    private boolean started,loading,installing,failed;
+    private boolean started,loading,installing,failed,partial;
     private String status="";
     private volatile dev.abros.rivet.core.InstallProgress progress=dev.abros.rivet.core.InstallProgress.phase("checking");
     CoreVersionsPopup(Screen parent){this(parent,"");}
@@ -35,19 +35,20 @@ final class CoreVersionsPopup extends ScrollScreen {
             choice.active=!installing;
         }
         int actionWidth=(w-30)/2;
-        var install=addRenderableWidget(UiActions.button(Component.literal(installing?Client.text("ui.preparing_bd54feee"):failed?Client.text("retry"):Client.text("install")),UiActions.Tone.PRIMARY,"",button->{if(failed)load();else install();}).bounds(x+12,bottom()-32,actionWidth,20).build());
-        install.active=!loading&&!installing&&(failed||selected!=null)&&Client.pending.isEmpty();
+        var install=addRenderableWidget(UiActions.button(Component.literal(installing?Client.text("ui.preparing_bd54feee"):failed||partial&&selected==null?Client.text("retry"):Client.text("install")),UiActions.Tone.PRIMARY,"",button->{if(failed||partial&&selected==null)load();else install();}).bounds(x+12,bottom()-32,actionWidth,20).build());
+        install.active=!loading&&!installing&&(failed||partial||selected!=null)&&Client.pending.isEmpty();
         var close=UiActions.close(new dev.abros.rivet.core.NativeLayout.Box(x+18+actionWidth,bottom()-32,w-30-actionWidth,20),this::addRenderableWidget,this::onClose);close.active=!installing;
         if(!started){started=true;load();}
     }
     private void load(){
         if(loading||installing)return;
-        boolean refresh=failed;
+        boolean refresh=failed||partial;
         loading=true;failed=false;status="";rebuildWidgets();
         try{Client.NETWORK.submit(()->{try{
             var hub=Client.ensureHub();
-            var updates=hub.availableCoreUpdates(refresh).stream().filter(u->!u.version().equals(Rivet.VERSION)).filter(u->requirement.isEmpty()||dev.abros.rivet.core.Versions.supportsRequirement(u.version(),requirement)).toList();
-            minecraft.execute(()->{loading=false;versions=updates;if(selected==null||!updates.contains(selected))selected=null;status=updates.isEmpty()?Client.text("ui.no_other_versions_81bda77b"):"";if(minecraft.screen==this)rebuildWidgets();});
+            var catalog=hub.coreCatalog(refresh);
+            var updates=catalog.updates().stream().filter(u->!u.version().equals(Rivet.VERSION)).filter(u->requirement.isEmpty()||dev.abros.rivet.core.Versions.supportsRequirement(u.version(),requirement)).toList();
+            minecraft.execute(()->{loading=false;partial=catalog.partial();versions=updates;if(selected==null||!updates.contains(selected))selected=null;status=partial?Client.text("update.partialCatalog"):updates.isEmpty()?Client.text("ui.no_other_versions_81bda77b"):"";if(minecraft.screen==this)rebuildWidgets();});
         }catch(Exception failure){System.getLogger(CoreVersionsPopup.class.getName()).log(System.Logger.Level.WARNING,"Rivet version check failed",failure);minecraft.execute(()->{loading=false;failed=true;status=Client.text("ui.could_not_check_versions_you_can_2b98d80f");if(minecraft.screen==this)rebuildWidgets();});}});
         }catch(java.util.concurrent.RejectedExecutionException busy){loading=false;failed=true;status=Client.text("ui.the_check_is_busy_try_again_03cafbbc");rebuildWidgets();}
     }

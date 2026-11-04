@@ -15,10 +15,13 @@ public final class Transactions {
         for(Path q=p;q!=null&&!q.equals(game);q=q.getParent())if(Files.isSymbolicLink(q)||(Files.exists(q)&&!q.toRealPath().startsWith(game)))throw new IOException("Unsafe internal directory");
     }
     public Path directory(String id)throws IOException{UUID.fromString(id);Path p=data.resolve("transactions").resolve(id);checkInternal(p);return p;}
-    public Path prepare(Planner.Plan plan,byte[] manifest,JsonObject nextState)throws IOException{
+    public Path prepare(Planner.Plan plan,byte[] manifest,JsonObject nextState)throws IOException{return prepare(plan,manifest,nextState,null);}
+    public Path prepare(Planner.Plan plan,byte[] manifest,JsonObject nextState,JsonObject expectedState)throws IOException{
         Path guard=data.resolve("prepare.lock");checkInternal(guard);
         try(FileChannel channel=FileChannel.open(guard,StandardOpenOption.CREATE,StandardOpenOption.WRITE);FileLock lock=channel.tryLock()){
             if(lock==null)throw new BusyException();
+            Path state=data.resolve("state.json");checkInternal(state);
+            if(expectedState!=null&&!expectedState.equals(Files.exists(state)?Json.read(state):new JsonObject()))throw new IOException(Messages.text("rivet.core.state_changed_review_the_changes_again_a2da111b"));
             return prepareLocked(plan,manifest,nextState);
         }catch(OverlappingFileLockException busy){throw new BusyException();}
     }
@@ -72,6 +75,8 @@ public final class Transactions {
                 if(!Objects.equals(Planner.hash(dest),c.before()))throw new IOException("PRECONDITION_CHANGED: "+c.path());
                 if(c.after()!=null){Hashes.check(c.after());Path object=object(c.after());if(!Hashes.sha256(object).equals(c.after()))throw new IOException("Corrupted cache");}
             }
+            var sizes=new HashMap<String,Long>();for(var change:plan.changes())if(change.after()!=null)sizes.put(change.after(),Files.size(object(change.after())));
+            UpdateSpace.check(game,plan,sizes,0);
             Path backup=dir.resolve("preimages");Files.createDirectories(backup);
             for(int i=0;i<plan.changes().size();i++){
                 var c=plan.changes().get(i);if(c.before()!=null){Path dest=SafePaths.resolve(game,c.path());Path b=backup.resolve(Integer.toString(i));Files.copy(dest,b,StandardCopyOption.REPLACE_EXISTING);if(!Hashes.sha256(b).equals(c.before()))throw new IOException("Backup mismatch");}

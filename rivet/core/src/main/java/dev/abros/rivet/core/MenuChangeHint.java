@@ -9,6 +9,7 @@ public final class MenuChangeHint {
  public static JsonObject subscription(String section,String id){
   var hint=new JsonObject();hint.addProperty("kind","changed");hint.addProperty("section",section);hint.addProperty("id",id);hint.addProperty("resync",true);return hint;
  }
+ public static boolean hud(JsonObject hint){return dataChange(hint)&&Set.of("","home","groups","tasks","storage","notifications").contains(Json.opt(hint,"section",""));}
  private static boolean dataChange(JsonObject hint){return !hint.has("resync")||!hint.get("resync").getAsBoolean();}
  public static boolean territories(JsonObject hint){return dataChange(hint)&&Set.of("","groups").contains(Json.opt(hint,"section",""));}
  public static boolean activities(JsonObject hint){return dataChange(hint)&&Set.of("","home","groups","events").contains(Json.opt(hint,"section",""));}

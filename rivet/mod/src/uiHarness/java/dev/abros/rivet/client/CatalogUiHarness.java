@@ -40,6 +40,10 @@ public final class CatalogUiHarness {
      if(Math.abs(bounds[0]*2+bounds[2]-popup.width)>1||Math.abs(bounds[1]*2+bounds[3]-popup.height)>1)throw new IllegalStateException("Update dialog not centered");
      for(var child:popup.children())if(child instanceof net.minecraft.client.gui.components.AbstractWidget widget&&(widget.getX()<bounds[0]||widget.getY()<bounds[1]||widget.getX()+widget.getWidth()>bounds[0]+bounds[2]||widget.getY()+widget.getHeight()>bounds[1]+bounds[3]))throw new IllegalStateException("Update action outside panel");
      if(count>0){var choice=(UiChoiceRow)popup.children().stream().filter(w->w instanceof UiChoiceRow).findFirst().orElseThrow();choice.onPress();var selected=CoreVersionsPopup.class.getDeclaredField("selected");selected.setAccessible(true);if(!updates.getFirst().equals(selected.get(popup)))throw new IllegalStateException("Version selection lost");}
+     var partial=CoreVersionsPopup.class.getDeclaredField("partial");partial.setAccessible(true);partial.setBoolean(popup,true);
+     var selectedField=CoreVersionsPopup.class.getDeclaredField("selected");selectedField.setAccessible(true);selectedField.set(popup,null);popup.rebuildWidgets();
+     if(popup.children().stream().noneMatch(w->w instanceof Button b&&b.active&&b.getMessage().getString().equals(Client.text("retry"))))throw new IllegalStateException("Partial catalog cannot retry");
+     if(count>0){((UiChoiceRow)popup.children().stream().filter(w->w instanceof UiChoiceRow).findFirst().orElseThrow()).onPress();if(popup.children().stream().noneMatch(w->w instanceof Button b&&b.active&&b.getMessage().getString().equals(Client.text("install"))))throw new IllegalStateException("Partial catalog cannot select known release");}
      var failed=CoreVersionsPopup.class.getDeclaredField("failed");failed.setAccessible(true);failed.setBoolean(popup,true);popup.rebuildWidgets();
      if(popup.children().stream().noneMatch(w->w instanceof Button b&&b.active&&b.getMessage().getString().equals("Повторить")))throw new IllegalStateException("Update retry unavailable");
      popup.onClose();if(mc.screen!=title)throw new IllegalStateException("Update close lost parent");

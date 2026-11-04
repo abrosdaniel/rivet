@@ -17,4 +17,13 @@ class MenuChangeHintTest {
   var hint=new JsonObject();for(String section:new String[]{"home","events"}){hint.addProperty("section",section);assertFalse(MenuChangeHint.territories(hint));assertTrue(MenuChangeHint.activities(hint));}
   hint.addProperty("section","notifications");assertFalse(MenuChangeHint.territories(hint));assertFalse(MenuChangeHint.activities(hint));
  }
+ @Test void hudRefreshesOnRelevantDataWithoutRefreshingOnSubscription(){
+  for(String section:new String[]{"", "home", "groups", "tasks", "storage", "notifications"}){
+   var hint=new JsonObject();hint.addProperty("section",section);assertTrue(MenuChangeHint.hud(hint));
+   assertFalse(MenuChangeHint.hud(MenuChangeHint.subscription(section,"")));
+  }
+  for(String section:new String[]{"skins", "profile", "chat"}){
+   var hint=new JsonObject();hint.addProperty("section",section);assertFalse(MenuChangeHint.hud(hint));
+  }
+ }
 }

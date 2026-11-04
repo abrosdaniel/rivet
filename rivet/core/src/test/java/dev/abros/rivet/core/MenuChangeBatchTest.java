@@ -13,4 +13,9 @@ class MenuChangeBatchTest {
   assertEquals(2,MenuChangeBatch.hints(events,"user","home","").size());assertEquals(1,MenuChangeBatch.hints(events,"user","groups","g").size());assertTrue(MenuChangeBatch.hints(events,"user","groups","different").isEmpty());
   events.add(event("groups","",""));var detail=MenuChangeBatch.hints(events,"user","groups","different");assertEquals(1,detail.size());assertEquals("",Json.str(detail.getFirst(),"id"));
  }
+ @Test void hudReceivesTaskChangesWithoutMenuSubscriptionAndHonoursRecipient(){
+  var events=new JsonArray();events.add(event("tasks","t","user"));events.add(event("storage","s","user"));events.add(event("notifications","n","other"));events.add(event("chat","c","user"));
+  var hints=MenuChangeBatch.hudHints(events,"user");assertEquals(2,hints.size());assertTrue(hints.stream().allMatch(MenuChangeHint::hud));
+  assertTrue(MenuChangeBatch.hudHints(events,"unrelated").isEmpty());
+ }
 }

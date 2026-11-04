@@ -4,6 +4,15 @@ import java.io.IOException;
 import java.util.*;
 import static org.junit.jupiter.api.Assertions.*;
 class RetryingWritesTest {
+ @Test void permanentFailureBacksOffWithoutLosingNewestDataOrFloodingLogs(){
+  var writes=new RetryingWrites<String,String>(1);int[] attempts={0},logs={0};
+  writes.put("tile","old",v->{attempts[0]++;throw new IOException();});
+  for(long now=0;now<60000;now+=50)writes.drain(now,1,false,(k,e)->logs[0]++);
+  assertEquals(4,attempts[0]);assertEquals(1,logs[0]);
+  var saved=new ArrayList<String>();writes.put("tile","new",saved::add);
+  writes.drain(60000,1,true,(k,e)->fail());assertEquals(List.of("new"),saved);assertEquals(0,writes.size());
+ }
+
  @Test void failedEvictedSnapshotSurvivesAndRetriesAfterBackoff(){
   var writes=new RetryingWrites<String,String>(2);var saved=new ArrayList<String>();int[] attempts={0};
   assertTrue(writes.put("world/tile","explored",v->{if(attempts[0]++==0)throw new IOException();saved.add(v);}));

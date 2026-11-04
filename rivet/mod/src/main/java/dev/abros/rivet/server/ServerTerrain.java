@@ -27,6 +27,7 @@ public final class ServerTerrain {
  private static Capture capture;private static long scan,lastFailure;private static volatile long ticks;
  private static TerrainJournal journal;private static volatile TerrainDirtyQueue dirty;private static TerrainDirtyQueue.Lease lease;
  private static java.util.concurrent.Future<SavedTerrainSnapshot> dirtyRead;private static java.util.concurrent.CompletableFuture<Void> dirtyWrite;
+ private static final dev.abros.rivet.core.CheckpointRecovery journalRecovery=new dev.abros.rivet.core.CheckpointRecovery();
  private static int manualChunks;private static boolean journalFailed,journalLoaded;private static String generation;private static java.util.concurrent.CompletableFuture<Void> checkpoint;private static TerrainJournal.State lastCheckpoint;
  private static volatile TerrainApi service;private static final java.util.concurrent.atomic.AtomicInteger requests=new java.util.concurrent.atomic.AtomicInteger();private static final LinkedHashMap<UUID,RenderJob> jobs=new LinkedHashMap<>();private static RenderJob active;
  private static final class RenderJob {UUID id=UUID.randomUUID();final TerrainApi.Region region;int total;SavedTerrainSource saved;java.util.concurrent.Future<SavedTerrainSource.Result> reading;int offset,committedOffset,rendered,skipped,pendingSkipped;TerrainJournal.Cursor cursor,pendingCursor;String state="QUEUED";java.util.concurrent.CompletableFuture<Void> writing;
@@ -71,7 +72,7 @@ public final class ServerTerrain {
   if(ServerDatabase.settings().flag("api.terrain.isometric"))isometric=new IsometricRenderer(root.resolve("isometric"),world,TerrainProfiles.masked(settings,ServerDatabase.settings().strings("api.terrain.publicHidden")),materials);
   privateViews=new PrivateTerrainViews(root.resolve("profiles"),world,settings,TerrainProfiles.from(ServerDatabase.settings()),materials);
   reader=new java.util.concurrent.ThreadPoolExecutor(1,1,30,java.util.concurrent.TimeUnit.SECONDS,new java.util.concurrent.ArrayBlockingQueue<>(2),r->{var t=new Thread(r,"Rivet saved terrain reader");t.setDaemon(true);return t;});reader.allowCoreThreadTimeOut(true);
-  generation=renderer.metadata().generation()+":"+(isometric==null?"off":isometric.metadata().generation())+":"+privateViews.generation();journal=new TerrainJournal(root);dirty=new TerrainDirtyQueue();ticks=0;lease=null;dirtyRead=null;dirtyWrite=null;manualChunks=0;journalFailed=false;journalLoaded=false;checkpoint=null;lastCheckpoint=null;
+  generation=renderer.metadata().generation()+":"+(isometric==null?"off":isometric.metadata().generation())+":"+privateViews.generation();journal=new TerrainJournal(root);dirty=new TerrainDirtyQueue();ticks=0;lease=null;dirtyRead=null;dirtyWrite=null;manualChunks=0;journalFailed=false;journalRecovery.reset();journalLoaded=false;checkpoint=null;lastCheckpoint=null;
   var restored=journal.load();if(restored!=null){boolean same=generation.equals(restored.generation());for(var record:restored.jobs()){var job=new RenderJob(record);if(!same&&!terminal(job.state)){job.offset=job.committedOffset=job.rendered=job.skipped=0;job.cursor=null;if(job.region==null)job.total=-1;else if(!regionAllowed(job.region))job.state="CANCELLED";}if(!terminal(job.state)&&job.region!=null&&!regionAllowed(job.region))job.state="CANCELLED";jobs.put(job.id,job);}dirty.restore(restored.dirty().stream().filter(c->chunkAllowed(c)).toList(),restored.sweep()||restored.running()||!same);}journalLoaded=true;persist().get(5,java.util.concurrent.TimeUnit.SECONDS);
   final var owner=renderer;
   service=new TerrainApi(){
@@ -94,7 +95,11 @@ public final class ServerTerrain {
  private static boolean chunkAllowed(TerrainJournal.Chunk c){return settings.dimensions().contains(c.dimension())&&c.x()>=Math.floorDiv(settings.minX(),16)&&c.x()<=Math.floorDiv(settings.maxX(),16)&&c.z()>=Math.floorDiv(settings.minZ(),16)&&c.z()<=Math.floorDiv(settings.maxZ(),16);}
  private static ServerLevel level(MinecraftServer server,String dimension){for(var l:server.getAllLevels())if(l.dimension().location().toString().equals(dimension))return l;return null;}
  private static void tick(MinecraftServer server){
-  ticks++;if(checkpoint!=null&&checkpoint.isCompletedExceptionally()){journalFailed=true;for(var job:jobs.values())if(!terminal(job.state)){job.state="FAILED";job.closeSource();}active=null;capture=null;com.mojang.logging.LogUtils.getLogger().error("Terrain journal write failed; rendering stopped until restart");return;}if(ticks%20==0)persist();if(journalFailed)return;
+  ticks++;boolean wasFailed=journalFailed;
+  journalFailed=!journalRecovery.ready(checkpoint,System.currentTimeMillis(),()->{lastCheckpoint=null;return persist();},failure->com.mojang.logging.LogUtils.getLogger().error("Terrain journal write failed; rendering paused while storage recovers",failure));
+  if(journalFailed)return;
+  if(wasFailed)com.mojang.logging.LogUtils.getLogger().info("Terrain journal recovered; resuming render queue");
+  if(ticks%20==0)persist();
   if(active==null){active=jobs.values().stream().filter(j->j.state.equals("QUEUED")).findFirst().orElse(null);if(active==null&&dirty.sweep()){active=enqueue(new RenderJob());dirty.sweep(false);persist();}if(active!=null){active.state=active.region==null?"READING":"CAPTURING";if(active.region==null)active.saved=new SavedTerrainSource(server,settings,active.cursor);}}
   if(lease==null&&capture==null&&(active==null||active.writing==null&&active.reading==null&&manualChunks>=8))lease=dirty.poll(ticks);
   if(lease!=null){

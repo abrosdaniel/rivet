@@ -2823,5 +2823,12 @@
   "rivet.permissions.cardAction": "Open permissions",
   "rivet.permissions.cardDescription": "LuckPerms group permissions",
   "rivet.permissions.cardHint": "Inspect, understand and edit permissions",
-  "rivet.permissions.noProvider": "Without LuckPerms, only the standard Minecraft roles can be inspected."
+  "rivet.permissions.noProvider": "Without LuckPerms, only the standard Minecraft roles can be inspected.",
+  "rivet.update.noCompatibleRelease": "No compatible Rivet release is available for this server yet. Try checking again later.",
+  "rivet.update.helperIncompatible": "This version requires a different installer. No automatic update has been prepared.",
+  "rivet.update.required": "Update to connect",
+  "rivet.update.coreRequired": "Connecting requires a Rivet update: %s → %s. Restart the game once after installation.",
+  "rivet.update.combined": "Rivet: %s → %s. Rivet and the modpack will be installed together, with one restart.",
+  "rivet.update.partialCatalog": "Some versions could not be checked. Select a version or retry.",
+  "rivet.core.update_disk_space": "Not enough free space for the update and its backup. Free some space and retry."
 }

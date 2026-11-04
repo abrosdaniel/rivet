@@ -147,8 +147,10 @@ public final class ServerFeatures {
                     if(updated)sendState(player,false);
                 }
                 for(var player:server.getPlayerList().getPlayers()){
-                    var sub=subscriptions.get(player.getUUID());if(sub==null||!AuthServer.authenticated(player))continue;
-                    for(var hint:MenuChangeBatch.hints(events,player.getUUID().toString(),sub.section,sub.id))send(player,hint);
+                    var sub=subscriptions.get(player.getUUID());if(!AuthServer.authenticated(player))continue;
+                    var hints=new ArrayList<JsonObject>();if(sub!=null)hints.addAll(MenuChangeBatch.hints(events,player.getUUID().toString(),sub.section,sub.id));
+                    if(ServerIntegration.supports(player,"hud"))for(var hint:MenuChangeBatch.hudHints(events,player.getUUID().toString()))if(MenuChangeHint.hud(hint)&&!hints.contains(hint))hints.add(hint);
+                    for(var hint:hints)send(player,hint);
                 }
                 CONTROL.execute(()->{try{store.acknowledgeChanges(events);}catch(Exception ex){com.mojang.logging.LogUtils.getLogger().warn("Cannot acknowledge Rivet changes; delivery will retry",ex);}finally{delivering.set(false);}});
             }catch(Exception ex){delivering.set(false);com.mojang.logging.LogUtils.getLogger().warn("Cannot deliver Rivet changes; delivery will retry",ex);}

@@ -28,6 +28,32 @@ python3 -m pip install -r rivet/tooling/requirements.txt
 python3 -m unittest discover -s rivet/tooling/tests
 ```
 
+## Сквозная проверка обновления
+
+После подготовки среды через `map_network.py` соберите кандидат и тестовый мод:
+
+```sh
+./gradlew -I /tmp/rivet-native/runs.init.gradle :bootstrap:verifyBundle :mod:compatibilityTestJar
+python3 rivet/tooling/combined_update.py /tmp/rivet-update --runtime /tmp/rivet-native --fixtures /tmp/rivet-native/build/mod/compatibility-tests/rivet-compatibility-tests.jar --bundle rivet/mod/build/libs/rivet-2.6.0-mc1.21.1-neoforge.jar --version 2.6.0
+```
+
+Укажите версию проверяемого кандидата и отдельную тестовую PostgreSQL через
+`--database-port`, `--database` и `RIVET_TEST_DB_PASSWORD`. Требуется графическая
+сессия; на Linux используйте `xvfb-run`. Каталог `/tmp/rivet-update` должен быть
+новым и пустым. Установленные профили лаунчера не используются.
+
+Сценарий нажимает кнопки настоящих экранов установки, завершает клиент, ждёт
+helper и запускает игру снова. Проверяются единая транзакция для Rivet и сборки,
+точные файлы, сохранность личного конфига и подключение без повторной установки.
+По умолчанию проверяются GUI 1/2/3 и обычный, светлый и контрастный профили.
+`--scales` и `--profiles` ограничивают локальный прогон.
+
+Исходный тестовый JAR содержит код кандидата с более старым номером версии:
+это проверка нового механизма, а не совместимости обновляторов прежних выпусков.
+Неопубликованный кандидат помещается в проверяемый кэш; источник каталога задаёт
+fixture, файлы сборки скачиваются по настоящему серверному соединению.
+Отдельные тесты ядра проверяют загрузку релизов, отмену и откат при сбоях.
+
 ## Проверка необязательных адаптеров
 
 Для совместного прогона нужны Docker и каталог с JAR семи интеграций из

@@ -17,7 +17,7 @@ public final class Client {
     public static final ExecutorService CONNECT=new ThreadPoolExecutor(1,1,0,TimeUnit.SECONDS,new ArrayBlockingQueue<>(8),r->{var t=new Thread(r,"Rivet connection");t.setDaemon(true);return t;},new ThreadPoolExecutor.AbortPolicy());
     public static volatile java.nio.file.Path loadedJar;public static volatile Hub hub;public static volatile String error="";public static volatile String pending="";
     private static boolean initialized;
-    static CoreUpdater.Update offeredUpdate;
+    static volatile CoreUpdater.Update offeredUpdate;
     static synchronized Hub ensureHub()throws java.io.IOException {if(hub==null)hub=new Hub(Minecraft.getInstance().gameDirectory.toPath(),Rivet.VERSION,ModList.get().getModContainerById("neoforge").orElseThrow().getModInfo().getVersion().toString());return hub;}
     public static String text(String key){return net.minecraft.locale.Language.getInstance().getOrDefault("rivet."+key);}
     static <T> java.util.List<T> labels(java.util.function.Supplier<java.util.List<T>> factory){

@@ -69,6 +69,7 @@ public final class OfflineHeadHarness {
      var diskField=SkinClient.class.getDeclaredField("DISK");diskField.setAccessible(true);((java.util.concurrent.ExecutorService)diskField.get(null)).execute(()->{try{Thread.sleep(1000);}catch(InterruptedException interrupted){Thread.currentThread().interrupt();}});
      phase=5;deadline=System.currentTimeMillis()+30000;SkinClient.upload("Head switch fixture",false,bytes.toByteArray());return;
     }
+    checkBlockedDisk(wrong,expected);
     checkRefreshFrames(wrong,expected);
     if(connections++==0){phase=4;next=System.currentTimeMillis()+1000;submitted=false;mc.level.disconnect();mc.disconnect();return;}
     System.out.println("RIVET_OFFLINE_HEAD_OK resolved=true wrongUuid=true lowercase=true placed=true online=true reconnect=true name=true stableUuid=true offline=true customTexture=true decorative=true");done=true;mc.stop();}
@@ -96,4 +97,21 @@ public final class OfflineHeadHarness {
   System.out.println("RIVET_HEAD_REFRESH_STABLE renders=240 connection="+connections);
  }
 
+
+ private static void checkBlockedDisk(ResolvableProfile profile,net.minecraft.client.renderer.RenderType expected)throws Exception{
+  var diskField=SkinClient.class.getDeclaredField("DISK");diskField.setAccessible(true);var disk=(java.util.concurrent.ThreadPoolExecutor)diskField.get(null);
+  var entered=new java.util.concurrent.CountDownLatch(1);var release=new java.util.concurrent.CountDownLatch(1);var stale=new java.util.concurrent.atomic.AtomicInteger();
+  disk.execute(()->{entered.countDown();try{release.await(5,java.util.concurrent.TimeUnit.SECONDS);}catch(InterruptedException ex){Thread.currentThread().interrupt();}});
+  if(!entered.await(2,java.util.concurrent.TimeUnit.SECONDS))throw new IllegalStateException("Disk blocker did not start");
+  var enqueue=SkinClient.class.getDeclaredMethod("cacheTask",Runnable.class);enqueue.setAccessible(true);
+  try{
+   for(int n=0;n<1000;n++)enqueue.invoke(null,(Runnable)stale::incrementAndGet);
+   if(disk.getQueue().size()!=128)throw new IllegalStateException("Skin disk queue not bounded: "+disk.getQueue().size());
+   for(int n=0;n<240;n++)if(render(profile)!=expected)throw new IllegalStateException("Blocked disk hid an available skin");
+   var reset=SkinClient.class.getDeclaredMethod("resetDisk");reset.setAccessible(true);reset.invoke(null);
+   if(!disk.getQueue().isEmpty())throw new IllegalStateException("Old connection disk work survived reset");
+  }finally{release.countDown();}
+  if(stale.get()!=0)throw new IllegalStateException("Stale skin disk work ran");
+  System.out.println("RIVET_SKIN_DISK_BOUNDED submissions=1000 capacity=128 stableRenders=240 reset=true");
+ }
 }
