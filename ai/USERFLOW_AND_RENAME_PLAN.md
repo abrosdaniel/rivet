@@ -1378,3 +1378,29 @@ notifications/persistence/terrain/ingress/publication/light/permissions/teleport
 Это локальный macOS-прогон, не подтверждение нового GitHub Linux CI.
 Релизный JAR не менялся: harness исключён из него; нужна отправка изменения
 теста и повторный CI соответствующего коммита. Установленный клиент не тронут.
+
+2026-11-04: CI combined-update install прошёл, reconnect отвергнут LaunchGate.
+Под Linux воспроизведены 20/20 ложных отказов: mutation.epoch записан ДО
+запуска Java, но ProcessHandle.startInstant примерно на 0.4с раньше реального
+времени запуска. Сравнение OS boot-derived timestamp с wall-clock mtime
+ошибочно определяло обновление во время старта. Это баг продукта, не harness.
+LaunchGate использует RuntimeMXBean.getStartTime (начало JVM до mod discovery).
+Проверки pending/apply.lock и отказ при действительно более новом mutation.epoch
+сохранены; OS startInstant для идентификации PID родителя helper не менялся.
+Linux после исправления: 0/20 отказов при немедленном запуске. Отдельный Linux
+процесс подтвердил отказ при изменении epoch после старта JVM и освобождение lock.
+Добавлен LaunchGateProbe и regression с20 свежими JVM в обычные bootstrap tests,
+а также проверка отказа и очистки после конкурентной мутации.
+Принудительные bootstrap7/helper10 и verifyBundle успешны; Python34 прошли.
+Повторный полный combined UI default/light/contrast × GUI1/2/3 выполняется.
+Кандидат dist/2.6.0 перепакован, descriptor/SHA256 обновлены; release notes обновлены.
+Установленный клиент не заменялся. Удалённый CI после исправления не запускался.
+
+Итог повторного combined flow: все9 сочетаний прошли, финальный
+RIVET_COMBINED_UPDATE_OK. Каждый цикл завершён COMMITTED, проверены точные
+байты обоих компонентов, сохранённый конфиг, загрузка addon и reconnect.
+Linux-проверки выполнены отдельно на реальных Java21-процессах; нативный UI
+прогон — macOS. CI точного нового коммита не подтверждён.
+Dist2.6.0:17456895 байт, SHA256
+2284aca34cac3c1d3c35de6672e1f93ab463d1ba7024e78263ccbb4fb7980971.
+Bootstrap-класс сверён с новой компиляцией, в bundle нет Probe/Harness.

@@ -16,7 +16,11 @@ public final class LaunchGate {
         try{lock=channel.tryLock(0,Long.MAX_VALUE,true);}catch(OverlappingFileLockException busy){throw new IOException("Rivet update lock is already held",busy);}
         if(lock==null||Files.exists(pending))throw new IOException("Rivet update in progress. Launch Minecraft again after completion.");
         Path epoch=data.resolve("mutation.epoch");
-        if(Files.exists(epoch)&&Files.getLastModifiedTime(epoch).toInstant().isAfter(ProcessHandle.current().info().startInstant().orElseThrow()))throw new IOException("Rivet completed an update while this launch was starting. Start Minecraft again to load a consistent pack.");
+        // Linux ProcessHandle startInstant is reconstructed from boot time and may
+        // precede wall-clock process creation by hundreds of milliseconds. JVM start
+        // uses the same wall clock as file timestamps and precedes all mod discovery.
+        var started=java.time.Instant.ofEpochMilli(java.lang.management.ManagementFactory.getRuntimeMXBean().getStartTime());
+        if(Files.exists(epoch)&&Files.getLastModifiedTime(epoch).toInstant().isAfter(started))throw new IOException("Rivet completed an update while this launch was starting. Start Minecraft again to load a consistent pack.");
         }catch(IOException|RuntimeException|Error failure){try{close();}catch(IOException cleanup){failure.addSuppressed(cleanup);}throw failure;}
     }
     public void close()throws IOException{var opened=channel;channel=null;lock=null;if(opened!=null)opened.close();}
