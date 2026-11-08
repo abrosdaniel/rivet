@@ -14,6 +14,13 @@
 
 ## Текущая работа
 
+2026-11-08: Windows CI упал на двух ServerSettingsTest из-за CRLF шаблона.
+Воспроизведены оба исходных падения с CRLF-копией packaged resource, затем
+фикстуры переведены на canonical LF перед явным выбором LF/CRLF. Добавлены
+assert фактической мутации невалидной фикстуры и проверка загрузки неизменённого
+raw packaged template. Полный core прогон с CRLF: 799 tests, 0 failures/errors.
+Настоящий Windows runner ещё не перепроверен; runtime parser/validator не ослаблены.
+
 2026-11-08: пользователь подтвердил, что 2.8.0 уже выпущена. Следующий кандидат
 2.9.0: кроме исправления плаща включает новые настройки chat.globalTrigger,
 chat.groupTrigger, chat.localTrigger, chat.personalTrigger и chat.localEmptyMessage. Любой один триггер
@@ -1726,3 +1733,7 @@ RIVET_MAP_NETWORK_OK. Terrain внутри полного прогона: 82000 
 подтвердил получателя и изоляцию observer. dist/2.9.0-candidate перепакован,
 SHA256 и ClientChat/mixin внутри game.jar сверены. Exact-commit GitHub CI,
 commit/push/tag/publish не выполнялись. Установленный клиент не заменён.
+
+После CRLF-прогона полный build/verifyBundle с LF и --rerun-tasks: 829 tests,
+0 failures/errors, все 34 задачи выполнены. Кандидат 2.9.0 перепакован и SHA256
+проверены. Remote exact-commit CI не запускался; установленный клиент не изменён.
