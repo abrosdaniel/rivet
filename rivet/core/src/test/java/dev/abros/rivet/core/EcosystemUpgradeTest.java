@@ -29,9 +29,9 @@ class EcosystemUpgradeTest {
         assertEquals("fixture-only-password", upgraded.text("database.password"));
         assertTrue(Files.readString(file).contains("# owner choice"));
         for(String id:RetiredFeatures.IDS){
-            assertTrue(upgraded.flag(id+".enabled"),"Published value must remain readable: "+id);
+            assertFalse(upgraded.flag(id+".enabled"),"Retired setting must use disabled fallback: "+id);
             assertFalse(upgraded.modules().enabled(id),"Retired feature must not start: "+id);
-            assertTrue(Files.readString(file).contains("["+id+"]"),"Owner's section must stay intact");
+            assertFalse(Files.readString(file).contains("["+id+"]"),"Retired section must be removed");
             assertFalse(ServerSettings.template().contains("["+id+"]"),"New files must not advertise a retired feature");
         }
         String first = Files.readString(file);

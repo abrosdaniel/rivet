@@ -12,25 +12,19 @@ import java.util.*;
 
 /** Server channel routing, permission checks and message presentation. */
 final class ServerChat {
- private static long nextSample;
- private static final Set<UUID> emptyLocalWarned=new HashSet<>();
- static void start(){nextSample=0;emptyLocalWarned.clear();ServerChatHistory.start();}
- static void stop(){markerShares.clear();emptyLocalWarned.clear();ServerChatHistory.stop();}
+ static void start(){ServerChatHistory.start();}
+ static void stop(){markerShares.clear();ServerChatHistory.stop();}
  static void install(){
   NeoForge.EVENT_BUS.addListener(ServerChat::chat);
   NeoForge.EVENT_BUS.addListener(net.neoforged.bus.api.EventPriority.LOWEST,ServerChat::rememberGlobal);
   NeoForge.EVENT_BUS.addListener((net.neoforged.neoforge.event.entity.player.PlayerEvent.PlayerLoggedInEvent e)->{if(e.getEntity() instanceof ServerPlayer p)ServerChatHistory.joined(p);});
   NeoForge.EVENT_BUS.addListener(ServerChat::commands);
-  NeoForge.EVENT_BUS.addListener((net.neoforged.neoforge.event.entity.player.PlayerEvent.PlayerLoggedOutEvent e)->{emptyLocalWarned.remove(e.getEntity().getUUID());markerShares.remove(e.getEntity().getUUID());if(e.getEntity() instanceof ServerPlayer p)ServerChatHistory.left(p);});
-  NeoForge.EVENT_BUS.addListener((net.neoforged.neoforge.event.tick.ServerTickEvent.Post e)->{
-   ServerChatHistory.tick(e.getServer());long now=System.currentTimeMillis();if(now<nextSample)return;nextSample=now+1000;
-   var settings=ServerDatabase.settings();if(!settings.flag("chat.enabled")||!settings.flag("chat.local")||emptyLocalWarned.isEmpty())return;
-   int radius=settings.number("chat.localRadius");emptyLocalWarned.removeIf(id->{var sender=e.getServer().getPlayerList().getPlayer(id);return sender==null||e.getServer().getPlayerList().getPlayers().stream().anyMatch(recipient->recipient!=sender&&localRecipient(sender,recipient,radius));});
-  });
+  NeoForge.EVENT_BUS.addListener((net.neoforged.neoforge.event.entity.player.PlayerEvent.PlayerLoggedOutEvent e)->{markerShares.remove(e.getEntity().getUUID());if(e.getEntity() instanceof ServerPlayer p)ServerChatHistory.left(p);});
+  NeoForge.EVENT_BUS.addListener((net.neoforged.neoforge.event.tick.ServerTickEvent.Post e)->ServerChatHistory.tick(e.getServer()));
  }
  private static void rememberGlobal(net.neoforged.neoforge.event.ServerChatEvent e){
   if(e.isCanceled()||!AuthServer.authenticated(e.getPlayer())||!ServerDatabase.settings().flag("chat.enabled"))return;
-  var parsed=dev.abros.rivet.core.ChatChannels.parse(e.getRawText(),ServerDatabase.settings().flag("chat.local"));
+  var parsed=dev.abros.rivet.core.ChatChannels.parse(e.getRawText(),ServerDatabase.settings().flag("chat.local"),ServerDatabase.settings().text("chat.globalTrigger"),ServerDatabase.settings().text("chat.groupTrigger"),ServerDatabase.settings().text("chat.localTrigger"),ServerDatabase.settings().text("chat.personalTrigger"));
   if(parsed.channel()==dev.abros.rivet.core.ChatChannels.Channel.GLOBAL)ServerChatHistory.remember(e.getPlayer(),"global",formatted(e.getPlayer(),ServerDatabase.settings().text("chat.globalName"),e.getMessage(),"globalColor"),List.of());
  }
  private static Component name(ServerPlayer p){var lp=ServerSocial.metadata(p);return dev.abros.rivet.network.ChatPresentation.identity(Json.opt(lp,"prefix",""),p.getGameProfile().getName(),Json.opt(lp,"suffix",""));}
@@ -40,8 +34,9 @@ final class ServerChat {
  private static void chat(net.neoforged.neoforge.event.ServerChatEvent e){try(var locale=dev.abros.rivet.core.Messages.locale(e.getPlayer().clientInformation().language())){chatLocalized(e);}}
  private static void chatLocalized(net.neoforged.neoforge.event.ServerChatEvent e){
   var player=e.getPlayer();if(!AuthServer.authenticated(player)||e.isCanceled()||!ServerDatabase.settings().flag("chat.enabled"))return;active(player);
-  var parsed=dev.abros.rivet.core.ChatChannels.parse(e.getRawText(),ServerDatabase.settings().flag("chat.local"));
+  var parsed=dev.abros.rivet.core.ChatChannels.parse(e.getRawText(),ServerDatabase.settings().flag("chat.local"),ServerDatabase.settings().text("chat.globalTrigger"),ServerDatabase.settings().text("chat.groupTrigger"),ServerDatabase.settings().text("chat.localTrigger"),ServerDatabase.settings().text("chat.personalTrigger"));
   if(parsed.text().isBlank()){e.setCanceled(true);return;}
+  if(parsed.channel()==dev.abros.rivet.core.ChatChannels.Channel.PERSONAL){e.setCanceled(true);player.sendSystemMessage(Component.translatable("rivet.chat.personalUseCommand"));return;}
   if(parsed.channel()==dev.abros.rivet.core.ChatChannels.Channel.LOCAL){e.setCanceled(true);channel(player,"local",parsed.text());return;}
   if(parsed.channel()==dev.abros.rivet.core.ChatChannels.Channel.GROUP){e.setCanceled(true);groupChat(player,parsed);return;}
   // Keep Minecraft's signed broadcast for the global channel.
@@ -61,7 +56,7 @@ final class ServerChat {
  private static boolean localRecipient(ServerPlayer sender,ServerPlayer recipient,int radius){return AuthServer.authenticated(recipient)&&recipient.level()==sender.level()&&recipient.distanceToSqr(sender)<=radius*(double)radius;}
  private static int channel(ServerPlayer p,String channel,String message){try(var locale=dev.abros.rivet.core.Messages.locale(p.clientInformation().language())){return channelLocalized(p,channel,message);}}
  private static int channelLocalized(ServerPlayer p,String channel,String message){if(!ServerDatabase.settings().flag("chat.enabled")||!AuthServer.authenticated(p)||message.isBlank()||message.length()>256)return 0;active(p);var settings=ServerDatabase.settings();
-  if(channel.equals("local")){if(!settings.flag("chat.local"))return 0;int radius=settings.number("chat.localRadius");var audience=p.server.getPlayerList().getPlayers().stream().filter(v->localRecipient(p,v,radius)).toList();deliver(p,settings.text("chat.localName"),message,audience);boolean alone=audience.stream().noneMatch(recipient->recipient!=p);if(!alone)emptyLocalWarned.remove(p.getUUID());if(alone&&emptyLocalWarned.add(p.getUUID()))p.sendSystemMessage(Component.translatable("rivet.core.no_players_nearby_start_your_message_520b9c5b").withStyle(style->style.withColor(0xE2BE75)));return audience.size();}
+  if(channel.equals("local")){if(!settings.flag("chat.local"))return 0;int radius=settings.number("chat.localRadius");var audience=p.server.getPlayerList().getPlayers().stream().filter(v->localRecipient(p,v,radius)).toList();deliver(p,settings.text("chat.localName"),message,audience);boolean alone=audience.stream().noneMatch(recipient->recipient!=p);if(alone)p.sendSystemMessage(Component.literal(settings.text("chat.localEmptyMessage").replace("{globalTrigger}",settings.text("chat.globalTrigger"))).withStyle(style->style.withColor(0xE2BE75)));return audience.size();}
   if(!settings.flag("chat.group"))return 0;try{UUID.fromString(channel);}catch(IllegalArgumentException bad){return 0;}var store=ServerFeatures.communityStore();if(store==null)return 0;Object epoch=ServerSocial.generation();var body=liveBody(p,content(p,message));
   try{ServerFeatures.storage(()->{try{store.deliverGroupChat(channel,p.getUUID().toString(),(label,members)->dev.abros.rivet.core.BoundedDelivery.run(p.server,dev.abros.rivet.core.Messages.capture(()->{if(epoch!=ServerSocial.generation()||store!=ServerFeatures.communityStore()||!ServerDatabase.settings().flag("chat.enabled")||!ServerDatabase.settings().flag("chat.group")||!ServerDatabase.settings().modules().enabled("groups")||p.server.getPlayerList().getPlayer(p.getUUID())!=p||!AuthServer.authenticated(p))return;var audience=p.server.getPlayerList().getPlayers().stream().filter(v->AuthServer.authenticated(v)&&members.contains(v.getUUID().toString())).toList();var formatted=formatted(p,label,body,"groupColor");for(var recipient:audience)recipient.sendSystemMessage(sender(formatted,p));ServerChatHistory.remember(p,channel,formatted,audience);com.mojang.logging.LogUtils.getLogger().info("[Rivet group] {}: {}",p.getGameProfile().getName(),message);}),3000));}catch(Exception denied){p.server.execute(dev.abros.rivet.core.Messages.capture(()->{if(epoch==ServerSocial.generation()&&p.server.getPlayerList().getPlayer(p.getUUID())==p&&AuthServer.authenticated(p))p.sendSystemMessage(Component.translatable("rivet.core.message_not_sent_check_your_group_b09287a8"));}));}});}catch(java.util.concurrent.RejectedExecutionException full){p.sendSystemMessage(Component.translatable("rivet.core.chat_busy_send_your_message_again_36311b98"));return 0;}return 1;
  }

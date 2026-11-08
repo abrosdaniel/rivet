@@ -14,6 +14,7 @@ public final class ChatCompatibilityHarness {
  private static boolean connecting,submitted;
  private static int stage;private static long sentAt;
  @SubscribeEvent public static void tick(net.neoforged.neoforge.client.event.ClientTickEvent.Post ignored){
+  if(System.getenv("RIVET_PRIVATE_WATCH_ADDRESS")!=null){watch();return;}
   if((System.getenv("RIVET_CHAT_COMPAT_CHECK")==null&&System.getenv("RIVET_CHAT_COMPAT_ADDRESS")==null)||stage==99)return;
   var mc=Minecraft.getInstance();String address=System.getenv("RIVET_CHAT_COMPAT_ADDRESS");
   if(address!=null&&!connecting&&mc.screen instanceof net.minecraft.client.gui.screens.TitleScreen){connecting=true;net.minecraft.client.gui.screens.ConnectScreen.startConnecting(mc.screen,mc,net.minecraft.client.multiplayer.resolver.ServerAddress.parseString(address),new net.minecraft.client.multiplayer.ServerData("Chat compatibility",address,net.minecraft.client.multiplayer.ServerData.Type.OTHER),false,null);}
@@ -24,23 +25,67 @@ public final class ChatCompatibilityHarness {
   if(stage==2)return;
   try{
    if(stage==0){
+    if(System.getenv("RIVET_PRIVATE_TARGET")!=null&&mc.getConnection().getPlayerInfo(System.getenv("RIVET_PRIVATE_TARGET"))==null)return;
     var state=ServerMenuClient.state.deepCopy();boolean dedupe=SocialSettings.INSTANCE.dedupe;
-    try{ServerMenuClient.state.addProperty("chatEnabled",true);SocialSettings.INSTANCE.dedupe=true;verify();}
+    try{ServerMenuClient.state.addProperty("chatEnabled",true);SocialSettings.INSTANCE.dedupe=true;verifyTriggers();verify();}
     finally{ServerMenuClient.state=state;SocialSettings.INSTANCE.dedupe=dedupe;ClientChat.reset();}
-    mc.player.connection.sendChat("!RIVET_PUBLIC_PROBE");
+    if(System.getenv("RIVET_CHAT_EMPTY_EXPECTED")!=null){mc.player.connection.sendChat(ChatHints.localTrigger()+"RIVET_LOCAL_ONE");mc.player.connection.sendChat(ChatHints.localTrigger()+"RIVET_LOCAL_TWO");}
+    mc.player.connection.sendChat(ChatHints.globalTrigger()+"RIVET_PUBLIC_PROBE");
     mc.player.connection.sendCommand("tell "+mc.player.getGameProfile().getName()+" RIVET_PRIVATE_PROBE");
+    mc.player.connection.sendCommand("w "+mc.player.getGameProfile().getName()+" RIVET_W_PROBE");
+    mc.player.connection.sendCommand("msg "+mc.player.getGameProfile().getName()+" RIVET_MSG_PROBE");
+    var chat=new net.minecraft.client.gui.screens.ChatScreen("");mc.setScreen(chat);chat.handleChatInput(ChatHints.personalTrigger()+mc.player.getGameProfile().getName()+": RIVET_SHORTCUT_PROBE",true);mc.setScreen(null);
+    mc.player.connection.sendCommand("msg RivetMissingXYZ RIVET_OFFLINE_PRIVATE_PROBE");
+    if(System.getenv("RIVET_PRIVATE_TARGET")!=null)mc.player.connection.sendCommand("msg "+System.getenv("RIVET_PRIVATE_TARGET")+" RIVET_TARGET_ONLY");
     mc.player.connection.sendCommand("me RIVET_EMOTE_PROBE");stage=1;sentAt=System.currentTimeMillis();return;
    }
    var rows=((dev.abros.rivet.mixin.ChatHistoryAccessor)mc.gui.getChat()).rivet$messages();
-   boolean arrived=rows.stream().anyMatch(row->row.content().getString().contains("RIVET_PUBLIC_PROBE"))&&rows.stream().anyMatch(row->nativeMessage(row.content(),"RIVET_PRIVATE_PROBE","commands.message.display.incoming"))&&rows.stream().anyMatch(row->nativeMessage(row.content(),"RIVET_PRIVATE_PROBE","commands.message.display.outgoing"))&&rows.stream().anyMatch(row->nativeMessage(row.content(),"RIVET_EMOTE_PROBE","chat.type.emote"));
+   boolean arrived=rows.stream().anyMatch(row->row.content().getString().contains("RIVET_PUBLIC_PROBE"))&&rows.stream().anyMatch(row->personalMessage(row.content(),"RIVET_PRIVATE_PROBE"))&&rows.stream().anyMatch(row->personalMessage(row.content(),"RIVET_SHORTCUT_PROBE"))&&rows.stream().anyMatch(row->nativeMessage(row.content(),"RIVET_EMOTE_PROBE","chat.type.emote"));
    if(!arrived&&System.currentTimeMillis()-sentAt<15000)return;
    check(rows.stream().anyMatch(row->row.content().getString().contains("RIVET_PUBLIC_PROBE")),"Actual public packet lost");
-   check(rows.stream().anyMatch(row->nativeMessage(row.content(),"RIVET_PRIVATE_PROBE","commands.message.display.incoming")),"Actual incoming whisper lost its native type");
-   check(rows.stream().anyMatch(row->nativeMessage(row.content(),"RIVET_PRIVATE_PROBE","commands.message.display.outgoing")),"Actual outgoing whisper lost its native type");
+   check(rows.stream().anyMatch(row->personalMessage(row.content(),"RIVET_PRIVATE_PROBE")),"Actual tell was not privately formatted");
+   check(rows.stream().anyMatch(row->personalMessage(row.content(),"RIVET_SHORTCUT_PROBE")),"Actual UI shortcut did not reach native private delivery");
    check(rows.stream().anyMatch(row->nativeMessage(row.content(),"RIVET_EMOTE_PROBE","chat.type.emote")),"Actual /me lost its native type");
+   for(String probe:java.util.List.of("RIVET_PRIVATE_PROBE","RIVET_W_PROBE","RIVET_MSG_PROBE","RIVET_SHORTCUT_PROBE"))check(rows.stream().filter(row->personalMessage(row.content(),probe)).count()==2,"Native self whisper must retain incoming/outgoing delivery: "+probe);
+   check(rows.stream().noneMatch(row->row.content().getString().contains("RIVET_OFFLINE_PRIVATE_PROBE")),"Unavailable target leaked into chat");
+   String empty=System.getenv("RIVET_CHAT_EMPTY_EXPECTED");if(empty!=null)check(rows.stream().filter(row->row.content().getString().equals(empty)).count()==2,"Local warning must appear for each message with configured text");
    System.out.println("RIVET_CHAT_COMPAT_OK public + private + team + emote + say + foreign formatting + rich duplicate identity + actual tell/me commands");if(System.getenv("RIVET_TLS_CLOSE_CHECK")!=null){stage=2;mc.player.connection.sendCommand("rivet_test_tls_timeout");}else{stage=99;mc.stop();}
   }catch(Throwable failure){System.out.println("RIVET_CHAT_COMPAT_FAILED");failure.printStackTrace();stage=99;mc.stop();}
  }
+ private static void watch(){
+  if(stage==99)return;var mc=Minecraft.getInstance();String address=System.getenv("RIVET_PRIVATE_WATCH_ADDRESS");
+  if(!connecting&&mc.screen instanceof net.minecraft.client.gui.screens.TitleScreen){connecting=true;net.minecraft.client.gui.screens.ConnectScreen.startConnecting(mc.screen,mc,net.minecraft.client.multiplayer.resolver.ServerAddress.parseString(address),new net.minecraft.client.multiplayer.ServerData("Private audience",address,net.minecraft.client.multiplayer.ServerData.Type.OTHER),false,null);}
+  if(mc.player==null||!SocialClient.available())return;
+  if(stage==0){System.out.println("RIVET_PRIVATE_WATCH_READY");stage=1;}
+  var rows=((dev.abros.rivet.mixin.ChatHistoryAccessor)mc.gui.getChat()).rivet$messages();
+  if(rows.stream().noneMatch(row->row.content().getString().contains("RIVET_EMOTE_PROBE")))return;
+  if(sentAt==0){sentAt=System.currentTimeMillis();return;}if(System.currentTimeMillis()-sentAt<1000)return;
+  try{
+   boolean target=mc.player.getGameProfile().getName().equals("RivetWhisperTo");
+   check(rows.stream().filter(row->row.content().getString().contains("RIVET_TARGET_ONLY")).count()==(target?1:0),"Private audience mismatch");
+   for(String probe:java.util.List.of("RIVET_PRIVATE_PROBE","RIVET_W_PROBE","RIVET_MSG_PROBE","RIVET_SHORTCUT_PROBE","RIVET_OFFLINE_PRIVATE_PROBE"))check(rows.stream().noneMatch(row->row.content().getString().contains(probe)),"Third-party private message leaked");
+   System.out.println("RIVET_PRIVATE_AUDIENCE_OK "+(target?"recipient":"observer"));
+  }catch(Throwable failure){failure.printStackTrace();System.out.println("RIVET_PRIVATE_AUDIENCE_FAILED");}stage=99;mc.stop();
+ }
+ private static void verifyTriggers(){
+  var mc=Minecraft.getInstance();ServerMenuClient.state.addProperty("chatGlobalTrigger","!!");ServerMenuClient.state.addProperty("chatGroupTrigger","@@");ServerMenuClient.state.addProperty("chatLocalTrigger","~");ServerMenuClient.state.addProperty("chatPersonalTrigger","%");
+  check(ChatHints.parse("~hello").channel()==dev.abros.rivet.core.ChatChannels.Channel.LOCAL,"Custom local indicator");
+  check(ChatHints.parse("!!hello").channel()==dev.abros.rivet.core.ChatChannels.Channel.GLOBAL,"Custom global indicator");
+  check(ChatHints.lines("@@Town: hello").stream().anyMatch(line->line.startsWith("@@")),"Custom trigger hint");
+  var suggestions=SocialChatControls.groupSuggestions("@@",2);check(suggestions!=null&&suggestions.getRange().getStart()==2,"Custom completion range");
+  ServerMenuClient.state.addProperty("chatGlobalTrigger","");
+  check(ChatHints.parse("hello").channel()==dev.abros.rivet.core.ChatChannels.Channel.GLOBAL,"Empty global trigger");
+  check(ChatHints.parse("@@Town: hello").channel()==dev.abros.rivet.core.ChatChannels.Channel.GROUP,"Empty global stole group");
+  ServerMenuClient.state.addProperty("chatGlobalTrigger","!!");ServerMenuClient.state.addProperty("chatGroupTrigger","");
+  check(ChatHints.parse("Town: hello").channel()==dev.abros.rivet.core.ChatChannels.Channel.GROUP,"Empty group trigger");
+  check(SocialChatControls.groupSuggestions("",0)!=null,"Empty group completion");
+  ServerMenuClient.state.addProperty("chatGroupTrigger","@@");
+  var chat=new net.minecraft.client.gui.screens.ChatScreen("@@Town: hello");mc.setScreen(chat);
+  check(SocialChatControls.chooseChannel(chat),"Custom channel picker");String label=ChatChannelIndicator.label("!!hello");
+  mc.screen.children().stream().filter(c->c instanceof net.minecraft.client.gui.components.Button b&&b.getMessage().getString().equals(label)).map(c->(net.minecraft.client.gui.components.Button)c).findFirst().orElseThrow().onPress();
+  check(((dev.abros.rivet.mixin.ChatInputAccessor)mc.screen).rivet$input().getValue().equals("!! hello"),"Picker lost custom trigger or body");mc.setScreen(null);
+ }
+ private static boolean personalMessage(Component message,String probe){return message.getString().contains(probe)&&message.getString().contains(" → ")&&message.getSiblings().stream().anyMatch(c->c.getStyle().getColor()!=null&&c.getStyle().getColor().getValue()==dev.abros.rivet.core.ChatChannels.color(dev.abros.rivet.core.ChatChannels.PERSONAL_COLOR));}
  private static boolean nativeMessage(Component message,String probe,String key){return message.getString().contains(probe)&&message.getContents() instanceof net.minecraft.network.chat.contents.TranslatableContents translated&&translated.getKey().equals(key);}
  private static void verify(){
   var mc=Minecraft.getInstance();var access=(dev.abros.rivet.mixin.ChatHistoryAccessor)mc.gui.getChat();
@@ -94,8 +139,13 @@ public final class ChatCompatibilityHarness {
    }catch(ReflectiveOperationException failure){throw new IllegalStateException(failure);}
   }
   var normal=player(ChatType.CHAT);var before=normal.getMessage();ClientChat.chat(normal);check(!normal.getMessage().equals(before),"Public chat not formatted");
-  for(var type:java.util.List.of(ChatType.MSG_COMMAND_INCOMING,ChatType.MSG_COMMAND_OUTGOING,ChatType.TEAM_MSG_COMMAND_INCOMING,ChatType.TEAM_MSG_COMMAND_OUTGOING,ChatType.EMOTE_COMMAND,ChatType.SAY_COMMAND)){
+  for(var type:java.util.List.of(ChatType.TEAM_MSG_COMMAND_INCOMING,ChatType.TEAM_MSG_COMMAND_OUTGOING,ChatType.EMOTE_COMMAND,ChatType.SAY_COMMAND)){
    var event=player(type);var original=event.getMessage();ClientChat.chat(event);check(event.getMessage().equals(original)&&!event.isCanceled(),"Command type modified: "+type);
+  }
+  for(var type:java.util.List.of(ChatType.MSG_COMMAND_INCOMING,ChatType.MSG_COMMAND_OUTGOING)){
+   var event=player(type);var signed=event.getPlayerChatMessage();var bound=event.getBoundChatType();ClientChat.chat(event);
+   check(personalMessage(event.getMessage(),"Test body")&&!event.isCanceled()&&event.getPlayerChatMessage()==signed&&event.getBoundChatType()==bound,"Private formatting changed delivery/signature");
+   var foreignPrivate=player(type);foreignPrivate.setMessage(link("Foreign private","/help"));var beforePrivate=foreignPrivate.getMessage();ClientChat.chat(foreignPrivate);check(foreignPrivate.getMessage().equals(beforePrivate),"Foreign private formatting replaced");
   }
   var replacement=player(ChatType.CHAT);replacement.setMessage(link("Foreign message","/help").withStyle(style->style.withColor(0x123456)));var foreign=replacement.getMessage();ClientChat.chat(replacement);check(replacement.getMessage().equals(foreign),"Foreign replacement lost");
   var styled=player(ChatType.CHAT);styled.setMessage(styled.getMessage().copy().withStyle(style->style.withColor(0x123456)));foreign=styled.getMessage();ClientChat.chat(styled);check(styled.getMessage().equals(foreign),"Foreign style lost");

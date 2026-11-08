@@ -46,13 +46,30 @@ public final class ClientChat {
  private static Component decorateSender(Component message,UUID id){var identity=sender(message);if(identity!=null&&identity.id.equals(id)&&identity.name.isPresent())return withHead(message,id);var out=message.plainCopy().withStyle(message.getStyle());for(var child:message.getSiblings())out.append(decorateSender(child,id));return out;}
  public static void drawHead(net.minecraft.client.gui.GuiGraphics g,UUID id,int x,int y){net.minecraft.client.gui.components.PlayerFaceRenderer.draw(g,SkinClient.skin(id),x,y,8);}
  private static void mention(net.neoforged.neoforge.client.event.ClientChatReceivedEvent.Player e){if(SocialClient.available()&&SocialSettings.chatEnabled()&&!e.isCanceled())ChatMentionNotice.received(e.getSender(),e.getPlayerChatMessage().decoratedContent().getString());}
+ /** Converts only the personal UI shortcut; native command dispatch owns signing and delivery. */
+ public static boolean sendPersonal(String text){
+  if(!SocialClient.available()||!SocialSettings.chatEnabled()||text.startsWith("/"))return false;
+  var message=ChatHints.parse(text);if(message.channel()!=dev.abros.rivet.core.ChatChannels.Channel.PERSONAL)return false;
+  var mc=Minecraft.getInstance();String target=message.group();String command="msg "+target+" "+message.text();
+  if(!target.matches("[A-Za-z0-9_]{1,16}")||message.text().isBlank()||command.length()>256){mc.gui.getChat().addMessage(Client.tr("chat.personalUnavailable"));return true;}
+  mc.player.connection.sendCommand(command);return true;
+ }
  static void chat(net.neoforged.neoforge.client.event.ClientChatReceivedEvent.Player e){
   if(!SocialClient.available()||!SocialSettings.INSTANCE.chat()||e.isCanceled())return;
   var bound=e.getBoundChatType();
-  if(bound==null||!bound.chatType().is(ChatType.CHAT))return;
+  if(bound==null)return;
+  boolean personal=bound.chatType().is(ChatType.MSG_COMMAND_INCOMING)||bound.chatType().is(ChatType.MSG_COMMAND_OUTGOING);
+  if(!personal&&!bound.chatType().is(ChatType.CHAT))return;
   var original=e.getPlayerChatMessage().decoratedContent();
   // Preserve replacements made by earlier handlers, including their actions and styles.
   if(!e.getMessage().equals(bound.decorate(original)))return;
+  if(personal){
+   boolean outgoing=bound.chatType().is(ChatType.MSG_COMMAND_OUTGOING);
+   var direction=Component.empty().append(outgoing?Client.tr("chat.you"):bound.name()).append(" → ").append(outgoing?bound.targetName().orElse(Component.empty()):Client.tr("chat.you"));
+   String label=Json.opt(ServerMenuClient.state,"chatPersonalName",Client.text("chat.personal"));
+   var header=Component.literal(label.isBlank()?"":"["+label+"] ").append(direction).append(": ").withStyle(style->style.withColor(ChatChannelIndicator.color(dev.abros.rivet.core.ChatChannels.Channel.PERSONAL)));
+   e.setMessage(Component.empty().append(header).append(original));return;
+  }
   formatPublic(e,original);
  }
  /** Used by optional chat effects after they transform the message body. */

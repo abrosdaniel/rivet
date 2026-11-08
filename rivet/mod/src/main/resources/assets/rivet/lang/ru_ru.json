@@ -2951,5 +2951,10 @@
   "rivet.wardrobe.applied": "Применено",
   "rivet.wardrobe.saveHint": "Сохранить надетые скин и плащ. Примерку сначала примените.",
   "rivet.wardrobe.search": "Поиск",
-  "rivet.wardrobe.turn": "Спереди / сзади"
+  "rivet.wardrobe.turn": "Спереди / сзади",
+  "rivet.chat.personal": "Лично",
+  "rivet.chat.personalHint": "{trigger}Ник: текст → личное сообщение",
+  "rivet.chat.personalUnavailable": "Укажите ник доступного онлайн-игрока: личное сообщение не отправлено.",
+  "rivet.chat.you": "Вы",
+  "rivet.chat.personalUseCommand": "Для личного сообщения используйте /msg Ник текст."
 }

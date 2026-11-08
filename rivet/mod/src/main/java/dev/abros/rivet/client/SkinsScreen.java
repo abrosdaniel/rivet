@@ -80,6 +80,12 @@ final class SkinsScreen extends ScrollScreen {
   if(SkinClient.retryable)button(Client.text("ui.retry_request_fcb97cf7"),collection,height-66,listWidth,SkinClient::retry);
   button(Client.text("back"),left,height-34,previewWidth,this::onClose).active=moving.isEmpty()&&!uploadPending;
   if(minecraft.level!=null&&minecraft.player!=null&&previewPlayer==null)previewPlayer=new RemotePlayer(minecraft.level,minecraft.player.getGameProfile()){@Override public PlayerSkin getSkin(){return previewSkin();}@Override public boolean isModelPartShown(net.minecraft.world.entity.player.PlayerModelPart part){return part==net.minecraft.world.entity.player.PlayerModelPart.CAPE||secondLayer;}};
+  // This detached preview never ticks: initialise the history consumed by vanilla CapeLayer.
+  if(previewPlayer!=null){
+   previewPlayer.xo=previewPlayer.xCloakO=previewPlayer.xCloak=previewPlayer.getX();
+   previewPlayer.yo=previewPlayer.yCloakO=previewPlayer.yCloak=previewPlayer.getY();
+   previewPlayer.zo=previewPlayer.zCloakO=previewPlayer.zCloak=previewPlayer.getZ();
+  }
   updateEquipment();
  }
  private void actions(){var entry=selectedEntry();String id=selection;var labels=new java.util.ArrayList<String>();var actions=new java.util.ArrayList<Runnable>();
@@ -141,7 +147,7 @@ final class SkinsScreen extends ScrollScreen {
   if(draft!=null)Ui.text(g,font,Client.text("map.name"),left+previewWidth+24,66,UiKit.text(),false);
   if(draft==null&&category==0&&query.isBlank()&&dev.abros.rivet.network.Protocol.supportedFeatures.contains("skin-order")&&scrollLayout()!=null){var b=scrollLayout().content();for(int row=Math.max(1,firstRow);row<Math.min(entries().size()+1,firstRow+visibleRows);row++)UiDragHandle.draw(g,b.right()-UiDragHandle.WIDTH,96+(row-firstRow)*stride(),rowId(row).equals(dragging));}
   if(!dragging.isEmpty()&&dropRow(mx,my)>=0){var b=scrollLayout().content();int yy=b.y()+((my-b.y())/stride())*stride();g.fill(b.x(),yy,b.right(),yy+2,UiKit.accent());}
-  if(previewPlayer!=null&&previewBottom>60){previewPlayer.yBodyRot=180;previewPlayer.setYRot(180);previewPlayer.yHeadRot=180;previewPlayer.yHeadRotO=180;g.enableScissor(left,44,left+previewWidth,previewBottom);InventoryScreen.renderEntityInInventory(g,left+previewWidth/2f,(44+previewBottom)/2f,Math.max(14,Math.min(previewWidth*.7f,(previewBottom-54)/2.2f)),new org.joml.Vector3f(0,previewPlayer.getBbHeight()/2,0),new org.joml.Quaternionf().rotateZ((float)Math.PI).rotateY(rotation),null,previewPlayer);g.disableScissor();}
+  if(previewPlayer!=null&&previewBottom>60){previewPlayer.yBodyRotO=previewPlayer.yBodyRot=180;previewPlayer.yRotO=180;previewPlayer.setYRot(180);previewPlayer.yHeadRot=180;previewPlayer.yHeadRotO=180;g.enableScissor(left,44,left+previewWidth,previewBottom);InventoryScreen.renderEntityInInventory(g,left+previewWidth/2f,(44+previewBottom)/2f,Math.max(14,Math.min(previewWidth*.7f,(previewBottom-54)/2.2f)),new org.joml.Vector3f(0,previewPlayer.getBbHeight()/2,0),new org.joml.Quaternionf().rotateZ((float)Math.PI).rotateY(rotation),null,previewPlayer);g.disableScissor();}
   String text=message.isEmpty()?SkinClient.status:message;
   if(text.isEmpty()){var entry=selectedEntry();text=draft!=null?draftName:entry!=null?Json.str(entry,"name"):category==2?Client.text("outfit.empty"):Client.text(capes?(selection.equals("hidden")?"cape.hide":"cape.official"):"ui.default_skin_b097c1e1");}
   if(!SkinClient.retryable)Ui.text(g,font,UiKit.fit(font,text,listWidth),left+previewWidth+24,height-58,UiKit.muted(),false);

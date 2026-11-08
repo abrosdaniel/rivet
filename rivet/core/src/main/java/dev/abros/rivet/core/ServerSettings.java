@@ -31,8 +31,8 @@ public final class ServerSettings {
         }
         if(Files.size(file)>65536)throw invalid("размер файла превышает 64 КиБ");
         String original=Files.readString(file);
-        var settings=parse(original); // Validate before changing an owner's file.
-        String expanded=expand(upgradeNameplates(original));
+        parse(original); // Validate before changing an owner's file.
+        String expanded=expand(cleanRetired(upgradeNameplates(original)));
         if(!expanded.equals(original)){
             parse(expanded);
             if(expanded.getBytes(java.nio.charset.StandardCharsets.UTF_8).length>65536)throw invalid("дополненный файл превышает 64 КиБ");
@@ -47,7 +47,7 @@ public final class ServerSettings {
                 catch(AtomicMoveNotSupportedException unsupported){Files.move(pending,file,StandardCopyOption.REPLACE_EXISTING);}
             }finally{Files.deleteIfExists(pending);}
         }
-        return settings;
+        return parse(expanded);
     }
     /** Add only absent template fields; existing text, including secrets and comments, stays intact. */
     private static String expand(String original)throws IOException{
@@ -115,6 +115,47 @@ public final class ServerSettings {
         }
         return out.toString();
     }
+    /** Edit complete TOML statements, leaving unrelated values, comments and credentials verbatim. */
+    private static String cleanRetired(String original){
+        var out=new StringBuilder();var statement=new StringBuilder();String header="",section="",quote="";
+        String newline=original.contains("\r\n")?"\r\n":"\n";
+        for(String line:original.split("(?<=\n)",-1)){
+            String trimmed=line.strip();
+            if(statement.isEmpty()&&(trimmed.isEmpty()||trimmed.startsWith("#"))){out.append(updateStockComment(line));continue;}
+            if(statement.isEmpty()&&trimmed.matches("\\[([^\\[].*)]\\s*(?:#.*)?")){
+                var parsed=flatten(new TomlParser().parse(trimmed+"\n__rivet_section_probe = true\n"));
+                String path=parsed.keySet().iterator().next();section=path.substring(0,path.lastIndexOf('.'));
+                header=trimmed+"\n";
+                if(!RetiredFeatures.contains(section))out.append(line);
+                continue;
+            }
+            statement.append(line);
+            quote=multilineQuote(line,quote);if(!quote.isEmpty())continue;
+            Map<String,Object> parsed;
+            try{parsed=flatten(new TomlParser().parse(header+statement));}catch(RuntimeException incomplete){continue;}
+            if(parsed.size()!=1){out.append(statement);statement.setLength(0);continue;}
+            String key=parsed.keySet().iterator().next();
+            boolean retired=key.equals("community.categories")||RetiredFeatures.IDS.stream().anyMatch(id->key.equals(id+".enabled"))||Set.of("tasks.maxPerOwner","tasks.maxSubtasks","tasks.maxComments").contains(key);
+            if(key.equals("community.sections")&&parsed.get(key) instanceof List<?> list){
+                var active=list.stream().filter(v->!(v instanceof String id)||!RetiredFeatures.contains(id)).toList();
+                if(active.size()!=list.size()){
+                    String prefix=statement.substring(0,statement.indexOf("=")+1);
+                    out.append(prefix).append(' ').append(Json.GSON.toJson(active)).append(newline);
+                }else out.append(statement);
+            }else if(!retired)out.append(statement);
+            statement.setLength(0);
+        }
+        if(!statement.isEmpty())throw invalid("не удалось обновить конфигурацию");
+        return out.toString();
+    }
+    private static String updateStockComment(String line){
+        if(line.strip().equals("# Необязательные категории доски, до 20 уникальных названий по 40 символов."))return "";
+        return line
+            .replace("Справочник: SERVER_GUIDE.md.","Справочник: https://abrosdaniel.github.io/rivet/server/configuration/")
+            .replace("# Сохранённых скинов на игрока: 1–5.","# Сохранённых скинов на игрока: 1–8.")
+            .replace("# Требуется доступная интеграция Plasmo Voice.","# Требуется доступная интеграция Plasmo Voice или Simple Voice Chat.")
+            .replace("# true — включено для клиентов Rivet; false — обычное имя Minecraft.","# nameplates: \"rivet\", \"base\" или \"hidden\" (клиенты Rivet).");
+    }
     private record ConfigHeader(String section,int offset){}
     private static String multilineQuote(String line,String quote){
         for(int n=0;n<line.length();n++){
@@ -138,6 +179,7 @@ public final class ServerSettings {
         // Accept published configuration without reintroducing retired switches in new files.
         // The feature policy rejects these domains regardless of their preserved values.
         for(String id:RetiredFeatures.IDS)defaults.put(id+".enabled",false);
+        defaults.put("community.categories",List.of());
         defaults.put("tasks.maxPerOwner",200);defaults.put("tasks.maxSubtasks",30);defaults.put("tasks.maxComments",100);
         // Preserve old boolean semantics while the file is upgraded to explicit modes.
         if(values.get("display.nameplates") instanceof Boolean old)values.put("display.nameplates",old?"rivet":"base");
@@ -195,8 +237,16 @@ public final class ServerSettings {
         String env=text("database.passwordEnv");if(!env.isEmpty()&&!env.matches("[A-Za-z_][A-Za-z0-9_]*"))throw invalid("database.passwordEnv: неверное имя переменной");
         for(String key:List.of("display.tab"))if(!Set.of("auto","rivet","compatible").contains(text(key)))throw invalid(key+": auto, rivet или compatible");
         if(!Set.of("rivet","base","hidden").contains(text("display.nameplates")))throw invalid("display.nameplates: rivet, base или hidden в кавычках");
-        for(String key:List.of("chat.localName","chat.globalName"))if(text(key).codePointCount(0,text(key).length())>40||text(key).codePoints().anyMatch(Character::isISOControl))throw invalid(key+": до 40 символов, без переводов строк");
-        for(String key:List.of("chat.localColor","chat.globalColor","chat.groupColor"))if(!text(key).matches("#[0-9a-fA-F]{6}"))throw invalid(key+": ожидается цвет #RRGGBB в кавычках");
+        for(String key:List.of("chat.localName","chat.globalName","chat.personalName"))if(text(key).codePointCount(0,text(key).length())>40||text(key).codePoints().anyMatch(Character::isISOControl))throw invalid(key+": до 40 символов, без переводов строк");
+        for(String key:List.of("chat.localColor","chat.globalColor","chat.groupColor","chat.personalColor"))if(!text(key).matches("#[0-9a-fA-F]{6}"))throw invalid(key+": ожидается цвет #RRGGBB в кавычках");
+        String localEmptyMessage=text("chat.localEmptyMessage");
+        if(localEmptyMessage.isBlank()||localEmptyMessage.length()>512||localEmptyMessage.codePoints().anyMatch(Character::isISOControl))throw invalid("chat.localEmptyMessage: 1–512 символов, без переводов строк");
+        String globalTrigger=text("chat.globalTrigger"),groupTrigger=text("chat.groupTrigger");
+        String localTrigger=text("chat.localTrigger");
+        var triggers=List.of(globalTrigger,groupTrigger,localTrigger,text("chat.personalTrigger"));
+        if(triggers.stream().filter(String::isEmpty).count()>1)throw invalid("только один канал чата может иметь пустой триггер");
+        for(String trigger:triggers)if(trigger.length()>8||trigger.startsWith("/")||trigger.contains(":")||trigger.codePoints().anyMatch(c->Character.isWhitespace(c)||Character.isSpaceChar(c)||Character.isISOControl(c)))throw invalid("chat.globalTrigger/chat.groupTrigger/chat.localTrigger/chat.personalTrigger: пусто или 1–8 символов, без пробелов, двоеточия и начального /");
+        for(int i=0;i<triggers.size();i++)for(int j=i+1;j<triggers.size();j++)if(!triggers.get(i).isEmpty()&&!triggers.get(j).isEmpty()&&(triggers.get(i).startsWith(triggers.get(j))||triggers.get(j).startsWith(triggers.get(i))))throw invalid("триггеры чата не должны совпадать или начинаться друг с друга");
         ChatFormat.parse(text("chat.format"),false);ChatFormat.parse(text("chat.channelFormat"),true);
         if(number("chat.history")<0||number("chat.history")>1000)throw invalid("chat.history: 0–1000");
         if(number("chat.historyDays")<1||number("chat.historyDays")>365)throw invalid("chat.historyDays: 1–365");

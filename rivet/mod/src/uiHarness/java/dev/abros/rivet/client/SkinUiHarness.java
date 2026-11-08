@@ -55,12 +55,24 @@ public final class SkinUiHarness {
     if(mc.screen.children().stream().noneMatch(c->c instanceof UiSkinCard))throw new IllegalStateException("Clearing search did not restore collection");
     step=31;next=now+200;
    }
-   case 31->{UiGeometryHarness.verify(mc.screen);UiCaptureHarness.grab(new java.io.File(output),String.format("wardrobe-%03d.png",wardrobeFrame),mc.getMainRenderTarget(),m->{});wardrobeFrame++;step=30;}
+   case 31->{verifyCapePose(mc);UiGeometryHarness.verify(mc.screen);UiCaptureHarness.grab(new java.io.File(output),String.format("wardrobe-%03d.png",wardrobeFrame),mc.getMainRenderTarget(),m->{});wardrobeFrame++;step=30;}
    case 18->{if(SkinClient.busy)return;SkinClient.command("outfitDelete",outfitId,false);step=20;}
    case 20->{if(SkinClient.busy)return;SkinClient.command("delete",id,false);step=10;}
    case 10->{if(SkinClient.busy)return;if(!SkinClient.library.getAsJsonArray("entries").isEmpty())throw new IllegalStateException("Delete failed");System.out.println("RIVET_SKINS_INTEGRATION_OK");if(System.getenv("RIVET_SKIN_PICKER_TEST")!=null){var choose=SkinsScreen.class.getDeclaredMethod("chooseFile");choose.setAccessible(true);choose.invoke(mc.screen);next=now+70000;step=11;}else{step=-1;mc.stop();}}
    case 11->{if(mc.player==null||!mc.getConnection().getConnection().isConnected())throw new IllegalStateException("Connection stopped during picker");System.out.println("RIVET_SKIN_PICKER_70_SECONDS_OK");step=-1;}
   }}catch(Exception error){error.printStackTrace();System.out.println("RIVET_SKINS_INTEGRATION_FAILED");step=-1;mc.stop();}
+ }
+ private static void verifyCapePose(Minecraft mc)throws Exception{
+  var field=SkinsScreen.class.getDeclaredField("previewPlayer");field.setAccessible(true);
+  var p=(net.minecraft.client.player.RemotePlayer)field.get(mc.screen);
+  // CapeLayer interpolates both current and previous positions; neither may imply movement.
+  for(double t:new double[]{0,.5,1}){
+   double dx=net.minecraft.util.Mth.lerp(t,p.xCloakO,p.xCloak)-net.minecraft.util.Mth.lerp(t,p.xo,p.getX());
+   double dy=net.minecraft.util.Mth.lerp(t,p.yCloakO,p.yCloak)-net.minecraft.util.Mth.lerp(t,p.yo,p.getY());
+   double dz=net.minecraft.util.Mth.lerp(t,p.zCloakO,p.zCloak)-net.minecraft.util.Mth.lerp(t,p.zo,p.getZ());
+   if(Math.abs(dx)+Math.abs(dy)+Math.abs(dz)>1e-9)throw new IllegalStateException("Stationary preview produces cape motion");
+  }
+  if(p.yBodyRotO!=p.yBodyRot)throw new IllegalStateException("Preview body rotation history differs");
  }
  private static void verifyEquipment(Minecraft mc)throws Exception{
   var slots=new net.minecraft.world.entity.EquipmentSlot[]{net.minecraft.world.entity.EquipmentSlot.HEAD,net.minecraft.world.entity.EquipmentSlot.CHEST,net.minecraft.world.entity.EquipmentSlot.LEGS,net.minecraft.world.entity.EquipmentSlot.FEET};

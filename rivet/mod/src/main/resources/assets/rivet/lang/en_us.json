@@ -2951,5 +2951,10 @@
   "rivet.wardrobe.applied": "Applied",
   "rivet.wardrobe.saveHint": "Save the skin and cape you are wearing. Apply your preview first.",
   "rivet.wardrobe.search": "Search",
-  "rivet.wardrobe.turn": "Front / back"
+  "rivet.wardrobe.turn": "Front / back",
+  "rivet.chat.personal": "Private",
+  "rivet.chat.personalHint": "{trigger}Name: text → private message",
+  "rivet.chat.personalUnavailable": "Specify an available online player: private message was not sent.",
+  "rivet.chat.you": "You",
+  "rivet.chat.personalUseCommand": "Use /msg Name text for a private message."
 }
