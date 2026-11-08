@@ -174,4 +174,26 @@ class CoreUpdaterTest {
         var jar=game.resolve("mods/rivet.jar");Files.createDirectories(jar.getParent());Files.writeString(jar,"old");
         assertThrows(IOException.class,()->updater.stage(game,jar,update,new Cache(game,remote),new JsonObject()));assertEquals("old",Files.readString(jar));assertFalse(Files.exists(game.resolve("rivet/pending.json")));
     }
+    @Test void requiredCheckRefreshesPersistedEmptyListAndNeverTurnsPartialIntoAbsence()throws Exception{
+        var remote=source();var list=remote.data.get(CoreUpdater.RELEASES);remote.put(CoreUpdater.RELEASES,new JsonArray());
+        var updater=new CoreUpdater(remote,game.resolve("metadata"));assertTrue(updater.catalog("1.0.0","1.21.1","21.1.250",100,false,false).updates().isEmpty());
+        remote.data.put(CoreUpdater.RELEASES,list);
+        assertEquals("1.1.0",updater.catalog("1.0.0","1.21.1","21.1.250",100,false,true).matching(u->u.version().equals("1.1.0")).orElseThrow().version());
+        var releases=JsonParser.parseString(new String(list,StandardCharsets.UTF_8)).getAsJsonArray();var broken=new JsonObject();broken.addProperty("draft",false);broken.addProperty("tag_name","v1.2.0");releases.add(broken);remote.put(CoreUpdater.RELEASES,releases);
+        var partial=updater.catalog("1.0.0","1.21.1","21.1.250",100,false,true);
+        assertTrue(partial.partial());assertThrows(IOException.class,()->partial.matching(u->u.version().equals("1.2.0")));assertTrue(partial.matching(u->u.version().equals("1.1.0")).isPresent());
+        remote.put(base("1.2.0")+"core.json",descriptor("1.2.0","21.1.250"));
+        assertTrue(updater.catalog("1.0.0","1.21.1","21.1.250",100,false,true).matching(u->u.version().equals("1.2.0")).isPresent());
+    }
+    @Test void freshCompleteCatalogCanConfirmAbsence()throws Exception{
+        assertTrue(new CoreUpdater(source()).catalog("1.0.0","1.21.1","21.1.249",100,false,true).matching(u->true).isEmpty());
+    }
+    @Test void failedRefreshCannotMakeCachedListLookComplete()throws Exception{
+        var remote=source();var updater=new CoreUpdater(remote,game.resolve("metadata"));
+        updater.catalog("1.0.0","1.21.1","21.1.250",100,false,false);
+        remote.data.remove(CoreUpdater.RELEASES);
+        assertThrows(IOException.class,()->updater.catalog("1.0.0","1.21.1","21.1.250",100,false,true));
+        var fallback=new CoreUpdater(remote,game.resolve("metadata")).catalog("1.0.0","1.21.1","21.1.250",100,false,false);
+        assertTrue(fallback.partial());assertThrows(IOException.class,()->fallback.matching(u->false));
+    }
 }

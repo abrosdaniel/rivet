@@ -33,6 +33,17 @@ jobs:
       - run: python -m pip install -r tooling/docs/requirements.txt
       - run: python -m mkdocs build --strict
       - run: python tooling/docs/check_links.py
+      - name: Include signed update mirror
+        if: github.event_name != 'pull_request'
+        run: |
+          if git ls-remote --exit-code origin refs/heads/updates >/dev/null; then
+            git fetch --depth=1 origin updates
+            mkdir -p build/docs-site/updates
+            git archive FETCH_HEAD | tar -x -C build/docs-site/updates
+          else
+            status=$?
+            if [ "$status" -ne 2 ]; then exit "$status"; fi
+          fi
       - uses: actions/upload-pages-artifact@7b1f4a764d45c48632c6b24a0339c27f5614fb0b # v4
         if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main'
         with:

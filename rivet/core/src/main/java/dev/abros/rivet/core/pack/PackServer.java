@@ -33,6 +33,8 @@ public final class PackServer implements AutoCloseable {
   try{listener.bind(new InetSocketAddress(bind,port));}catch(Exception ex){workers.shutdownNow();listener.close();throw ex;}
   acceptor=new Thread(this::accept,"Rivet pack listener");acceptor.setDaemon(true);acceptor.start();
  }
+ private volatile CoreRelay coreRelay;
+ public void coreRelay(CoreRelay relay){coreRelay=relay;}
  public String fingerprint(){return fingerprint;}public int port(){return listener.getLocalPort();}public boolean required(){return required;}
  private synchronized Peer acquire(Socket socket){var address=socket.getInetAddress();var peer=peers.get(address);if(peer==null){if(peers.size()>=4096)return null;peer=new Peer(protection.requestsPerSecond);peers.put(address,peer);}if(peer.connections>=protection.connectionsPerAddress)return null;peer.connections++;return peer;}
  private synchronized void release(Socket socket,Peer peer){peer.connections--;if(peer.connections==0&&peers.size()>2048)peers.remove(socket.getInetAddress());}
@@ -43,10 +45,15 @@ public final class PackServer implements AutoCloseable {
    while(!peer.request(protection.requestsPerSecond)){if(closed.get()||Thread.currentThread().isInterrupted())return;Thread.sleep(25);}
    String action=Json.str(request,"action");
    if(action.equals("manifest")){var current=publisher.current();if(current!=null&&(!request.has("manifestProtocol")||!request.get("manifestProtocol").isJsonPrimitive()||!request.get("manifestProtocol").getAsJsonPrimitive().isNumber()||request.get("manifestProtocol").getAsInt()<2))current=current.legacy();var response=new JsonObject();response.addProperty("required",required);response.addProperty("ready",current!=null);if(current!=null){response.addProperty("hash",current.hash());response.add("manifest",Json.parse(new String(current.bytes(),java.nio.charset.StandardCharsets.UTF_8)));}PackWire.write(out,response);continue;}
-   if(!action.equals("file"))throw new IOException(dev.abros.rivet.core.Messages.text("rivet.core.unknown_modpack_request_6cec51c2"));var publication=publisher.load(Json.str(request,"publication"));String hash=Json.str(request,"hash");Hashes.check(hash);var file=publication.files().stream().filter(f->f.hash().equals(hash)).findFirst().orElseThrow(()->new IOException(dev.abros.rivet.core.Messages.text("rivet.core.file_missing_from_publication_34ae98c2")));long offset=request.get("offset").getAsBigDecimal().longValueExact();if(offset<0||offset>file.size())throw new IOException(dev.abros.rivet.core.Messages.text("rivet.core.invalid_file_position_4958ba8a"));
+   if(action.equals("core")){var relay=coreRelay;var current=relay==null?null:relay.snapshot();var response=new JsonObject();response.addProperty("ready",current!=null);if(current!=null)response.add("release",current.update().proof());PackWire.write(out,response);continue;}
+   String hash=Json.str(request,"hash");Hashes.check(hash);Path object;long size;
+   if(action.equals("coreFile")){var relay=coreRelay;var current=relay==null?null:relay.snapshot();if(current==null||!current.update().artifact().sha256().equals(hash))throw new IOException("Signed core update unavailable");object=current.file();size=current.update().artifact().size();}
+   else if(action.equals("file")){var publication=publisher.load(Json.str(request,"publication"));var file=publication.files().stream().filter(f->f.hash().equals(hash)).findFirst().orElseThrow(()->new IOException("File missing from publication"));object=publisher.object(hash);size=file.size();}
+   else throw new IOException("Unknown modpack request");
+   long offset=request.get("offset").getAsBigDecimal().longValueExact();if(offset<0||offset>size)throw new IOException("Invalid file position");
    boolean acquired=false;try{if(slots!=null){var wait=new JsonObject();wait.addProperty("queued",true);PackWire.write(out,wait);if(!slots.tryAcquire(protection.queueSeconds,TimeUnit.SECONDS))throw new SocketTimeoutException("Pack queue timed out");if(closed.get()){slots.release();return;}acquired=true;}
-    Path object=publisher.object(hash);verifier.check(object,hash,file.size());var response=new JsonObject();response.addProperty("bytes",file.size()-offset);PackWire.write(out,response);
-    try(var stream=Files.newInputStream(object)){stream.skipNBytes(offset);byte[] buffer=new byte[65536];long left=file.size()-offset;while(left>0){int n=stream.read(buffer,0,(int)Math.min(left,buffer.length));if(n<0)throw new EOFException();budget.take(n);total.take(n);out.write(buffer,0,n);left-=n;}out.flush();}
+    verifier.check(object,hash,size);var response=new JsonObject();response.addProperty("bytes",size-offset);PackWire.write(out,response);
+    try(var stream=Files.newInputStream(object)){stream.skipNBytes(offset);byte[] buffer=new byte[65536];long left=size-offset;while(left>0){int n=stream.read(buffer,0,(int)Math.min(left,buffer.length));if(n<0)throw new EOFException();budget.take(n);total.take(n);out.write(buffer,0,n);left-=n;}out.flush();}
    }finally{if(acquired)slots.release();}
   }
  }catch(Exception ex){if(!closed.get()&&!(ex instanceof EOFException))System.getLogger(PackServer.class.getName()).log(System.Logger.Level.DEBUG,dev.abros.rivet.core.Messages.text("rivet.core.modpack_transfer_completed_42119156")+ex.getClass().getSimpleName());}finally{sockets.remove(socket);release(socket,peer);}}

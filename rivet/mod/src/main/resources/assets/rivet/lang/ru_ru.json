@@ -1,4 +1,5 @@
 {
+  "rivet.error.rateWait": "Источник ограничил запросы. Повторите через %s с.",
   "rivet.api.keys.cleanup": "Изменение сохранено. Не удалось удалить старый файл выдачи %s.secret; удалите его вручную.",
   "rivet.api.keys.issued": "API: ключ=%s, приложение=%s. Секрет в файле rivet/api-keys/%s.secret. Прочитайте локально и удалите файл.",
   "rivet.api.keys.scopes": "Права API: %s",
@@ -2824,12 +2825,12 @@
   "rivet.permissions.cardDescription": "Назначения групп LuckPerms",
   "rivet.permissions.cardHint": "Просмотр, описание и изменение прав",
   "rivet.permissions.noProvider": "Без LuckPerms доступен только просмотр стандартных ролей Minecraft.",
-  "rivet.update.noCompatibleRelease": "Для этого сервера пока нет доступного совместимого выпуска Rivet. Повторите проверку позже.",
+  "rivet.update.noCompatibleRelease": "Проверка завершена: совместимый опубликованный выпуск Rivet для этого сервера и вашей платформы не найден.",
   "rivet.update.helperIncompatible": "Для выбранной версии требуется другой механизм установки. Автоматическое обновление не подготовлено.",
   "rivet.update.required": "Обновление для подключения",
   "rivet.update.coreRequired": "Для подключения требуется обновить Rivet: %s → %s. После установки понадобится один перезапуск игры.",
   "rivet.update.combined": "Rivet: %s → %s. Rivet и сборка установятся вместе — потребуется один перезапуск.",
-  "rivet.update.partialCatalog": "Список загружен не полностью. Можно выбрать версию или повторить проверку.",
+  "rivet.update.partialCatalog": "Каталог неполный или содержит сохранённые данные после ошибки сети. Можно выбрать найденную версию или повторить проверку.",
   "rivet.core.update_disk_space": "Недостаточно свободного места для обновления и резервной копии. Освободите место и повторите попытку.",
   "rivet.pack.routesUnavailable": "Не удалось подключиться ни к одному адресу раздачи сборки.",
   "rivet.pack.switchingRoute": "Соединение с раздачей прервано. Пробуем резервный адрес…",
@@ -2956,5 +2957,8 @@
   "rivet.chat.personalHint": "{trigger}Ник: текст → личное сообщение",
   "rivet.chat.personalUnavailable": "Укажите ник доступного онлайн-игрока: личное сообщение не отправлено.",
   "rivet.chat.you": "Вы",
-  "rivet.chat.personalUseCommand": "Для личного сообщения используйте /msg Ник текст."
+  "rivet.chat.personalUseCommand": "Для личного сообщения используйте /msg Ник текст.",
+  "rivet.update.checkFailed": "Не удалось проверить обновления Rivet. Повторите запрос. Подробности записаны в logs/latest.log.",
+  "rivet.update.compatibilityContext": "Клиент: Rivet %s. Сервер: Rivet %s. Minecraft 1.21.1; NeoForge %s; Java %s.",
+  "rivet.core.incomplete_update_catalog": "Не удалось проверить все выпуски Rivet. Отсутствие совместимой версии не подтверждено. Повторите проверку."
 }

@@ -31,3 +31,6 @@ rivet/deploy/.env
 
 # Documentation tooling environment (generated site is under build/)
 .venv-docs/
+
+# Local release signing key; never distribute the private half.
+/.release-keys/

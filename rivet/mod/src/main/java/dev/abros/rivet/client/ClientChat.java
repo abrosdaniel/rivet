@@ -63,14 +63,17 @@ public final class ClientChat {
   var original=e.getPlayerChatMessage().decoratedContent();
   // Preserve replacements made by earlier handlers, including their actions and styles.
   if(!e.getMessage().equals(bound.decorate(original)))return;
-  if(personal){
+  if(personal){formatPersonal(e,original);return;}
+  formatPublic(e,original);
+ }
+ /** Rebuild private presentation after an optional effect changes only the body. */
+ public static void formatPersonal(net.neoforged.neoforge.client.event.ClientChatReceivedEvent.Player e,Component original){
+  var bound=e.getBoundChatType();
    boolean outgoing=bound.chatType().is(ChatType.MSG_COMMAND_OUTGOING);
    var direction=Component.empty().append(outgoing?Client.tr("chat.you"):bound.name()).append(" → ").append(outgoing?bound.targetName().orElse(Component.empty()):Client.tr("chat.you"));
    String label=Json.opt(ServerMenuClient.state,"chatPersonalName",Client.text("chat.personal"));
    var header=Component.literal(label.isBlank()?"":"["+label+"] ").append(direction).append(": ").withStyle(style->style.withColor(ChatChannelIndicator.color(dev.abros.rivet.core.ChatChannels.Channel.PERSONAL)));
-   e.setMessage(Component.empty().append(header).append(original));return;
-  }
-  formatPublic(e,original);
+   var rendered=Component.empty().append(header).append(original);formattedLines.add(rendered);e.setMessage(rendered);
  }
  /** Used by optional chat effects after they transform the message body. */
  public static void formatPublic(net.neoforged.neoforge.client.event.ClientChatReceivedEvent.Player e,Component original){

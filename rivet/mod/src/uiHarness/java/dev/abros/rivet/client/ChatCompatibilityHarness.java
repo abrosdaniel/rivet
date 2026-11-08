@@ -36,7 +36,11 @@ public final class ChatCompatibilityHarness {
     mc.player.connection.sendCommand("msg "+mc.player.getGameProfile().getName()+" RIVET_MSG_PROBE");
     var chat=new net.minecraft.client.gui.screens.ChatScreen("");mc.setScreen(chat);chat.handleChatInput(ChatHints.personalTrigger()+mc.player.getGameProfile().getName()+": RIVET_SHORTCUT_PROBE",true);mc.setScreen(null);
     mc.player.connection.sendCommand("msg RivetMissingXYZ RIVET_OFFLINE_PRIVATE_PROBE");
-    if(System.getenv("RIVET_PRIVATE_TARGET")!=null)mc.player.connection.sendCommand("msg "+System.getenv("RIVET_PRIVATE_TARGET")+" RIVET_TARGET_ONLY");
+    if(System.getenv("RIVET_PRIVATE_TARGET")!=null){
+     String target=System.getenv("RIVET_PRIVATE_TARGET");
+     for(String command:java.util.List.of("msg","w","tell"))mc.player.connection.sendCommand(command+" "+target+" RIVET_TARGET_ONLY_"+command);
+     var direct=new net.minecraft.client.gui.screens.ChatScreen("");mc.setScreen(direct);direct.handleChatInput(ChatHints.personalTrigger()+target+": RIVET_TARGET_ONLY_shortcut",true);mc.setScreen(null);
+    }
     mc.player.connection.sendCommand("me RIVET_EMOTE_PROBE");stage=1;sentAt=System.currentTimeMillis();return;
    }
    var rows=((dev.abros.rivet.mixin.ChatHistoryAccessor)mc.gui.getChat()).rivet$messages();
@@ -47,6 +51,7 @@ public final class ChatCompatibilityHarness {
    check(rows.stream().anyMatch(row->personalMessage(row.content(),"RIVET_SHORTCUT_PROBE")),"Actual UI shortcut did not reach native private delivery");
    check(rows.stream().anyMatch(row->nativeMessage(row.content(),"RIVET_EMOTE_PROBE","chat.type.emote")),"Actual /me lost its native type");
    for(String probe:java.util.List.of("RIVET_PRIVATE_PROBE","RIVET_W_PROBE","RIVET_MSG_PROBE","RIVET_SHORTCUT_PROBE"))check(rows.stream().filter(row->personalMessage(row.content(),probe)).count()==2,"Native self whisper must retain incoming/outgoing delivery: "+probe);
+   if(System.getenv("RIVET_PRIVATE_TARGET")!=null)for(String command:java.util.List.of("msg","w","tell","shortcut"))check(rows.stream().filter(row->personalMessage(row.content(),"RIVET_TARGET_ONLY_"+command)).count()==1,"Outgoing private delivery missing: "+command);
    check(rows.stream().noneMatch(row->row.content().getString().contains("RIVET_OFFLINE_PRIVATE_PROBE")),"Unavailable target leaked into chat");
    String empty=System.getenv("RIVET_CHAT_EMPTY_EXPECTED");if(empty!=null)check(rows.stream().filter(row->row.content().getString().equals(empty)).count()==2,"Local warning must appear for each message with configured text");
    System.out.println("RIVET_CHAT_COMPAT_OK public + private + team + emote + say + foreign formatting + rich duplicate identity + actual tell/me commands");if(System.getenv("RIVET_TLS_CLOSE_CHECK")!=null){stage=2;mc.player.connection.sendCommand("rivet_test_tls_timeout");}else{stage=99;mc.stop();}
@@ -62,7 +67,11 @@ public final class ChatCompatibilityHarness {
   if(sentAt==0){sentAt=System.currentTimeMillis();return;}if(System.currentTimeMillis()-sentAt<1000)return;
   try{
    boolean target=mc.player.getGameProfile().getName().equals("RivetWhisperTo");
-   check(rows.stream().filter(row->row.content().getString().contains("RIVET_TARGET_ONLY")).count()==(target?1:0),"Private audience mismatch");
+   for(String command:java.util.List.of("msg","w","tell","shortcut")){
+    String probe="RIVET_TARGET_ONLY_"+command;
+    check(rows.stream().filter(row->row.content().getString().contains(probe)).count()==(target?1:0),"Private audience mismatch: "+command);
+    if(target)check(rows.stream().anyMatch(row->personalMessage(row.content(),probe)),"Incoming private presentation missing: "+command);
+   }
    for(String probe:java.util.List.of("RIVET_PRIVATE_PROBE","RIVET_W_PROBE","RIVET_MSG_PROBE","RIVET_SHORTCUT_PROBE","RIVET_OFFLINE_PRIVATE_PROBE"))check(rows.stream().noneMatch(row->row.content().getString().contains(probe)),"Third-party private message leaked");
    System.out.println("RIVET_PRIVATE_AUDIENCE_OK "+(target?"recipient":"observer"));
   }catch(Throwable failure){failure.printStackTrace();System.out.println("RIVET_PRIVATE_AUDIENCE_FAILED");}stage=99;mc.stop();
@@ -113,8 +122,16 @@ public final class ChatCompatibilityHarness {
    try{
     var type=Class.forName("umpaz.brewinandchewin.neoforge.client.TipsyEffects");var listener=type.getMethod("iCanHear",ClientChatReceivedEvent.Player.class);
     var real=player(ChatType.CHAT);ClientChat.chat(real);var sober=real.getMessage();listener.invoke(null,real);check(real.getMessage().equals(sober),"Actual B&C sober adapter changed message");
-    var utils=Class.forName("umpaz.brewinandchewin.client.utility.BnCClientTextUtils");utils.getField("tipsyMessageLevel").setInt(null,4);utils.getField("randomSeed").setLong(null,12345L);listener.invoke(null,real);
+    var utils=Class.forName("umpaz.brewinandchewin.client.utility.BnCClientTextUtils");utils.getField("tipsyMessageLevel").setInt(null,4);utils.getField("randomSeed").setLong(null,12345L);utils.getField("generatedRandom").setBoolean(null,true);listener.invoke(null,real);
     check(ClientChat.formatted(real.getMessage()),"Actual B&C tipsy effect lost Rivet format");check(!real.getMessage().equals(sober),"Actual B&C effect was not applied");
+    for(var privateType:java.util.List.of(ChatType.MSG_COMMAND_INCOMING,ChatType.MSG_COMMAND_OUTGOING)){
+     var whisper=player(privateType,"Testing beautifully preserved private communication");var signed=whisper.getPlayerChatMessage();var bound=whisper.getBoundChatType();ClientChat.chat(whisper);var clean=whisper.getMessage();
+     utils.getField("tipsyMessageLevel").setInt(null,0);listener.invoke(null,whisper);
+     check(whisper.getMessage().equals(clean),"B&C changed sober private message");
+     utils.getField("tipsyMessageLevel").setInt(null,4);utils.getField("randomSeed").setLong(null,12345L);utils.getField("generatedRandom").setBoolean(null,true);listener.invoke(null,whisper);
+     check(!whisper.getMessage().equals(clean)&&whisper.getMessage().getString().contains(" → "),"Private effect or direction lost");
+     check(whisper.getPlayerChatMessage()==signed&&whisper.getBoundChatType()==bound&&!whisper.isCanceled(),"Private signature/delivery changed");
+    }
     for(String channel:java.util.List.of("Local","Group","API website")){
      var identity=dev.abros.rivet.network.ChatPresentation.identity("STAFF","Reader","VIP");
      var body=link("Testing beautifully preserved clickable navigation coordinates", "/rivet direction minecraft:overworld 1 2 64 Reader")
@@ -135,7 +152,7 @@ public final class ChatCompatibilityHarness {
      check(transformed.getStyle().getClickEvent().equals(inherited.getStyle().getClickEvent())&&transformed.getStyle().getColor().equals(inherited.getStyle().getColor()),"Empty body container lost inherited style");
     }
     utils.getField("tipsyMessageLevel").setInt(null,0);
-    System.out.println("RIVET_BREWIN_ADAPTER_OK actual 4.5.0 sober/tipsy + channel envelopes");
+    System.out.println("RIVET_BREWIN_ADAPTER_OK actual 4.5.0 sober/tipsy + private incoming/outgoing + channel envelopes");
    }catch(ReflectiveOperationException failure){throw new IllegalStateException(failure);}
   }
   var normal=player(ChatType.CHAT);var before=normal.getMessage();ClientChat.chat(normal);check(!normal.getMessage().equals(before),"Public chat not formatted");
@@ -145,6 +162,15 @@ public final class ChatCompatibilityHarness {
   for(var type:java.util.List.of(ChatType.MSG_COMMAND_INCOMING,ChatType.MSG_COMMAND_OUTGOING)){
    var event=player(type);var signed=event.getPlayerChatMessage();var bound=event.getBoundChatType();ClientChat.chat(event);
    check(personalMessage(event.getMessage(),"Test body")&&!event.isCanceled()&&event.getPlayerChatMessage()==signed&&event.getBoundChatType()==bound,"Private formatting changed delivery/signature");
+   var clean=event.getMessage();
+   dev.abros.rivet.compat.BrewinChatAdapter.receive(event,nativeEvent->{
+    var envelope=(net.minecraft.network.chat.contents.TranslatableContents)nativeEvent.getMessage().getContents();
+    check(envelope.getArgs()[1] instanceof Component,"Private envelope body missing");
+   });check(event.getMessage().equals(clean),"Sober private adapter changed message");
+   dev.abros.rivet.compat.BrewinChatAdapter.receive(event,nativeEvent->nativeEvent.setMessage(Component.literal("prefix").append(link("Private effect","/help"))));
+   check(personalMessage(event.getMessage(),"Private effect")&&hasClick(event.getMessage(),"/help"),"Private effect lost colour/direction/action");
+   check(event.getPlayerChatMessage()==signed&&event.getBoundChatType()==bound,"Private adapter changed signed message/type");
+   var canceledPrivate=player(type);ClientChat.chat(canceledPrivate);dev.abros.rivet.compat.BrewinChatAdapter.receive(canceledPrivate,nativeEvent->nativeEvent.setCanceled(true));check(canceledPrivate.isCanceled(),"Private cancellation lost");
    var foreignPrivate=player(type);foreignPrivate.setMessage(link("Foreign private","/help"));var beforePrivate=foreignPrivate.getMessage();ClientChat.chat(foreignPrivate);check(foreignPrivate.getMessage().equals(beforePrivate),"Foreign private formatting replaced");
   }
   var replacement=player(ChatType.CHAT);replacement.setMessage(link("Foreign message","/help").withStyle(style->style.withColor(0x123456)));var foreign=replacement.getMessage();ClientChat.chat(replacement);check(replacement.getMessage().equals(foreign),"Foreign replacement lost");
@@ -158,7 +184,8 @@ public final class ChatCompatibilityHarness {
   ClientChat.reset();system(same);Minecraft.getInstance().gui.getChat().addMessage(Component.literal("Intervening message"));check(!system(same).isCanceled(),"Removed message across intervening history");
   var custom=Component.literal("Other mod player hover").withStyle(style->style.withHoverEvent(new HoverEvent(HoverEvent.Action.SHOW_ENTITY,new HoverEvent.EntityTooltipInfo(net.minecraft.world.entity.EntityType.PLAYER,Minecraft.getInstance().player.getUUID(),Component.literal("Other mod")))));check(system(custom).getMessage().equals(custom),"Foreign player hover lost");
  }
- private static ClientChatReceivedEvent.Player player(ResourceKey<ChatType> type){var mc=Minecraft.getInstance();var bound=ChatType.bind(type,mc.level.registryAccess(),Component.literal("Sender")).withTargetName(Component.literal("Recipient"));var message=PlayerChatMessage.unsigned(mc.player.getUUID(),"Test body");return new ClientChatReceivedEvent.Player(bound,bound.decorate(message.decoratedContent()),message,mc.player.getUUID());}
+ private static ClientChatReceivedEvent.Player player(ResourceKey<ChatType> type){return player(type,"Test body");}
+ private static ClientChatReceivedEvent.Player player(ResourceKey<ChatType> type,String text){var mc=Minecraft.getInstance();var bound=ChatType.bind(type,mc.level.registryAccess(),Component.literal("Sender")).withTargetName(Component.literal("Recipient"));var message=PlayerChatMessage.unsigned(mc.player.getUUID(),text);return new ClientChatReceivedEvent.Player(bound,bound.decorate(message.decoratedContent()),message,mc.player.getUUID());}
  private static MutableComponent link(String text,String command){return Component.literal(text).withStyle(style->style.withClickEvent(new ClickEvent(ClickEvent.Action.RUN_COMMAND,command)));}
  private static ClientChatReceivedEvent.System system(Component message){var event=new ClientChatReceivedEvent.System(message,false);ClientChat.system(event);if(!event.isCanceled())Minecraft.getInstance().gui.getChat().addMessage(event.getMessage());return event;}
  private static boolean hasClick(Component value,String command){if(value.getStyle().getClickEvent()!=null&&value.getStyle().getClickEvent().getValue().equals(command))return true;for(var child:value.getSiblings())if(hasClick(child,command))return true;return false;}

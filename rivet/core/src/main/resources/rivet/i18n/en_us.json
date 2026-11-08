@@ -862,5 +862,6 @@
   "rivet.outfit.unavailable": "Unavailable",
   "rivet.outfit.empty": "Apply a skin and cape, then choose “Save current outfit” in the library actions.",
   "rivet.pack.rollback.missing": "No previous publication is recorded. Specify a snapshot hash.",
-  "rivet.pack.rollback.scheduled": "Rollback to pack %s is scheduled for the next start. Check server mod compatibility: the world and server data are not rolled back."
+  "rivet.pack.rollback.scheduled": "Rollback to pack %s is scheduled for the next start. Check server mod compatibility: the world and server data are not rolled back.",
+  "rivet.core.incomplete_update_catalog": "Not all Rivet releases could be checked. A compatible version may still exist. Retry the check."
 }

@@ -122,7 +122,7 @@ def validate_protocol_change(current, previous):
             raise ValueError("Network protocols changed within the same A. Increase the major version A before publishing.")
 
 
-def publish(root, artifact, output):
+def publish(root, artifact, output, signed_updates=False):
     number = version(root)
     tag = "v" + number
     repository = os.environ["GITHUB_REPOSITORY"]
@@ -132,6 +132,14 @@ def publish(root, artifact, output):
     available = releases(repository)
     existing = next((r for r in available if r["tag_name"] == tag), None)
     if existing and not existing["draft"]:
+        if signed_updates:
+            package(root, artifact, output)
+            published = json.loads(run("gh", "release", "download", tag, "--repo", repository, "--pattern", "core.json", "--output", "-"))
+            if published != json.loads((output / "core.json").read_text()):
+                raise ValueError("Published release differs from the tested bundle; refusing mirror replacement")
+            from update_catalog import signed_release, publish_static
+            signed_release(root, output)
+            publish_static(root, output)
         print(f"{tag} is already published; nothing to do")
         return
     refs = run("git", "ls-remote", "origin", "refs/tags/" + tag)
@@ -145,6 +153,9 @@ def publish(root, artifact, output):
     if not notes.is_file() or not notes.read_text(encoding="utf-8").strip():
         raise ValueError("Fill rivet/RELEASE_NOTES.md before publishing")
     files = package(root, artifact, output)
+    if signed_updates:
+        from update_catalog import signed_release
+        files.append(signed_release(root, output))
     current = json.loads((output / "core.json").read_text())
     same_major = [r for r in available if not r["draft"] and not r.get("prerelease", False)
                   and re.fullmatch(r"v[0-9]+\.[0-9]+\.[0-9]+", r["tag_name"])
@@ -170,6 +181,9 @@ def publish(root, artifact, output):
             if (Path(temp) / path.name).read_bytes() != path.read_bytes():
                 raise ValueError("Uploaded asset differs: " + path.name)
     change_release(repository, tag, commit, "gh", "release", "edit", tag, "--repo", repository, "--draft=false")
+    if signed_updates:
+        from update_catalog import publish_static
+        publish_static(root, output)
     print(f"Published {tag}")
 
 
@@ -178,10 +192,11 @@ def main():
     parser.add_argument("--artifact", type=Path, required=True)
     parser.add_argument("--output", type=Path, default=Path("dist"))
     parser.add_argument("--publish", action="store_true")
+    parser.add_argument("--signed-updates", action="store_true")
     args = parser.parse_args()
     root = Path.cwd()
     if args.publish:
-        publish(root, args.artifact, args.output)
+        publish(root, args.artifact, args.output, args.signed_updates)
     else:
         package(root, args.artifact, args.output)
 

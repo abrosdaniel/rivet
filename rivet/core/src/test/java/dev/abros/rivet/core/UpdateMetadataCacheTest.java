@@ -61,4 +61,10 @@ class UpdateMetadataCacheTest {
   source.failed=false;source.body="[1]";assertEquals("[1]",new String(cache.read(source,url,1024,true)));
   assertEquals(3,source.calls.get());
  }
+ @Test void staleFallbackReportsUncertaintyIncludingFreshCacheAfterFailedRefresh()throws Exception{
+  var now=new AtomicLong(1_000_000);var source=new Source();var cache=new UpdateMetadataCache(root,now::get);cache.read(source,url,1024);
+  source.failed=true;assertThrows(IOException.class,()->cache.read(source,url,1024,true));
+  var stale=new AtomicBoolean();assertEquals("[]",new String(new UpdateMetadataCache(root,now::get).read(source,url,1024,false,()->stale.set(true))));assertTrue(stale.get());
+  now.addAndGet(UpdateMetadataCache.FRESH);stale.set(false);cache.read(source,url,1024,false,()->stale.set(true));assertTrue(stale.get());
+ }
 }

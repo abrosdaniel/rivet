@@ -14,6 +14,79 @@
 
 ## Текущая работа
 
+2026-11-08: кандидат 2.10.0 — подписанный статический каталог и раздача Rivet
+через Builder. Новый Ed25519 trust anchor в core; приватный ключ исключён из Git,
+локально защищён правами 600. Для CI требуется RIVET_UPDATE_SIGNING_KEY с той же
+парой; пользователь подтвердил добавление секрета и разрешил commit/push,
+проверку CI и публикацию 2.10.0.
+Источники: raw ветка updates, резерв Pages, legacy GitHub API; signed JAR mirrors.
+Builder передаёт только running bundle после проверки подписи, размера и SHA256;
+клиент повторяет проверку. Общие маршруты, очередь, лимиты и возобновление загрузки.
+CoreRelay закрывается без позднего восстановления snapshot; отмена preflight
+передаётся relay. Remote хранит Retry-After/reset между запусками, не блокирует
+другие хосты. Version popup показывает причину и срок ограничения.
+Release pipeline подписывает metadata, проверяет upload, публикует bounded orphan
+ветку updates (100 описаний/10 JAR), запускает docs mirror. Retry не заменяет
+выпущенный descriptor. Secrets/permissions передаются в reusable workflow явно.
+Docs workflow не удаляет зеркало при временном сбое чтения ветки.
+
+Проверки: полный принудительный build/verifyBundle — 838 tests, 0 failures/errors,
+1 opt-in skip; SignedUpdateLiveTest отдельно выполнен успешно на финальном JAR.
+Реальный HTTP: 429 primary catalog, резервный каталог/описание, 403 primary JAR,
+резервный JAR, отсутствие лишнего API-запроса, отклонение повреждённого JAR.
+54 tooling tests, 0 failures, 1 штатный skip; подпись/tamper/wrong key, повтор
+публикации в настоящий локальный bare Git, неизменяемость версии проверены.
+Native UpdateCatalogHarness: persisted stale/empty, 429/502, partial, recovery,
+no-match, локализованное ожидание; ReviewScreen GUI1–3 прошёл.
+Packaged combined signed flow: пустой клиентский кэш, настоящий TLS сервер,
+TCP proxy и отключённый proxy с прямым резервом; GUI1–3, один transaction,
+helper, exact JAR/pack hashes, сохранённый конфиг, reconnect + alias без новой
+установки. Последний JAR после правки UI повторно прошёл все три маршрута GUI2.
+Это изолированный реальный TCP-прокси, не production Playit. Исходный клиент
+содержит новый код со старой metadata; исторические updater JAR этим не проверены.
+После последней UI правки mod:test/verifyBundle повторены успешно. Проверка
+разрешения зависимостей --refresh-dependencies успешна. Strict docs: 80 pages,
+0 broken links. dist/2.10.0-candidate содержит JAR, descriptors/signature, каталог,
+SHA256SUMS и release notes; hashes и bundled RU/EN сверены. Приватного ключа там нет.
+Рабочий Prism не менялся. Commit/push/tag/publish не выполнялись. Exact-commit CI
+и публичные static URLs ещё не проверены: требуется secret setup и публикация.
+
+
+2026-11-08: в кандидат 2.9.1 добавлена проверка каталога обновлений.
+Обязательный update и CoreVersionsPopup выполняют refresh=true; старый пустой
+кэш не используется для отказа во входе. UpdateMetadataCache сообщает stale
+fallback, включая fresh snapshot после неудачного forced refresh. Catalog.partial
+сохраняет неопределённость; matching не подтверждает отсутствие при partial и
+сохраняет исходную причину ошибки для журнала. Диалог показывает client/server/
+Minecraft/NeoForge/Java и отличает check failure от complete no-match.
+В живом отдельном клиенте UpdateCatalogHarness прошёл: реальный loopback HTTP,
+сохранённый пустой каталог, 429/502, отказ одного descriptor при доступном другом,
+повтор без ожидания backoff, восстановление и подтверждённое отсутствие. Native
+ReviewScreen retry проверен в GUI1–3. Первый live обнаружил отсутствующий клиентский
+перевод нового core ключа; перевод добавлен, финальный live с assertion локализации
+прошёл. Сценарий updates включён в map_network CI. Установленный клиент не изменён.
+Полный финальный build/verifyBundle --rerun-tasks: 833 tests, 0 failures/errors.
+Tooling 52/0 (1 skip), strict docs 80 страниц/0 broken links. Кандидат 2.9.1
+перепакован; bytecode, переводы и SHA256 сверены. Exact-commit remote CI не запускался.
+
+
+2026-11-08: патч 2.9.1 — личный чат с B&C 4.5.0. Воспроизведён
+ClassCastException в TipsyEffects.getChatMessage: адаптер пропускал personal
+incoming/outgoing, а ClientChat уже заменял vanilla envelope. Оба личных типа
+теперь помечаются как форматированные Rivet и проходят через native envelope;
+после эффекта восстанавливается личное оформление, signed message/bound не меняются.
+Harness покрывает sober/tipsy через настоящий B&C, сохранение направления/цвета,
+click actions и отмену. Три изолированных клиента с B&C проверяют @ и /msg /w /tell,
+исходящие/входящие и отсутствие утечки observer; финальный повтор прошёл:
+RIVET_BREWIN_ADAPTER_OK, RIVET_CHAT_COMPAT_OK и оба PRIVATE_AUDIENCE_OK.
+В новом тесте эффекта устранён nondeterminism: B&C перезаписывает seed, если
+не задан generatedRandom. Теперь seed фиксирован, private fixture использует
+длинную фразу; проверки изменения тела, направления и подписи не ослаблены.
+Полный build/verifyBundle --rerun-tasks: 829 tests, 0 failures/errors/skips.
+Strict docs: 80 страниц, 0 битых ссылок. Кандидат 2.9.1 собран, bytecode/SHA256
+сверены. Установленный клиент не изменён. Exact-commit CI/публикация не выполнены.
+
+
 2026-11-08: Windows CI упал на двух ServerSettingsTest из-за CRLF шаблона.
 Воспроизведены оба исходных падения с CRLF-копией packaged resource, затем
 фикстуры переведены на canonical LF перед явным выбором LF/CRLF. Добавлены

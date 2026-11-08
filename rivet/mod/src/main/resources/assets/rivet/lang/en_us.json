@@ -1,4 +1,5 @@
 {
+  "rivet.error.rateWait": "The source limited requests. Try again in %s s.",
   "rivet.api.keys.cleanup": "The change is saved. Could not remove old delivery file %s.secret; delete it manually.",
   "rivet.api.keys.issued": "API: key=%s, application=%s. Secret file: rivet/api-keys/%s.secret. Read locally, then delete the file.",
   "rivet.api.keys.scopes": "API scopes: %s",
@@ -2824,12 +2825,12 @@
   "rivet.permissions.cardDescription": "LuckPerms group permissions",
   "rivet.permissions.cardHint": "Inspect, understand and edit permissions",
   "rivet.permissions.noProvider": "Without LuckPerms, only the standard Minecraft roles can be inspected.",
-  "rivet.update.noCompatibleRelease": "No compatible Rivet release is available for this server yet. Try checking again later.",
+  "rivet.update.noCompatibleRelease": "Check complete: no published Rivet release matches this server and your platform.",
   "rivet.update.helperIncompatible": "This version requires a different installer. No automatic update has been prepared.",
   "rivet.update.required": "Update to connect",
   "rivet.update.coreRequired": "Connecting requires a Rivet update: %s → %s. Restart the game once after installation.",
   "rivet.update.combined": "Rivet: %s → %s. Rivet and the modpack will be installed together, with one restart.",
-  "rivet.update.partialCatalog": "Some versions could not be checked. Select a version or retry.",
+  "rivet.update.partialCatalog": "The catalog is incomplete or includes cached data after a network error. Select a known version or retry.",
   "rivet.core.update_disk_space": "Not enough free space for the update and its backup. Free some space and retry.",
   "rivet.pack.routesUnavailable": "Could not connect to any pack distribution address.",
   "rivet.pack.switchingRoute": "Pack connection interrupted. Trying a backup address…",
@@ -2956,5 +2957,8 @@
   "rivet.chat.personalHint": "{trigger}Name: text → private message",
   "rivet.chat.personalUnavailable": "Specify an available online player: private message was not sent.",
   "rivet.chat.you": "You",
-  "rivet.chat.personalUseCommand": "Use /msg Name text for a private message."
+  "rivet.chat.personalUseCommand": "Use /msg Name text for a private message.",
+  "rivet.update.checkFailed": "Could not verify Rivet updates. Retry the request. Details are recorded in logs/latest.log.",
+  "rivet.update.compatibilityContext": "Client: Rivet %s. Server: Rivet %s. Minecraft 1.21.1; NeoForge %s; Java %s.",
+  "rivet.core.incomplete_update_catalog": "Not all Rivet releases could be checked. A compatible version may still exist. Retry the check."
 }

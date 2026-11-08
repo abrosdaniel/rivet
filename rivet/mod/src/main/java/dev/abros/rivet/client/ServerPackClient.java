@@ -22,6 +22,24 @@ public final class ServerPackClient {
   if(data==null)return;
   var flow=new Flow(parent,mc,ServerAddress.parseString(data.ip),data,false,null);flow.configure=true;flow.check();
  }
+ static CoreUpdater.Update requiredUpdate(Hub hub,PackDiscovery.Status preflight)throws Exception{return requiredUpdate(hub,preflight,new AtomicBoolean());}
+ private static CoreUpdater.Update requiredUpdate(Hub hub,PackDiscovery.Status preflight,AtomicBoolean cancel)throws Exception{
+    if(preflight.pack()!=null)try(var relay=new PackClient(preflight.routes(),cancel)){
+     var offered=relay.core(hub.neoVersion());if(offered.isPresent()){var candidate=offered.get();if(Versions.sameMajor(candidate.version(),dev.abros.rivet.Rivet.VERSION)&&Versions.compare(candidate.version(),dev.abros.rivet.Rivet.VERSION)>0&&preflight.compatible(candidate.version(),candidate.protocols()))return candidate;}
+    }catch(Exception unavailable){com.mojang.logging.LogUtils.getLogger().debug("Builder update relay unavailable; using official sources",unavailable);}
+    if(cancel.get()||Thread.currentThread().isInterrupted())throw new java.io.InterruptedIOException("Cancelled");
+    CoreUpdater.Update update;
+    String context=Client.tr("update.compatibilityContext",dev.abros.rivet.Rivet.VERSION,preflight.coreVersion(),hub.neoVersion(),Runtime.version().feature()).getString();
+    try{
+     // A mandatory update must not be rejected using an old or incomplete release list.
+     update=hub.coreCatalog(true).matching(u->Versions.sameMajor(u.version(),dev.abros.rivet.Rivet.VERSION)&&Versions.compare(u.version(),dev.abros.rivet.Rivet.VERSION)>0&&preflight.compatible(u.version(),u.protocols())).orElse(null);
+    }catch(Exception failure){
+     com.mojang.logging.LogUtils.getLogger().warn("Rivet required update check failed: client={}, server={}, loader={}",dev.abros.rivet.Rivet.VERSION,preflight.coreVersion(),hub.neoVersion(),failure);
+     throw new java.io.IOException(Client.text("update.checkFailed")+"\n"+context+"\n"+Errors.message(failure),failure);
+    }
+    if(update==null)throw new java.io.IOException(Client.text("update.noCompatibleRelease")+"\n"+context);
+    return update;
+ }
  private static final class Flow {
   final Screen parent;final Minecraft mc;final ServerAddress address;final ServerData data;final boolean quick;final TransferState transfer;
   final AtomicBoolean cancel=new AtomicBoolean();final java.util.concurrent.atomic.AtomicInteger working=new java.util.concurrent.atomic.AtomicInteger();volatile boolean committing,staging;volatile PackClient active;final PackLoadingScreen loading;
@@ -41,7 +59,7 @@ public final class ServerPackClient {
    var resolved=ServerNameResolver.DEFAULT.resolveAddress(address).orElseThrow(()->new java.io.IOException(Client.text("ui.could_not_resolve_the_server_address_d2e1a78a")));
    preflight=PackDiscovery.status(resolved.asInetSocketAddress(),address.getHost(),address.getPort(),address.getHost());endpoint=preflight.pack();coreRequired=!preflight.compatible(dev.abros.rivet.Rivet.VERSION);
    var offered=Client.offeredUpdate;if(offered!=null&&preflight.compatible(offered.version(),offered.protocols())&&Versions.sameMajor(offered.version(),dev.abros.rivet.Rivet.VERSION)&&Versions.compare(offered.version(),dev.abros.rivet.Rivet.VERSION)>0)coreUpdate=offered;
-   if(coreRequired&&coreUpdate==null)coreUpdate=Client.hub.availableCoreUpdates().stream().filter(u->Versions.sameMajor(u.version(),dev.abros.rivet.Rivet.VERSION)&&Versions.compare(u.version(),dev.abros.rivet.Rivet.VERSION)>0&&preflight.compatible(u.version(),u.protocols())).findFirst().orElseThrow(()->new java.io.IOException(Client.text("update.noCompatibleRelease")));
+   if(coreRequired&&coreUpdate==null)coreUpdate=requiredUpdate(Client.hub,preflight,cancel);
    if(coreUpdate!=null&&coreUpdate.protocols().get("helper").getAsInt()!=WireProtocols.version("helper"))throw new java.io.IOException(Client.text("update.helperIncompatible"));
    if(cancel.get())return;
    if(endpoint==null){if(coreRequired){coreOnly();return;}if(configure)throw new java.io.IOException(Client.text("ui.this_server_does_not_distribute_a_7ceb10ae"));resume();return;}
@@ -60,7 +78,7 @@ public final class ServerPackClient {
    }
    if(cancel.get())return;var review=coreUpdate==null?base:installer.withCore(base,Client.loadedJar,coreUpdate);var text=new StringBuilder(catalogWarning.isEmpty()?"":catalogWarning+"\n\n").append(coreUpdate==null?"":Client.tr("update.combined",dev.abros.rivet.Rivet.VERSION,coreUpdate.version()).getString()+"\n\n").append(Client.text("ui.files_a8faed18")+review.plan().changes().size()+Client.text("ui.download_a39bb753")+review.plan().downloadBytes()+Client.text("ui.bytes_beea81d5"));for(var change:review.plan().changes())text.append(change.after()==null?Client.text("ui.delete_1c562302"):change.before()==null?Client.text("ui.add_8e5f90ba"):Client.text("ui.replace_90e10d85")).append(change.path()).append('\n');if(!review.plan().conflicts().isEmpty())text.append(Client.text("ui.existing_or_modified_files_affected_f592057d")).append(String.join("\n",review.plan().conflicts()));text.append(review.plan().changes().isEmpty()?Client.text("ui.the_files_already_match_the_pack_62a4af53"):Client.text("ui.existing_files_being_modified_will_be_01a9083a"));mc.execute(()->{if(!cancel.get())mc.setScreen(new ReviewScreen(parent,Client.tr("ui.pack_changes_d70cc394"),text.toString(),Component.literal(review.plan().changes().isEmpty()?Client.text("map.tool.save"):Client.text("install")),()->stage(review),true));});}catch(Exception ex){fail(ex);}});}
   void coreOnly(){mc.execute(()->{if(cancel.get())return;mc.setScreen(new ReviewScreen(parent,Client.tr("update.required"),Client.tr("update.coreRequired",dev.abros.rivet.Rivet.VERSION,coreUpdate.version()).getString(),Client.tr("install"),()->{
-   staging=true;mc.setScreen(loading);background(()->{try{if(cancel.get())return;String id=Client.hub.prepareCoreUpdate(Client.loadedJar,coreUpdate,event->loading.progress=event,cancel,this::beginCommit);Client.pending=id;mc.execute(()->{if(!cancel.get())mc.setScreen(new RestartScreen(parent,id));});}catch(Exception ex){fail(ex);}finally{staging=false;}});
+   staging=true;mc.setScreen(loading);background(()->{try{if(cancel.get())return;if(endpoint!=null&&coreUpdate.proof()!=null&&!Client.hub.cache.contains(coreUpdate.artifact().sha256()))try(var relay=new PackClient(preflight.routes(),cancel)){active=relay;relay.downloadCore(coreUpdate,Client.hub.cache,cancel,event->loading.progress=event);}catch(java.io.IOException unavailable){if(cancel.get())return;}finally{active=null;}String id=Client.hub.prepareCoreUpdate(Client.loadedJar,coreUpdate,event->loading.progress=event,cancel,this::beginCommit);Client.pending=id;mc.execute(()->{if(!cancel.get())mc.setScreen(new RestartScreen(parent,id));});}catch(Exception ex){fail(ex);}finally{staging=false;}});
   },true));});}
   void stage(PackInstaller.Review review){
    if(review.plan().changes().isEmpty()){

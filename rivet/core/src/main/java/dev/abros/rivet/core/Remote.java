@@ -28,25 +28,46 @@ public class Remote {
  public static class Unavailable extends IOException{public Unavailable(String message,Throwable cause){super(message,cause);}public Unavailable(String message){super(message);}}
  public static final class CoolingDown extends Unavailable{private final URI source;public CoolingDown(URI source){super(dev.abros.rivet.core.Messages.text("rivet.core.source_has_temporarily_limited_downloads_6a7fe469"));this.source=source;}public void await(AtomicBoolean cancel)throws IOException,InterruptedException{awaitHost(source,cancel);}}
  public static final class HttpFailure extends Unavailable {
-  public final int status;public final URI endpoint;
-  public HttpFailure(int status,URI endpoint){super("HTTP "+status+" from "+endpoint.getHost());this.status=status;this.endpoint=endpoint;}
+  public final int status;public final URI endpoint;public final long retryAt;
+  public HttpFailure(int status,URI endpoint){this(status,endpoint,0);}
+  public HttpFailure(int status,URI endpoint,long retryAt){super("HTTP "+status+" from "+endpoint.getHost()+(retryAt>0?"; retry after "+java.time.Instant.ofEpochMilli(retryAt):""));this.status=status;this.endpoint=endpoint;this.retryAt=retryAt;}
  }
  private static final ScheduledExecutorService TIMER=Executors.newSingleThreadScheduledExecutor(r->{Thread t=new Thread(r,"Rivet network timeout");t.setDaemon(true);return t;});
  private Path metadataCache;
  public void cacheMetadata(Path directory)throws IOException{Files.createDirectories(directory);metadataCache=directory;}
  public static URI https(String s){URI u=URI.create(s);if(!"https".equals(u.getScheme())||u.getHost()==null||u.getUserInfo()!=null||u.getFragment()!=null)throw new IllegalArgumentException("HTTPS required");return u;}
+ private final ConcurrentHashMap<String,Long> metadataLimits=new ConcurrentHashMap<>();
+ private Path rateFile(URI uri){return metadataCache==null?null:metadataCache.resolve("rate-"+Hashes.sha256(uri.getHost().getBytes(java.nio.charset.StandardCharsets.UTF_8))+".json");}
+ private void checkLimit(URI uri)throws IOException{
+  long now=System.currentTimeMillis(),until=metadataLimits.getOrDefault(uri.getHost(),0L);Path file=rateFile(uri);
+  if(until==0&&file!=null&&Files.isRegularFile(file))try{until=Json.read(file).get("until").getAsLong();}catch(Exception ignored){}
+  if(until>now&&until-now<=TimeUnit.DAYS.toMillis(1))throw new HttpFailure(429,uri,until);
+ }
+ static long limitUntil(HttpResponse<?> response,long now){
+  int status=response.statusCode();String retry=response.headers().firstValue("Retry-After").orElse("");boolean limited=status==429||(status==403&&(!retry.isEmpty()||response.headers().firstValue("X-RateLimit-Remaining").orElse("").equals("0")))||(status==503&&!retry.isEmpty());if(!limited)return 0;
+  long until=now+60_000;
+  if(!retry.isEmpty())try{until=now+Math.multiplyExact(Long.parseLong(retry),1000);}catch(Exception numeric){try{until=java.time.ZonedDateTime.parse(retry,java.time.format.DateTimeFormatter.RFC_1123_DATE_TIME).toInstant().toEpochMilli();}catch(Exception ignored){}}
+  try{until=Math.max(until,Math.multiplyExact(Long.parseLong(response.headers().firstValue("X-RateLimit-Reset").orElse("0")),1000));}catch(Exception ignored){}
+  return Math.max(now+1000,Math.min(now+TimeUnit.DAYS.toMillis(1),until));
+ }
+ private void rememberLimit(URI uri,HttpResponse<?> response)throws IOException{
+  long until=limitUntil(response,System.currentTimeMillis());if(until==0)return;
+  if(metadataLimits.size()>4096)metadataLimits.entrySet().removeIf(e->e.getValue()<System.currentTimeMillis());metadataLimits.put(uri.getHost(),until);
+  Path file=rateFile(uri);if(file!=null)try{Json.write(file,java.util.Map.of("until",until));}catch(IOException ignored){}
+  throw new HttpFailure(response.statusCode(),uri,until);
+ }
  public byte[] bytes(String url,int limit)throws IOException,InterruptedException{
   Path cache=metadataCache==null?null:metadataCache.resolve(Hashes.sha256(url.getBytes(java.nio.charset.StandardCharsets.UTF_8)));Path validators=cache==null?null:cache.resolveSibling(cache.getFileName()+".json");
   String etag="";if(validators!=null&&Files.exists(validators))etag=Json.opt(Json.read(validators),"etag","");
   URI u=https(url);
   for(int redirect=0;redirect<=5;redirect++){
-   var builder=HttpRequest.newBuilder(u).timeout(Duration.ofSeconds(30)).header("User-Agent","Rivet/1").header("Cache-Control","no-cache");if(!etag.isEmpty()&&cache!=null&&Files.exists(cache))builder.header("If-None-Match",etag);
+   checkLimit(u);var builder=HttpRequest.newBuilder(u).timeout(Duration.ofSeconds(30)).header("User-Agent","Rivet/1").header("Cache-Control","no-cache");if(!etag.isEmpty()&&cache!=null&&Files.exists(cache))builder.header("If-None-Match",etag);
    HttpResponse<InputStream> response;
    try{response=send(builder.GET().build());}catch(IOException e){throw new Unavailable("Metadata unavailable",e);}
    try(var in=response.body()){
     int code=response.statusCode();if(code==304&&cache!=null&&Files.exists(cache)){byte[] b=Files.readAllBytes(cache);if(b.length>limit)throw new IOException("Metadata limit");return b;}
     if(code>=300&&code<400){u=https(u.resolve(response.headers().firstValue("Location").orElseThrow()).toString());etag="";continue;}
-    if(code!=200)throw new HttpFailure(code,u);
+    rememberLimit(u,response);if(code!=200)throw new HttpFailure(code,u);
     ByteArrayOutputStream out=new ByteArrayOutputStream();copy(in,out,limit,new AtomicBoolean(),n->{});byte[] bytes=out.toByteArray();
     if(cache!=null){Path tmp=Files.createTempFile(metadataCache,"metadata-",".tmp");try{Files.write(tmp,bytes);Json.move(tmp,cache);Json.write(validators,java.util.Map.of("etag",response.headers().firstValue("ETag").orElse("")));}finally{Files.deleteIfExists(tmp);}}
     return bytes;
@@ -69,10 +90,11 @@ public class Remote {
   if(etag.isBlank()||etag.startsWith("W/")||offset>=limit){offset=0;Files.deleteIfExists(to);}
   URI u=https(url);
   for(int redirects=0;redirects<=5;redirects++){
-   checkCancelled(cancel);Long until=COOLDOWNS.get(u.getHost());if(until!=null&&until>System.nanoTime())throw new CoolingDown(u);var builder=HttpRequest.newBuilder(u).timeout(Duration.ofSeconds(30)).header("User-Agent","Rivet/1");if(offset>0)builder.header("Range","bytes="+offset+"-").header("If-Range",etag);
+   checkCancelled(cancel);checkLimit(u);Long until=COOLDOWNS.get(u.getHost());if(until!=null&&until>System.nanoTime())throw new CoolingDown(u);var builder=HttpRequest.newBuilder(u).timeout(Duration.ofSeconds(30)).header("User-Agent","Rivet/1");if(offset>0)builder.header("Range","bytes="+offset+"-").header("If-Range",etag);
    HttpResponse<InputStream> response;try{response=send(builder.GET().build(),cancel);}catch(IOException e){throw new Unavailable("Download unavailable",e);}
    try(var in=response.body()){
     int code=response.statusCode();if(code>=300&&code<400){u=https(u.resolve(response.headers().firstValue("Location").orElseThrow()).toString());continue;}
+    rememberLimit(u,response);
     if(code==429||code==503){
      COOLDOWNS.entrySet().removeIf(entry->entry.getValue()<=System.nanoTime());
      COOLDOWNS.merge(u.getHost(),System.nanoTime()+TimeUnit.SECONDS.toNanos(retryDelay(response.headers().firstValue("Retry-After").orElse("1"))),Math::max);

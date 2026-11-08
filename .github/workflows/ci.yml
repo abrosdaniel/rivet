@@ -443,5 +443,7 @@ jobs:
     if: needs.plan.outputs.publish == 'true'
     permissions:
       contents: write
-      actions: read
+      actions: write
+    secrets:
+      RIVET_UPDATE_SIGNING_KEY: ${{ secrets.RIVET_UPDATE_SIGNING_KEY }}
     uses: ./.github/workflows/release.yml

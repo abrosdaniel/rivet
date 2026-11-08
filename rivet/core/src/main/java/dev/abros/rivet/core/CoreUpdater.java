@@ -9,18 +9,23 @@ import java.util.concurrent.atomic.AtomicBoolean;
 public final class CoreUpdater {
     public static final String REPOSITORY="https://github.com/abrosdaniel/rivet";
     public static final String RELEASES="https://api.github.com/repos/abrosdaniel/rivet/releases?per_page=100";
-    public record Update(String version,Cache.Artifact artifact,boolean preservesProtocols,JsonObject protocols){
+    public record Update(String version,Cache.Artifact artifact,boolean preservesProtocols,JsonObject protocols,JsonObject proof){
+        public Update(String version,Cache.Artifact artifact,boolean preservesProtocols,JsonObject protocols){this(version,artifact,preservesProtocols,protocols,null);}
         public Update(String version,Cache.Artifact artifact,boolean preservesProtocols){this(version,artifact,preservesProtocols,WireProtocols.current());}
-        public Update{protocols=protocols.deepCopy();}
+        public Update{protocols=protocols.deepCopy();proof=proof==null?null:proof.deepCopy();}
         @Override public JsonObject protocols(){return protocols.deepCopy();}
+        @Override public JsonObject proof(){return proof==null?null:proof.deepCopy();}
     }
     private static final java.util.concurrent.ExecutorService METADATA=new java.util.concurrent.ThreadPoolExecutor(4,4,0,java.util.concurrent.TimeUnit.SECONDS,
         new java.util.concurrent.ArrayBlockingQueue<>(100),r->{var t=new Thread(r,"Rivet release metadata");t.setDaemon(true);return t;},new java.util.concurrent.ThreadPoolExecutor.AbortPolicy());
+    private final java.security.PublicKey signingKey;
     private final Remote remote;
     private final UpdateMetadataCache metadata;
     public CoreUpdater(Remote remote){this(remote,null);}
-    public CoreUpdater(Remote remote,Path metadataDirectory){this.remote=remote;this.metadata=metadataDirectory==null?null:new UpdateMetadataCache(metadataDirectory);}
-    private byte[] metadata(String url,int limit,boolean refresh)throws Exception{return metadata==null?remote.bytes(url,limit):metadata.read(remote,url,limit,refresh);}
+    public CoreUpdater(Remote remote,Path metadataDirectory){this(remote,metadataDirectory,null);}
+    CoreUpdater(Remote remote,Path metadataDirectory,java.security.PublicKey signingKey){this.remote=remote;this.metadata=metadataDirectory==null?null:new UpdateMetadataCache(metadataDirectory);this.signingKey=signingKey;}
+    private java.security.PublicKey signingKey()throws Exception{return signingKey==null?SignedUpdates.key():signingKey;}
+    private byte[] metadata(String url,int limit,boolean refresh,AtomicBoolean stale)throws Exception{return metadata==null?remote.bytes(url,limit):metadata.read(remote,url,limit,refresh,()->stale.set(true));}
     public Optional<Update> check(String runningVersion,String minecraft,String neoForge)throws Exception{
         return available(runningVersion,minecraft,neoForge,1).stream().findFirst();
     }
@@ -33,13 +38,40 @@ public final class CoreUpdater {
     public List<Update> releases(String runningVersion,String minecraft,String neoForge,int limit,boolean includeOlder,boolean refresh)throws Exception{
         return catalog(runningVersion,minecraft,neoForge,limit,includeOlder,refresh).updates();
     }
-    public record Catalog(List<Update> updates,boolean partial){public Catalog{updates=List.copyOf(updates);}}
+    public record Catalog(List<Update> updates,boolean partial,Throwable failure){
+        public Catalog(List<Update> updates,boolean partial){this(updates,partial,null);}
+        public Catalog{updates=List.copyOf(updates);}
+        /** Absence is authoritative only after a complete check. */
+        public Optional<Update> matching(java.util.function.Predicate<Update> compatible)throws IOException{
+            var match=updates.stream().filter(compatible).findFirst();
+            if(match.isEmpty()&&partial)throw new IOException(Messages.text("rivet.core.incomplete_update_catalog"),failure);
+            return match;
+        }
+    }
     public Catalog catalog(String runningVersion,String minecraft,String neoForge,int limit,boolean includeOlder,boolean refresh)throws Exception{
         if(limit<1||limit>100)throw new IllegalArgumentException("Release list limit");
+        Exception failure=null;
+        for(String source:SignedUpdates.SOURCES)try{
+            var stale=new AtomicBoolean();var envelope=Json.parse(new String(metadata(source+"catalog.json",8*1024*1024,refresh,stale),StandardCharsets.UTF_8));
+            var payload=SignedUpdates.verify(envelope,signingKey());Json.keys(payload,"schemaVersion","releases");if(payload.get("schemaVersion").getAsInt()!=1||payload.getAsJsonArray("releases").size()>100)throw new IOException("Invalid static catalog");
+            var found=new ArrayList<Update>();for(var item:payload.getAsJsonArray("releases"))SignedUpdates.update(item.getAsJsonObject(),minecraft,neoForge,signingKey()).filter(u->!u.version().equals(runningVersion)&&(includeOlder||Versions.compare(u.version(),runningVersion)>0)).ifPresent(found::add);
+            var result=new Catalog(found.stream().sorted((a,b)->Versions.compare(b.version(),a.version())).limit(limit).toList(),stale.get());
+            if(!result.partial())return result;failure=new IOException("Static catalog is stale");
+        }catch(Exception ex){if(ex instanceof InterruptedException)throw ex;failure=ex;}
+        try{return legacyCatalog(runningVersion,minecraft,neoForge,limit,includeOlder,refresh);}catch(Exception ex){if(failure!=null)ex.addSuppressed(failure);throw ex;}
+    }
+    public Optional<Update> signedRelease(String version,String minecraft,String neoForge)throws Exception{
+        if(!Versions.isRelease(version))throw new IOException("Invalid release version");Exception failure=null;
+        for(String source:SignedUpdates.SOURCES)try{return SignedUpdates.update(Json.parse(new String(metadata(source+"versions/"+version+".json",1024*1024,true,new AtomicBoolean()),StandardCharsets.UTF_8)),minecraft,neoForge).filter(u->u.version().equals(version));}catch(Exception ex){if(ex instanceof InterruptedException)throw ex;failure=ex;}
+        throw new IOException("Signed release unavailable",failure);
+    }
+    private Catalog legacyCatalog(String runningVersion,String minecraft,String neoForge,int limit,boolean includeOlder,boolean refresh)throws Exception{
+        if(limit<1||limit>100)throw new IllegalArgumentException("Release list limit");
+        var stale=new AtomicBoolean();
         var versions=new java.util.TreeSet<String>((a,b)->Versions.compare(b,a));
         for(int page=1;page<=100;page++){
             String url=RELEASES+(page==1?"":"&page="+page);
-            var releases=JsonParser.parseString(new String(metadata(url,4*1024*1024,refresh),StandardCharsets.UTF_8));
+            var releases=JsonParser.parseString(new String(metadata(url,4*1024*1024,refresh,stale),StandardCharsets.UTF_8));
             if(!releases.isJsonArray())throw new IllegalArgumentException("Invalid official release list");
             for(var value:releases.getAsJsonArray()){
                 var release=value.getAsJsonObject();if(release.get("draft").getAsBoolean()||(release.has("prerelease")&&release.get("prerelease").getAsBoolean()))continue;
@@ -57,7 +89,7 @@ public final class CoreUpdater {
         try{
             while(candidates.hasNext()&&found.size()<limit&&System.nanoTime()<deadline){
                 int pending=0;
-                while(pending<4&&candidates.hasNext()){String version=candidates.next();jobs.add(completed.submit(()->descriptor(version,minecraft,neoForge,refresh)));pending++;}
+                while(pending<4&&candidates.hasNext()){String version=candidates.next();jobs.add(completed.submit(()->descriptor(version,minecraft,neoForge,refresh,stale)));pending++;}
                 while(pending>0){
                     var job=completed.poll(Math.max(1,deadline-System.nanoTime()),java.util.concurrent.TimeUnit.NANOSECONDS);
                     if(job==null){failure=new java.util.concurrent.TimeoutException();break;}
@@ -67,11 +99,11 @@ public final class CoreUpdater {
         }catch(InterruptedException interrupted){Thread.currentThread().interrupt();throw interrupted;}
         finally{for(var job:jobs)if(!job.isDone())job.cancel(true);}
         if(found.isEmpty()&&failure!=null)throw new java.io.IOException(dev.abros.rivet.core.Messages.text("rivet.core.could_not_load_available_rivet_versions_8ab41b79"),failure);
-        return new Catalog(found.stream().sorted((a,b)->Versions.compare(b.version(),a.version())).limit(limit).toList(),failure!=null||candidates.hasNext()&&found.size()<limit);
+        return new Catalog(found.stream().sorted((a,b)->Versions.compare(b.version(),a.version())).limit(limit).toList(),stale.get()||failure!=null||candidates.hasNext()&&found.size()<limit,failure);
     }
-    private Optional<Update> descriptor(String version,String minecraft,String neoForge,boolean refresh)throws Exception{
+    private Optional<Update> descriptor(String version,String minecraft,String neoForge,boolean refresh,AtomicBoolean stale)throws Exception{
         String base=REPOSITORY+"/releases/download/v"+version+"/";
-        var descriptor=Json.parse(new String(metadata(base+"core.json",1024*1024,refresh),StandardCharsets.UTF_8));Schema.validate("core-release",descriptor);
+        var descriptor=Json.parse(new String(metadata(base+"core.json",1024*1024,refresh,stale),StandardCharsets.UTF_8));Schema.validate("core-release",descriptor);
         if(!version.equals(Json.str(descriptor,"version")))throw new IllegalArgumentException("Official release version mismatch");
         for(var value:descriptor.getAsJsonArray("artifacts")){
             var artifact=value.getAsJsonObject();
@@ -100,7 +132,8 @@ public final class CoreUpdater {
         return List.of(new Planner.Change(relative,Hashes.sha256(jar),null),new Planner.Change(destination,null,update.artifact().sha256()));
     }
     private static void validateUpdate(Update update)throws IOException{
-        if(!Versions.isRelease(update.version())||update.artifact().urls().isEmpty()||update.artifact().urls().stream().anyMatch(url->!officialArtifact(url,update.version(),"1.21.1")))throw new IOException("Update is not an official Rivet release");
+        if(update.proof()!=null)SignedUpdates.validate(update);
+        if(!Versions.isRelease(update.version())||update.artifact().urls().isEmpty()||update.proof()==null&&update.artifact().urls().stream().anyMatch(url->!officialArtifact(url,update.version(),"1.21.1")))throw new IOException("Update is not an official Rivet release");
         String destination=update.artifact().path();if(!destination.equals("mods/rivet-"+update.version()+"-mc1.21.1-neoforge.jar"))throw new IOException("Invalid Rivet update destination");
         if(!update.protocols().has("helper")||!update.protocols().get("helper").equals(WireProtocols.current().get("helper")))throw new IOException("Incompatible update helper protocol");
         try{Hashes.check(update.artifact().sha256());}catch(IllegalArgumentException bad){throw new IOException("Invalid update checksum",bad);}

@@ -31,10 +31,12 @@ public final class CombinedUpdateHarness {
     mc.options.guiScale().set(Integer.parseInt(System.getenv().getOrDefault("RIVET_COMBINED_SCALE","2")));mc.resizeDisplay();
     if(phase.equals("install")){
      check(!Rivet.VERSION.equals(target),"Initial version already current");
+     if(!"true".equals(System.getenv("RIVET_COMBINED_SIGNED"))){
      Path artifact=Path.of(System.getenv("RIVET_COMBINED_ARTIFACT"));String hash=Hashes.sha256(artifact);
      var cached=Client.hub.cache.path(hash);Files.createDirectories(cached.getParent());Files.copy(artifact,cached,StandardCopyOption.REPLACE_EXISTING);
      String name=artifact.getFileName().toString();var update=new CoreUpdater.Update(target,new Cache.Artifact("mods/"+name,List.of(CoreUpdater.REPOSITORY+"/releases/download/v"+target+"/"+name),hash,Files.size(artifact)),true);
      var offered=Client.class.getDeclaredField("offeredUpdate");offered.setAccessible(true);offered.set(null,update);
+     }else check(!Files.exists(Client.hub.cache.path(Hashes.sha256(Path.of(System.getenv("RIVET_COMBINED_ARTIFACT"))))),"Signed relay must start without a preloaded artifact");
     }else check(Rivet.VERSION.equals(target),"Wrong running version after helper: "+Rivet.VERSION);
     String address=System.getenv("RIVET_COMBINED_ADDRESS");var parent=new TitleScreen();mc.setScreen(parent);
     ConnectScreen.startConnecting(parent,mc,ServerAddress.parseString(address),new ServerData("Combined update",address,ServerData.Type.OTHER),false,null);return;

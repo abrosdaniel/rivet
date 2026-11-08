@@ -132,6 +132,7 @@ def main():
     parser.add_argument('--runtime', type=Path, required=True, help='Prepared native runtime containing build/mod/moddev')
     parser.add_argument('--fixtures', type=Path, required=True)
     parser.add_argument('--version', required=True)
+    parser.add_argument('--signed-release', type=Path, help='Verified signed candidate metadata; download core through Builder instead of preloading cache')
     parser.add_argument('--database-port', type=int, default=5432)
     parser.add_argument('--database', default='rivet_test')
     parser.add_argument('--game-port', type=int, default=25589)
@@ -169,6 +170,10 @@ def main():
     server = work / 'server'
     bundle = args.bundle.resolve()
     shutil.copy2(bundle, server / 'mods' / bundle.name)
+    if args.signed_release:
+        relay = server / 'rivet/update-relay'
+        relay.mkdir(parents=True)
+        shutil.copyfile(args.signed_release, relay / (args.version + '.json'))
     game_proxy = TcpRelay(('127.0.0.1', args.game_port))
     pack_proxy = TcpRelay(('127.0.0.1', args.pack_port))
     config = server / 'config/rivet-server.toml'
@@ -205,7 +210,7 @@ def main():
                 (game / 'rivet').mkdir(exist_ok=True)
                 (game / 'rivet/ui-theme.json').write_text(json.dumps({'theme': 'ivory' if profile == 'light' else 'golden-dark'}))
                 (game / 'rivet/accessibility.json').write_text(json.dumps({'contrast': profile == 'contrast'}))
-                client_env = dict(env, RIVET_COMBINED_VERSION=args.version, RIVET_COMBINED_ARTIFACT=str(bundle), RIVET_COMBINED_ADDRESS=address, RIVET_COMBINED_SCALE=str(scale))
+                client_env = dict(env, RIVET_COMBINED_SIGNED=str(bool(args.signed_release)).lower(), RIVET_COMBINED_VERSION=args.version, RIVET_COMBINED_ARTIFACT=str(bundle), RIVET_COMBINED_ADDRESS=address, RIVET_COMBINED_SCALE=str(scale))
                 phases = [('install', 'RIVET_COMBINED_INSTALL_OK'), ('connect', 'RIVET_COMBINED_RECONNECT_OK')]
                 if args.alias_reconnect:
                     phases.append(('alias', 'RIVET_COMBINED_RECONNECT_OK'))

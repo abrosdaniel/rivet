@@ -1,6 +1,9 @@
 name: Publish Rivet
 on:
   workflow_call:
+    secrets:
+      RIVET_UPDATE_SIGNING_KEY:
+        required: true
 permissions:
   contents: read
 jobs:
@@ -8,7 +11,7 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       contents: write
-      actions: read
+      actions: write
     concurrency:
       group: rivet-release
       cancel-in-progress: false
@@ -25,7 +28,16 @@ jobs:
           GH_TOKEN: ${{ github.token }}
           RUN_ID: ${{ github.run_id }}
         run: gh run download "$RUN_ID" --name rivet-ubuntu-latest --dir tested
+      - name: Configure mirror push authentication
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh auth setup-git
       - name: Package and publish new version
         env:
           GH_TOKEN: ${{ github.token }}
-        run: python rivet/tooling/release.py --artifact tested --publish
+          RIVET_UPDATE_SIGNING_KEY: ${{ secrets.RIVET_UPDATE_SIGNING_KEY }}
+        run: python rivet/tooling/release.py --artifact tested --publish --signed-updates
+      - name: Refresh documentation and update mirror
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh workflow run docs.yml --ref main
