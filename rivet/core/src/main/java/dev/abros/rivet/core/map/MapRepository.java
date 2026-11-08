@@ -50,21 +50,34 @@ public final class MapRepository {
     }
     public Optional<MapTile> read(String dimension,int x,int z)throws IOException {return read(MapLayer.surface(dimension),x,z);}
     public Optional<MapTile> read(MapLayer layer,int x,int z)throws IOException {
-        Path file=tile(layer,x,z);if(!Files.exists(file))return Optional.empty();
-        if(Files.size(file)<8||Files.size(file)>196608)throw new IOException("Invalid map tile size");
-        try(var in=new DataInputStream(new BufferedInputStream(Files.newInputStream(file)))) {
-            if(in.readInt()!=0x524d4150)throw new IOException("Unsupported map tile");
+        Path file=tile(layer,x,z);if(!Files.exists(file,LinkOption.NOFOLLOW_LINKS))return Optional.empty();
+        if(!Files.isRegularFile(file,LinkOption.NOFOLLOW_LINKS))throw new IOException("Map tile is not a regular file");
+        if(Files.size(file)<8||Files.size(file)>196608)throw new DamagedTile("Invalid map tile size");
+        byte[] bytes;try(var source=Files.newInputStream(file)){bytes=source.readNBytes(196609);}
+        if(bytes.length>196608)throw new DamagedTile("Invalid map tile size");
+        try(var in=new DataInputStream(new ByteArrayInputStream(bytes))) {
+            if(in.readInt()!=0x524d4150)throw new DamagedTile("Invalid map tile magic");
             int version=in.readInt();if(version!=1&&version!=2&&version!=3&&version!=4&&version!=5)throw new IOException("Unsupported map tile");
-            if(version<3&&Files.size(file)!=(version==1?2056:4360))throw new IOException("Invalid map tile size");
+            if(version<3&&bytes.length!=(version==1?2056:4360))throw new DamagedTile("Invalid map tile size");
             int[] colors=new int[256],heights=new int[256],ground=new int[256],overlays=new int[256];boolean[] glow=new boolean[256];String[] biomes=new String[256];int[] blockLight=new int[256],skyLight=new int[256];java.util.Arrays.fill(blockLight,-1);java.util.Arrays.fill(skyLight,-1);
             @SuppressWarnings("unchecked") var layers=(java.util.List<MapOverlay>[])new java.util.List<?>[256];
             for(int i=0;i<256;i++){
                 colors[i]=in.readInt();heights[i]=in.readInt();
                 ground[i]=version==1?heights[i]:in.readInt();overlays[i]=version==1?0xff000000:in.readInt();glow[i]=version>=2&&in.readBoolean();
-                if(version>=3){int count=in.readUnsignedByte();if(count!=255){if(count>10)throw new IOException("Too many map overlays");var list=new ArrayList<MapOverlay>();for(int n=0;n<count;n++){int color=in.readInt(),light=in.readUnsignedByte(),opacity=in.readUnsignedByte();if(light>15||opacity>15)throw new IOException("Invalid overlay lighting");int sky=version>=5?in.readByte():-1;if(sky< -1||sky>15)throw new IOException("Invalid sky light");list.add(new MapOverlay(color,light,opacity,sky));}layers[i]=List.copyOf(list);}biomes[i]=in.readUTF();if(biomes[i].length()>256||!biomes[i].isEmpty()&&!biomes[i].matches("[a-z0-9_.-]+:[a-z0-9_./-]+"))throw new IOException("Invalid biome");}if(version>=4){blockLight[i]=in.readByte();if(blockLight[i]< -1||blockLight[i]>15)throw new IOException("Invalid block light");}if(version>=5){skyLight[i]=in.readByte();if(skyLight[i]< -1||skyLight[i]>15)throw new IOException("Invalid sky light");}
+                if(version>=3){int count=in.readUnsignedByte();if(count!=255){if(count>10)throw new DamagedTile("Too many map overlays");var list=new ArrayList<MapOverlay>();for(int n=0;n<count;n++){int color=in.readInt(),light=in.readUnsignedByte(),opacity=in.readUnsignedByte();if(light>15||opacity>15)throw new DamagedTile("Invalid overlay lighting");int sky=version>=5?in.readByte():-1;if(sky< -1||sky>15)throw new DamagedTile("Invalid sky light");list.add(new MapOverlay(color,light,opacity,sky));}layers[i]=List.copyOf(list);}biomes[i]=in.readUTF();if(!MapTile.validBiome(biomes[i]))throw new DamagedTile("Invalid biome");}if(version>=4){blockLight[i]=in.readByte();if(blockLight[i]< -1||blockLight[i]>15)throw new DamagedTile("Invalid block light");}if(version>=5){skyLight[i]=in.readByte();if(skyLight[i]< -1||skyLight[i]>15)throw new DamagedTile("Invalid sky light");}
             }
-            if(in.read()!=-1)throw new IOException("Trailing map tile data");
+            if(in.read()!=-1)throw new DamagedTile("Trailing map tile data");
             var tile=new MapTile(colors,heights,ground,overlays,glow,layers);if(version>=3)for(int i=0;i<256;i++){tile.biome(i%16,i/16,biomes[i]);tile.blockLight(i%16,i/16,blockLight[i]);tile.skyLight(i%16,i/16,skyLight[i]);}return Optional.of(tile);
+        }catch(EOFException|UTFDataFormatException truncated){throw new DamagedTile("Invalid map tile encoding",truncated);}
+    }
+    private static final class DamagedTile extends IOException {
+        DamagedTile(String message){super(message);}DamagedTile(String message,Throwable cause){super(message,cause);}
+    }
+    /** Preserve malformed bytes for recovery; permission/I/O errors and newer versions remain errors. */
+    public Optional<MapTile> readRecovering(MapLayer layer,int x,int z)throws IOException{
+        try{return read(layer,x,z);}catch(DamagedTile damaged){
+            Path file=tile(layer,x,z);Path backup=file.resolveSibling(file.getFileName()+".corrupt-"+UUID.randomUUID());
+            Files.move(file,backup);return Optional.empty();
         }
     }
     public void write(String dimension,int x,int z,MapTile tile)throws IOException {write(MapLayer.surface(dimension),x,z,tile);}

@@ -42,11 +42,20 @@ class RestContractTest(unittest.TestCase):
         validator.validate(snapshot)
         invalid = dict(snapshot, status=dict(snapshot["status"], onlinePlayers=-1))
         self.assertFalse(validator.is_valid(invalid))
-        for route in document["paths"].values():
+        retired_domains = {"tasks", "events", "board", "polls", "ideas"}
+        for path, route in document["paths"].items():
             self.assertTrue(set(route) <= {"get", "options", "post", "put", "delete"})
             for method, operation in route.items():
-                with self.subTest(method=method, operation=operation.get("operationId")):
-                    self.assertIn("204" if method == "options" else "200", operation["responses"])
+                with self.subTest(path=path, method=method, operation=operation.get("operationId")):
+                    if path.split("/")[3] in retired_domains:
+                        self.assertTrue(operation.get("deprecated"))
+                        self.assertFalse(any(code.startswith("2") for code in operation["responses"]))
+                        response = operation["responses"]["503"]
+                        self.assertIn("UNAVAILABLE", response["description"])
+                        self.assertEqual({"$ref": "#/components/schemas/Error"},
+                                         response["content"]["application/json"]["schema"])
+                    else:
+                        self.assertIn("204" if method == "options" else "200", operation["responses"])
                     self.assertIn("403" if method == "options" else "401", operation["responses"])
         operation_ids = [operation["operationId"] for route in document["paths"].values()
                          for operation in route.values() if "operationId" in operation]

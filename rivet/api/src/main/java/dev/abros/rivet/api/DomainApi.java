@@ -15,11 +15,15 @@ public interface DomainApi {
 
  default CompletableFuture<GroupPage<GroupMarker>> groupMarkers(UUID group,String cursor){return CompletableFuture.failedFuture(new ApiException(ApiException.Code.MODULE_DISABLED,"Resource unavailable"));}
  default CompletableFuture<GroupPage<GroupPerson>> groupPeople(UUID group,GroupPeople kind,String cursor){return CompletableFuture.failedFuture(new ApiException(ApiException.Code.MODULE_DISABLED,"Resource unavailable"));}
- default CompletableFuture<EventSchedule> eventSchedule(UUID id){return CompletableFuture.failedFuture(new ApiException(ApiException.Code.MODULE_DISABLED,"Resource unavailable"));}
+ /** Retained for binary compatibility; events return UNAVAILABLE. */
+ @Deprecated
+ default CompletableFuture<EventSchedule> eventSchedule(UUID id){return CompletableFuture.failedFuture(new ApiException(ApiException.Code.UNAVAILABLE,"Events retired"));}
  default CompletableFuture<Page<ScheduledAnnouncement>> scheduledAnnouncements(){return CompletableFuture.failedFuture(new ApiException(ApiException.Code.MODULE_DISABLED,"Resource unavailable"));}
 
  default CompletableFuture<ServerControl> serverControl(){return CompletableFuture.failedFuture(new ApiException(ApiException.Code.MODULE_DISABLED,"Server control unavailable"));}
- default CompletableFuture<TaskDetails> taskDetails(UUID id,int subtaskOffset,int commentOffset,OptionalLong revision){return CompletableFuture.failedFuture(new ApiException(ApiException.Code.MODULE_DISABLED,"Task details unavailable"));}
+ /** Retained for binary compatibility; tasks return UNAVAILABLE. */
+ @Deprecated
+ default CompletableFuture<TaskDetails> taskDetails(UUID id,int subtaskOffset,int commentOffset,OptionalLong revision){return CompletableFuture.failedFuture(new ApiException(ApiException.Code.UNAVAILABLE,"Tasks retired"));}
 
  /** Starts with a fresh snapshot. Close the returned handle when no longer needed. */
  default <T> DomainSubscription<T> watch(DomainWatch<T> target){
@@ -36,12 +40,17 @@ public interface DomainApi {
  CompletableFuture<Set<String>> capabilities();
  CompletableFuture<Page<Document>> community(Community domain,String cursor);
  CompletableFuture<Document> document(Community domain,UUID id);
- /** Empty group selects personal tasks. */
+ /** Retained for binary compatibility; tasks return UNAVAILABLE. */
+ @Deprecated
  CompletableFuture<Page<Task>> tasks(Optional<UUID> group,String cursor);
+ /** Retained for binary compatibility; tasks return UNAVAILABLE. */
+ @Deprecated
  CompletableFuture<Task> task(UUID id);
  CompletableFuture<Profile> profile(UUID id);
  default CompletableFuture<NotificationPreferences> notificationPreferences(){return CompletableFuture.failedFuture(new ApiException(ApiException.Code.MODULE_DISABLED,"Preferences unavailable"));}
  CompletableFuture<Page<Notice>> notifications(String cursor);
+ /** Explicit locale such as en_us. Without it, notices retain their stored fallback. */
+ default CompletableFuture<Page<Notice>> notifications(String cursor,String locale){return CompletableFuture.failedFuture(new ApiException(ApiException.Code.UNAVAILABLE,"Localized notifications unavailable"));}
  CompletableFuture<Page<ChatMessage>> chat(String cursor);
  CompletableFuture<Page<Channel>> channels(String cursor);
  /** First page: empty cursor and empty snapshot. Later pages must retain the returned snapshot. */

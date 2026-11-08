@@ -48,7 +48,7 @@ public final class CommunityApiResources {
  private static String uuid(String value){try{if(!UUID.fromString(value).toString().equals(value))throw new IllegalArgumentException();return value;}catch(IllegalArgumentException e){throw new ApiException(INVALID_ARGUMENT,"Invalid ID");}}
  private static JsonObject pick(JsonObject source,String... fields){var out=new JsonObject();for(String f:fields)if(source.has(f))out.add(f,source.get(f).deepCopy());return out;}
  private static long cursor(String value){try{long n=Long.parseLong(value);if(n<1)throw new IllegalArgumentException();return n;}catch(IllegalArgumentException e){throw new ApiException(INVALID_ARGUMENT,"Invalid cursor");}}
- private void module(String name){if(!store.modules().enabled(name))throw new ApiException(MODULE_DISABLED,"Module disabled");}
+ private void module(String name){RetiredFeatures.requireActive(name);if(!store.modules().enabled(name))throw new ApiException(MODULE_DISABLED,"Module disabled");}
  public JsonObject read(CommunityStore.Actor actor,String path,Map<String,String> query)throws Exception{
   if(path.equals("map/layers")||path.startsWith("map/layers/")){
    if(!settings.flag("map.enabled")||layers==null)throw new ApiException(MODULE_DISABLED,"Map layers unavailable");filters(query,"cursor","snapshot");
@@ -103,20 +103,9 @@ public final class CommunityApiResources {
   else{if(!settings.skins().enabled())throw new ApiException(MODULE_DISABLED,"Skins disabled");var value=new dev.abros.rivet.core.skins.SkinStore(db,settings.skins()).appearance(UUID.fromString(id));for(String field:List.of("hash","slim"))if(value.has(field))item.add(field,value.get(field));}
   out.add("item",item);return out;
  }
- private JsonObject tasks(CommunityStore.Actor actor,String path,Map<String,String> query)throws Exception{
-  module("tasks");var service=new CommunityTasks(db,store);var input=new JsonObject();var out=new JsonObject();
-  if(!path.equals("tasks")){
-   boolean details=path.endsWith("/details");filters(query,details?new String[]{"subtaskOffset","commentOffset","revision"}:new String[]{});var task=service.task(uuid(path.substring(6,details?path.length()-8:path.length())),false);if(!service.access(actor,task,false))throw new ApiException(NOT_FOUND,"Task unavailable");if(details){if(query.containsKey("revision")&&!query.get("revision").equals(task.get("revision").getAsString()))throw new ApiException(CONFLICT,"Task changed");var request=new JsonObject();for(String key:List.of("subtaskOffset","commentOffset"))if(query.containsKey(key))request.addProperty(key,Long.parseLong(query.get(key)));TaskDetailPage.apply(task,request);var view=pick(task,"id","revision","assignee","dueAt","subtaskOffset","subtaskCount","commentOffset","commentCount");for(String key:List.of("subtasks","comments","resources")){var rows=new JsonArray();if(task.has(key))for(var row:task.getAsJsonArray(key))rows.add(switch(key){case "subtasks"->pick(row.getAsJsonObject(),"title","done","assignee");case "comments"->pick(row.getAsJsonObject(),"author","text","at");default->pick(row.getAsJsonObject(),"item","amount","alternatives");});view.add(key,rows);}out.add("item",view);}else out.add("item",task(task));return out;
-  }
-  filters(query,"group","cursor");String group=query.getOrDefault("group",""),after=query.getOrDefault("cursor","");if(!group.isEmpty())uuid(group);if(!after.isEmpty())uuid(after);
-  if(!group.isEmpty()){var probe=new JsonObject();probe.addProperty("group",group);if(!service.access(actor,probe,false))throw new ApiException(NOT_FOUND,"Group tasks unavailable");}
-  var items=new JsonArray();out.add("items",items);out.addProperty("nextCursor","");
-  try(var q=db.connection().prepareStatement(CommunityTasks.LIST_SQL)){
-   q.setString(1,group);q.setString(2,actor.id());q.setString(3,group);q.setString(4,after);for(int i=5;i<=8;i++)q.setString(i,"");
-   try(var rows=q.executeQuery()){while(rows.next()){if(items.size()==20){out.addProperty("nextCursor",items.get(19).getAsJsonObject().get("id").getAsString());break;}var item=Json.parse(rows.getString(2));item.addProperty("id",rows.getString(1));item.addProperty("group",group);item.addProperty("revision",rows.getLong(3));if(rows.getString(5)!=null)item.addProperty("code",rows.getString(5));items.add(task(item));}}
-  }return out;
+ private JsonObject tasks(CommunityStore.Actor actor,String path,Map<String,String> query){
+  throw new ApiException(UNAVAILABLE,"Tasks have been retired; saved data can be exported by the server owner");
  }
- private static JsonObject task(JsonObject value){return pick(value,"id","code","group","title","description","preview","status","revision","dueAt","completedAt","archived","location","stagesTotal","stagesDone");}
  private JsonObject profile(CommunityStore.Actor actor,String target,Map<String,String> query)throws Exception{
   if(!store.enabled("players"))throw new ApiException(MODULE_DISABLED,"Profiles disabled");filters(query);if(!new CommunityPlayerTools(db,store).visible(target,actor.id()))throw new ApiException(NOT_FOUND,"Profile unavailable");
   var out=new JsonObject();try(var q=db.connection().prepareStatement("SELECT p.name,c.about,c.interests FROM people p LEFT JOIN community_profile c ON c.player=p.id WHERE p.id=?")){
@@ -124,12 +113,16 @@ public final class CommunityApiResources {
   }return out;
  }
  private JsonObject notices(CommunityStore.Actor actor,Map<String,String> query)throws Exception{
-  filters(query,"cursor");long before=query.containsKey("cursor")?cursor(query.get("cursor")):Long.MAX_VALUE;var out=new JsonObject();var items=new JsonArray();out.add("items",items);out.addProperty("nextCursor","");
+  filters(query,"cursor","locale");String language=query.get("locale");
+  if(language!=null&&!language.matches("[a-z]{2,3}_[a-z]{2}"))throw new ApiException(INVALID_ARGUMENT,"Invalid locale");
+  long before=query.containsKey("cursor")?cursor(query.get("cursor")):Long.MAX_VALUE;var out=new JsonObject();var items=new JsonArray();out.add("items",items);out.addProperty("nextCursor","");
   // Disabled sections are filtered in SQL before the page limit. Reading never marks a notice read.
   var active=new ArrayList<String>();for(String s:FeatureModules.OPTIONAL)if(store.modules().enabled(s))active.add(s);
-  try(var q=db.connection().prepareStatement("SELECT id,body,read FROM notices WHERE recipient=? AND id<? AND (NOT (coalesce(body->>'routeSection',body->>'section')=ANY(?)) OR coalesce(body->>'routeSection',body->>'section')=ANY(?)) ORDER BY id DESC LIMIT 21")){
+  try(var q=db.connection().prepareStatement("SELECT id,body,read FROM notices WHERE "+NotificationStore.active("")+" AND recipient=? AND id<? AND (NOT (coalesce(body->>'routeSection',body->>'section')=ANY(?)) OR coalesce(body->>'routeSection',body->>'section')=ANY(?)) ORDER BY id DESC LIMIT 21")){
    q.setString(1,actor.id());q.setLong(2,before);q.setArray(3,db.connection().createArrayOf("text",FeatureModules.OPTIONAL.toArray()));q.setArray(4,db.connection().createArrayOf("text",active.toArray()));
-   try(var rows=q.executeQuery()){while(rows.next()){if(items.size()==20){out.addProperty("nextCursor",items.get(19).getAsJsonObject().get("id").getAsString());break;}var item=pick(Json.parse(rows.getString(2)),"title","body","section","at");item.addProperty("id",Long.toString(rows.getLong(1)));item.addProperty("read",rows.getBoolean(3));items.add(item);}}
+   try(var rows=q.executeQuery()){while(rows.next()){if(items.size()==20){out.addProperty("nextCursor",items.get(19).getAsJsonObject().get("id").getAsString());break;}var source=Json.parse(rows.getString(2));
+    if(language!=null)try(var locale=Messages.locale(language)){source=LocalizedText.localize(source).getAsJsonObject();}
+    var item=pick(source,"title","body","section","at");item.addProperty("id",Long.toString(rows.getLong(1)));item.addProperty("read",rows.getBoolean(3));items.add(item);}}
   }return out;
  }
  private JsonObject channels(CommunityStore.Actor actor,Map<String,String> query)throws Exception{

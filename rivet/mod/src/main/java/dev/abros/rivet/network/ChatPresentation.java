@@ -30,6 +30,7 @@ public final class ChatPresentation {
   var hover=message.getStyle().getHoverEvent();var entity=hover==null?null:hover.getValue(HoverEvent.Action.SHOW_ENTITY);
   boolean slot=entity!=null&&entity.type==EntityType.PLAYER&&entity.name.isEmpty()&&message.plainCopy().getString().isEmpty();
   var out=slot?Component.literal(enabled?"   ":"").withStyle(message.getStyle()):message.plainCopy().withStyle(message.getStyle());
+  if(dev.abros.rivet.core.ChatEffectEnvelope.read(out.getStyle().getInsertion()).isPresent())out.withStyle(style->style.withInsertion(null));
   for(var child:message.getSiblings())out.append(heads(child,enabled));return out;
  }
  private ChatPresentation(){}

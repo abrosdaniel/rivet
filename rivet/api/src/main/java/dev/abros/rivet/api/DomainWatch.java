@@ -48,8 +48,14 @@ public sealed interface DomainWatch<T> {
   public Profile{Objects.requireNonNull(id);}
   public CompletableFuture<DomainData.Profile> read(DomainApi api){return api.profile(id);}
  }
- record Notifications() implements DomainWatch<Page<Notice>> {
-  public CompletableFuture<Page<Notice>> read(DomainApi api){return api.notifications("");}
+ /** Empty locale uses stored fallback text, matching the original no-argument watch. */
+ record Notifications(String locale) implements DomainWatch<Page<Notice>> {
+  public Notifications { Objects.requireNonNull(locale);if(!locale.isEmpty()&&!locale.matches("[a-z]{2,3}_[a-z]{2}"))throw new IllegalArgumentException("Invalid notification locale"); }
+  public Notifications(){this("");}
+  public CompletableFuture<Page<Notice>> read(DomainApi api){return locale.isEmpty()?api.notifications(""):api.notifications("",locale);}
+ }
+ record NotificationPreferences() implements DomainWatch<DomainData.NotificationPreferences> {
+  public CompletableFuture<DomainData.NotificationPreferences> read(DomainApi api){return api.notificationPreferences();}
  }
  record Chat() implements DomainWatch<Page<ChatMessage>> {
   public CompletableFuture<Page<ChatMessage>> read(DomainApi api){return api.chat("");}

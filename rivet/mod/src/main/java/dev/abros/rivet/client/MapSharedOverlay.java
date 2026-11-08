@@ -9,11 +9,11 @@ import java.util.List;
 final class MapSharedOverlay {
  private record MiniHit(MapLayerClient.Point point,int x,int y,int radius){}
  private static final java.util.List<MiniHit> miniHits=new java.util.ArrayList<>();
- private static List<MapLayerClient.Point> points(boolean mini){return java.util.stream.Stream.of(MapLayerClient.points(),MapWaystones.points(),MapActivities.points(),MapPositions.points()).flatMap(List::stream).filter(p->MapLayers.visible(p.activity()?(p.source().equals("tasks")?MapLayers.Layer.TASKS:p.source().equals("events")?MapLayers.Layer.EVENTS:MapLayers.Layer.GROUPMARKERS):p.waystone()?MapLayers.Layer.WAYSTONES:p.player()?MapLayers.Layer.PLAYERS:MapLayers.Layer.PLACES,mini)).toList();}
+ private static List<MapLayerClient.Point> points(boolean mini){return java.util.stream.Stream.of(MapLayerClient.points(),MapWaystones.points(),MapActivities.points(),MapPositions.points()).flatMap(List::stream).filter(p->!dev.abros.rivet.core.RetiredFeatures.contains(p.source())).filter(p->MapLayers.visible(p.activity()?MapLayers.Layer.GROUPMARKERS:p.waystone()?MapLayers.Layer.WAYSTONES:p.player()?MapLayers.Layer.PLAYERS:MapLayers.Layer.PLACES,mini)).toList();}
  private static void glyph(GuiGraphics g,MapLayerClient.Point point,int x,int y,int size){
   if(point.player())net.minecraft.client.gui.components.PlayerFaceRenderer.draw(g,SkinClient.skin(java.util.UUID.fromString(point.id())),x-size/2,y-size/2,size);
   else if(point.waystone())MapWaystones.drawIcon(g,x,y,size);
-  else MapGlyphs.marker(g,point.source().equals("tasks")?"pickaxe":point.source().equals("events")?"star":"flag",x-size/2,y-size/2,size);
+  else MapGlyphs.marker(g,"flag",x-size/2,y-size/2,size);
  }
  static void world(GuiGraphics g,String dimension,MapViewport view,int width,int height,dev.abros.rivet.core.BoxIntersectionIndex occupied,List<dev.abros.rivet.core.NativeLayout.Box> reserved){
   var font=Minecraft.getInstance().font;int size=Math.round(16*MapRenderSettings.INSTANCE.markerScale);
@@ -38,7 +38,7 @@ final class MapSharedOverlay {
  private static boolean open(Screen parent,MapLayerClient.Point point,double x,double y){
   var p=point.location();var mc=Minecraft.getInstance();var actions=new java.util.ArrayList<UiContextPopup.Item>();
   actions.add(new UiContextPopup.Item(Component.literal(Client.text("ui.navigate_here_bd1f9053")+p.name()),()->{if(point.activity())MapActivities.navigate(point);else if(point.player())MapPositions.navigate(point);else DirectionCue.start(p);mc.setScreen(null);},false));
-  if(point.activity())actions.add(new UiContextPopup.Item(Component.literal(point.source().equals("tasks")?Client.text("ui.open_task_60587630"):point.source().equals("events")?Client.text("ui.open_event_4b435091"):Client.text("ui.open_group_63d4261f")),()->mc.setScreen(point.source().equals("tasks")?new TaskScreen(parent,point.group(),point.id()):new CommunityScreen(parent,point.source().equals("events")?"events":"groups",point.source().equals("events")?point.id():point.group())),false));
+  if(point.activity())actions.add(new UiContextPopup.Item(Client.tr("ui.open_group_63d4261f"),()->mc.setScreen(new CommunityScreen(parent,"groups",point.group())),false));
   if(!point.player()&&!point.waystone()&&!point.activity())actions.add(new UiContextPopup.Item(Client.tr("ui.save_personal_waypoint_88facb1a"),()->ClientMap.openLocation(parent,p,true),false));
   mc.setScreen(new UiContextPopup(parent,(int)x,(int)y,actions));return true;
  }

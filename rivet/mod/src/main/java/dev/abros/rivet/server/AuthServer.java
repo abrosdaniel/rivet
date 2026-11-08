@@ -53,6 +53,10 @@ public final class AuthServer {
     public static Optional<AuthStore.Profile> knownIdentity(String name){var index=identities;return index==null?Optional.empty():index.known(name);}
     public static Optional<AuthStore.Profile> knownIdentity(UUID id){var index=identities;return index==null?Optional.empty():index.known(id);}
     public static Optional<AuthStore.Profile> verifiedAlias(UUID id){var index=identities;return index==null?Optional.empty():index.verifiedAlias(id);}
+    private static volatile Set<String> operators=Set.of();
+    private static void refreshOperators(){if(server==null){operators=Set.of();return;}var ids=new HashSet<String>();for(String name:server.getPlayerList().getOps().getUserList())ids.add(name.toLowerCase(Locale.ROOT));operators=Set.copyOf(ids);}
+    private static boolean requiresFactor(AuthStore.Account account){String policy=ServerDatabase.settings().text("auth.totp");if(policy.equals("all"))return true;if(!policy.equals("staff"))return false;UUID id=UUID.fromString(account.uuid());if(operators.contains(account.name().toLowerCase(Locale.ROOT)))return true;for(String node:List.of("rivet.admin","rivet.permissions.manage","rivet.auth.reset","rivet.restart","rivet.maintenance","rivet.pack"))if(ServerPermissions.offlineAllowed(id,node))return true;return false;}
+    static AuthStore apiStore(){var current=store;return current==null?new AuthStore(ServerDatabase.get(),ServerDatabase.settings().number("auth.minPasswordLength")):current;}
     public static boolean enabled(){return !mode.equals("false");}
     public static void install(IEventBus bus,ModContainer container){
         bus.addListener(AuthServer::tasks);AuthProtocol.server=AuthServer::receive;AuthProtocol.upgrade=AuthServer::upgrade;
@@ -68,7 +72,7 @@ public final class AuthServer {
         if(ModList.get().isLoaded("authlogic"))throw new IllegalStateException("Remove AuthLogic before enabling Rivet Auth");
         root=net.neoforged.fml.loading.FMLPaths.GAMEDIR.get();
         try{
-            store=new AuthStore(database,ServerDatabase.settings().number("auth.minPasswordLength"));identities=new ServerIdentities(store.profiles());identity=AuthTls.identity(root.resolve("rivet"));mode=requestedMode;
+            refreshOperators();store=new AuthStore(database,ServerDatabase.settings().number("auth.minPasswordLength"),AuthFactorVault.open(root.resolve("rivet"))).requireSecondFactor(AuthServer::requiresFactor);identities=new ServerIdentities(store.profiles());identity=AuthTls.identity(root.resolve("rivet"));mode=requestedMode;
             for(var pending:store.pendingRenames()){
                 refreshRenamedProfile(server,new com.mojang.authlib.GameProfile(UUID.fromString(pending.uuid()),pending.newName()));
                 renameScores(server,pending.oldName(),pending.newName());
@@ -127,14 +131,14 @@ public final class AuthServer {
         Session(ServerConfigurationPacketListenerImpl listener)throws Exception{this.listener=listener;connection=listener.getConnection();name=AuthStore.name(listener.getOwner().getName());uuid=listener.getOwner().getId().toString();tunnel=new AuthTls.Tunnel(identity.context(),false,b->connection.send(new ClientboundCustomPayloadPacket(new AuthProtocol.ToClient(b))),this::message);}
         boolean active(){return !closed&&server==sessionServer&&SESSIONS.get(connection)==this&&connection.isConnected();}
         void send(JsonObject j)throws Exception{if(!active())return;tunnel.send(Json.GSON.toJson(j));}
-        void offer()throws Exception{var j=result("offer","");j.addProperty("mode",mode);j.addProperty("name",name);j.addProperty("challenge",challenge);var a=database.account(name);j.addProperty("type",a==null?"new":a.type());j.addProperty("linked",a!=null&&a.official()!=null);j.addProperty("registration",ServerDatabase.settings().flag("auth.registration"));j.addProperty("minimumPasswordLength",database.minimumPasswordLength());send(j);}
+        void offer()throws Exception{var j=result("offer","");j.addProperty("mode",mode);j.addProperty("name",name);j.addProperty("challenge",challenge);var a=database.account(name);j.addProperty("type",a==null?"new":a.type());j.addProperty("linked",a!=null&&a.official()!=null);j.addProperty("secondFactor",database.secondFactor(name));j.addProperty("factorRequired",database.factorRequired(name));j.addProperty("registration",ServerDatabase.settings().flag("auth.registration"));j.addProperty("minimumPasswordLength",database.minimumPasswordLength());send(j);}
         void message(String json){message(json,null);}
         void message(String json,String verified){
             try{var input=Json.parse(json);String requested=Json.opt(input,"language",language);language=requested.startsWith("ru")?"ru_ru":"en_us";}catch(Exception ignored){}
             try(var locale=dev.abros.rivet.core.Messages.locale(language)){messageLocalized(json,verified);}
         }
         void messageLocalized(String json,String verified){if(!active())return;try{
-            var j=Json.parse(json);String action=Json.str(j,"action");long now=System.currentTimeMillis();
+            var j=Json.parse(json);String action=Json.str(j,"action");String requestId=Json.opt(j,"request","");if(requestId.length()>64)throw new IllegalArgumentException();long now=System.currentTimeMillis();
             if(officialPending&&verified==null)throw new IllegalArgumentException(dev.abros.rivet.core.Messages.text("rivet.core.wait_for_minecraft_account_verification_a357d4e6"));
             if(action.equals("accept")){if(joined||account==null)throw new IllegalArgumentException(dev.abros.rivet.core.Messages.text("rivet.message.error_2590e723469e"));validate();joined=true;sessionServer.execute(dev.abros.rivet.core.Messages.capture(()->{if(active())listener.finishCurrentTask(TASK);}));return;}
             if(verified==null&&now-lastAction<700)throw new IllegalArgumentException(dev.abros.rivet.core.Messages.text("rivet.core.wait_before_the_next_action_96d41f81"));lastAction=now;
@@ -145,33 +149,38 @@ public final class AuthServer {
             }
             if(!joined){
                 if(account!=null)throw new IllegalArgumentException(dev.abros.rivet.core.Messages.text("rivet.core.awaiting_sign_in_confirmation_764b7e1e"));if(verified==null){if(++attempts>10){disconnectKey("rivet.core.too_many_sign_in_attempts_55fa623e");return;}database.checkRate(name,now);}
+                if(action.equals("factorBegin")||action.equals("factorConfirm")){factorAction(j,action,now);return;}
                 switch(action){
-                    case "login" -> account=withPassword(j,"password",p->database.login(name,uuid,p,now));
+                    case "login" -> account=withPassword(j,"password",p->database.login(name,uuid,p,Json.opt(j,"code",""),now));
                     case "register" -> {if(!ServerDatabase.settings().flag("auth.registration"))throw new IllegalArgumentException(dev.abros.rivet.core.Messages.text("rivet.core.registration_is_closed_contact_an_administrator_d7b5317c"));account=withPassword(j,"password",p->database.register(name,uuid,p,now));}
-                    case "device" -> {String token=Json.str(j,"token");account=database.deviceLogin(name,uuid,token,now);device=database.deviceId(name,token);}
+                    case "device" -> {String token=Json.str(j,"token");account=database.deviceLogin(name,uuid,token,Json.opt(j,"code",""),now);device=database.deviceId(name,token);}
                     case "official" -> {
                         if(!mode.equals("hybrid"))throw new IllegalArgumentException(dev.abros.rivet.core.Messages.text("rivet.core.official_sign_in_unavailable_60384b11"));
-                        account=database.official(name,uuid,verified,now);
+                        account=database.official(name,uuid,verified,Json.opt(j,"code",""),now);
                     }
                     case "reset" -> {withPassword(j,"password",p->{database.reset(name,uuid,Json.str(j,"invitation"),p,now);return null;});remember(database.account(name));invalidate(name);send(result("resetDone",dev.abros.rivet.core.Messages.text("rivet.core.password_changed_sign_in_with_your_bf6cf1e3")));return;}
                     default -> throw new IllegalArgumentException(dev.abros.rivet.core.Messages.text("rivet.message.error_f5a758644e64"));
                 }
+                if(database.factorRequired(name)&&!database.secondFactor(name)){account=null;offer();return;}
                 remember(account);var out=result("authenticated","");out.addProperty("type",account.type());
                 if(account.type().equals("local")&&j.has("remember")&&j.get("remember").getAsBoolean()&&!action.equals("device")){var saved=database.remember(name,Json.opt(j,"label",dev.abros.rivet.core.Messages.text("rivet.core.my_computer_709726d5")),now);device=saved.id();out.addProperty("token",saved.token());}
                 send(out);return;
             }
             validate();switch(action){
-                case "devices" -> {var out=result("devices","");out.addProperty("type",account.type());out.addProperty("current",device);out.addProperty("linked",account.official()!=null);out.addProperty("mode",mode);out.add("devices",database.devices(name,now));send(out);}
+                case "factorBegin", "factorConfirm", "factorCodes", "factorRemove" -> factorAction(j,action,now);
+                case "applications" -> {var out=ServerRest.playerSessions(uuid,Json.opt(j,"cursor",""));out.addProperty("kind","applications");String request=Json.opt(j,"request","");if(request.length()>64)throw new IllegalArgumentException();out.addProperty("request",request);send(out);}
+                case "revokeApplication" -> {ServerRest.revokePlayerSession(uuid,Json.str(j,"id"));var out=ServerRest.playerSessions(uuid,"");out.addProperty("kind","applications");String request=Json.opt(j,"request","");if(request.length()>64)throw new IllegalArgumentException();out.addProperty("request",request);send(out);}
+                case "devices" -> {var out=result("devices","");out.addProperty("type",account.type());out.addProperty("current",device);out.addProperty("linked",account.official()!=null);out.addProperty("secondFactor",database.secondFactor(name));out.addProperty("factorRequired",database.factorRequired(name));out.addProperty("mode",mode);out.addProperty("applicationSessions",ServerRest.sessionsAvailable());out.add("devices",database.devices(name,now));send(out);}
                 case "link" -> {
                     String official=verified;
-                    account=withPassword(j,"password",p->database.linkOfficial(name,uuid,official,p,now));device="";remember(account);
+                    account=withPassword(j,"password",p->database.linkOfficial(name,uuid,official,p,Json.opt(j,"code",""),now));device="";remember(account);
                     invalidate(name);send(result("updated",dev.abros.rivet.core.Messages.text("rivet.core.minecraft_account_linked_other_sessions_revoked_4024573d")));
                 }
                 case "unlink" -> {
-                    account=withPassword(j,"password",p->database.unlinkOfficial(name,uuid,p,now));device="";remember(account);
+                    account=withPassword(j,"password",p->database.unlinkOfficial(name,uuid,p,Json.opt(j,"code",""),now));device="";remember(account);
                     invalidate(name);send(result("updated",dev.abros.rivet.core.Messages.text("rivet.core.minecraft_account_unlinked_other_sessions_revoked_2c969a41")));
                 }
-                case "change" -> {withPassword(j,"oldPassword",old->withPassword(j,"password",p->{database.change(name,uuid,old,p,now);return null;}));invalidate(name);send(result("changed",dev.abros.rivet.core.Messages.text("rivet.core.password_changed_sign_in_again_1482c4fc")));disconnectKey("rivet.core.password_changed_reconnect_3a65b7a1");}
+                case "change" -> {withPassword(j,"oldPassword",old->withPassword(j,"password",p->{database.change(name,uuid,old,p,Json.opt(j,"code",""),now);return null;}));invalidate(name);send(result("changed",dev.abros.rivet.core.Messages.text("rivet.core.password_changed_sign_in_again_1482c4fc")));disconnectKey("rivet.core.password_changed_reconnect_3a65b7a1");}
                 case "revoke" -> {database.revoke(name,Json.str(j,"device"),now);invalidate(name);send(result("updated",dev.abros.rivet.core.Messages.text("rivet.core.device_access_revoked_cdb49eef")));}
                 case "invite" -> {
                     if(!resetAllowed)throw new IllegalArgumentException(dev.abros.rivet.core.Messages.text("rivet.core.rivet_auth_reset_permission_required_fc0935f2"));
@@ -181,7 +190,13 @@ public final class AuthServer {
                 }
                 default -> throw new IllegalArgumentException(dev.abros.rivet.core.Messages.text("rivet.message.error_16f4fb50ee99"));
             }
-        }catch(Exception ex){try{send(result("error",ex instanceof IllegalArgumentException?ex.getMessage():dev.abros.rivet.core.Messages.text("rivet.core.could_not_perform_the_auth_action_c272c643")));}catch(Exception ignored){disconnectKey("rivet.ui.auth_error_deb64113");}}}
+        }catch(Exception ex){try{var error=result("error",ex instanceof IllegalArgumentException?ex.getMessage():dev.abros.rivet.core.Messages.text("rivet.core.could_not_perform_the_auth_action_c272c643"));String request=Json.opt(Json.parse(json),"request","");if(request.length()<=64)error.addProperty("request",request);send(error);}catch(Exception ignored){disconnectKey("rivet.ui.auth_error_deb64113");}}}
+        void factorAction(JsonObject j,String action,long now)throws Exception{
+            if(action.equals("factorBegin")){String secret=withPassword(j,"password",p->database.beginFactor(name,uuid,p,now));var out=result("factorSetup","");out.addProperty("secret",secret);out.addProperty("request",Json.opt(j,"request",""));send(out);return;}
+            if(action.equals("factorRemove")&&database.factorRequired(name))throw new IllegalArgumentException(dev.abros.rivet.core.Messages.text("rivet.auth.factor.required"));
+            java.util.List<String> codes=withPassword(j,"password",p->{String code=Json.opt(j,"code","");return switch(action){case "factorConfirm"->database.confirmFactor(name,uuid,p,code,now);case "factorCodes"->database.renewBackupCodes(name,uuid,p,code,now);case "factorRemove"->{database.removeFactor(name,uuid,p,code,now);yield java.util.List.of();}default->throw new IllegalArgumentException();};});
+            if(joined){account=database.account(name);device="";}invalidate(name);var out=result("factorUpdated","");out.addProperty("secondFactor",database.secondFactor(name));var values=new JsonArray();codes.forEach(values::add);out.add("codes",values);out.addProperty("request",Json.opt(j,"request",""));send(out);
+        }
         synchronized void verifyLater(String json,JsonObject request,String purpose)throws Exception{
             String launcherName=AuthStore.name(Json.str(request,"officialName"));
             if(!active())return;String digest=proof(challenge,identity.fingerprint(),purpose);var service=sessionServer.getSessionService();
@@ -207,7 +222,7 @@ public final class AuthServer {
                 try{serial.execute(()->{if(!active())return;try{var out=result("invitation","");out.addProperty("target",target);out.addProperty("token",token);out.addProperty("expires",issuedAt+900000);send(out);}catch(Exception ex){disconnectKey("rivet.core.could_not_issue_an_invitation_3fc9bc59");}});}catch(RejectedExecutionException ignored){}
             }));
         }
-        void validate()throws Exception{var current=database.account(name);if(current==null||current.blocked()||current.generation()!=account.generation()||!device.isEmpty()&&!database.hasDevice(name,device,System.currentTimeMillis())){disconnectKey("rivet.core.access_revoked_sign_in_again_b2d0179e");throw new IllegalArgumentException(dev.abros.rivet.core.Messages.text("rivet.core.access_revoked_9374312a"));}}
+        void validate()throws Exception{var current=database.account(name);if(current==null||current.blocked()||current.generation()!=account.generation()||!database.factorPolicySatisfied(name)||!device.isEmpty()&&!database.hasDevice(name,device,System.currentTimeMillis())){disconnectKey("rivet.core.access_revoked_sign_in_again_b2d0179e");throw new IllegalArgumentException(dev.abros.rivet.core.Messages.text("rivet.core.access_revoked_9374312a"));}}
         void disconnectKey(String key){disconnect(Component.translatable(key));}
         void disconnect(String text){disconnect(Component.literal(text));}
         void disconnect(Component text){joined=false;if(!active())return;sessionServer.execute(dev.abros.rivet.core.Messages.capture(()->{if(active())connection.disconnect(text);}));}
@@ -217,12 +232,12 @@ public final class AuthServer {
     private interface PasswordWork<T>{T run(char[] password)throws Exception;}
     private static <T>T withPassword(JsonObject j,String field,PasswordWork<T> work)throws Exception{String value=Json.str(j,field);if(value.length()>128)throw new IllegalArgumentException(dev.abros.rivet.core.Messages.text("rivet.core.password_is_too_long_c616603e"));char[] password=value.toCharArray();j.remove(field);try{return work.run(password);}finally{Arrays.fill(password,'\0');}}
     private static JsonObject result(String kind,String text){var j=new JsonObject();j.addProperty("kind",kind);j.addProperty("text",text==null?"":text);return j;}
-    private static void tick(net.neoforged.neoforge.event.tick.ServerTickEvent.Post e){if(!enabled()||System.currentTimeMillis()-lastCheck<1000)return;lastCheck=System.currentTimeMillis();for(var s:SESSIONS.values()){
+    private static void tick(net.neoforged.neoforge.event.tick.ServerTickEvent.Post e){if(!enabled()||System.currentTimeMillis()-lastCheck<1000)return;lastCheck=System.currentTimeMillis();refreshOperators();for(var s:SESSIONS.values()){
         if(!s.connection.isConnected()){SESSIONS.remove(s.connection,s);s.close();continue;}
         if(!s.joined&&lastCheck-s.created>180000){s.disconnectKey("rivet.core.sign_in_timed_out_579103a8");continue;}
     }
         var checks=new HashMap<Session,AuthStore.SessionKey>();for(var session:SESSIONS.values()){var account=session.account;if(session.joined&&account!=null)checks.put(session,new AuthStore.SessionKey(session.name,account.generation(),session.device));}
-        if(!checks.isEmpty()&&validating.compareAndSet(false,true)){var database=store;try{VALIDATION.execute(()->{try{var valid=database.validSessions(checks.values(),System.currentTimeMillis());checks.forEach((session,key)->{if(!valid.contains(key))session.disconnectKey("rivet.core.access_revoked_sign_in_again_b2d0179e");});}catch(Exception ex){checks.keySet().forEach(session->session.disconnectKey("rivet.core.could_not_verify_auth_session_eafe641a"));}finally{validating.set(false);}});}catch(RejectedExecutionException busy){validating.set(false);checks.keySet().forEach(session->session.disconnectKey("rivet.core.could_not_verify_auth_session_reconnect_cc88e81b"));}}
+        if(!checks.isEmpty()&&validating.compareAndSet(false,true)){var database=store;try{VALIDATION.execute(()->{try{var valid=database.validSessions(checks.values(),System.currentTimeMillis());checks.forEach((session,key)->{if(!valid.contains(key)&&session.account!=null&&session.account.generation()==key.generation()&&session.device.equals(key.device()))session.disconnectKey("rivet.core.access_revoked_sign_in_again_b2d0179e");});}catch(Exception ex){checks.keySet().forEach(session->session.disconnectKey("rivet.core.could_not_verify_auth_session_eafe641a"));}finally{validating.set(false);}});}catch(RejectedExecutionException busy){validating.set(false);checks.keySet().forEach(session->session.disconnectKey("rivet.core.could_not_verify_auth_session_reconnect_cc88e81b"));}}
     }
     // Called on the auth worker immediately after committing a credential change.
     private static void invalidate(String name){for(var session:SESSIONS.values())if(session.account!=null&&session.name.equalsIgnoreCase(name))try{session.validate();}catch(Exception ex){session.disconnectKey("rivet.core.access_revoked_sign_in_again_b2d0179e");}}
@@ -231,6 +246,7 @@ public final class AuthServer {
         var reset=Commands.literal("reset").requires(s->enabled()&&(console(s)||s.getEntity() instanceof ServerPlayer p&&mayReset(p)))
             .then(Commands.argument("player",StringArgumentType.word()).suggests((c,b)->ServerCommands.suggest(b)).executes(c->{var source=c.getSource();String target=StringArgumentType.getString(c,"player");if(source.getEntity() instanceof ServerPlayer p)return playerInvitation(source,p,target);return consoleJob(source,(database,index)->{String token=database.invite("console",target,System.currentTimeMillis());return dev.abros.rivet.core.Messages.text("rivet.core.recovery_code_for_6a7b63d0")+AuthStore.name(target)+": "+token+dev.abros.rivet.core.Messages.text("rivet.core.valid_for_15_minutes_single_use_e2005e55");});}));
         var auth=Commands.literal("auth").then(reset);
+        auth.then(Commands.literal("reset-totp").requires(s->enabled()&&console(s)).then(Commands.argument("player",StringArgumentType.word()).executes(c->consoleJob(c.getSource(),(database,index)->{String name=StringArgumentType.getString(c,"player");database.resetFactor("console",name,System.currentTimeMillis());invalidate(name);return dev.abros.rivet.core.Messages.text("rivet.auth.factor.reset");}))));
         auth.then(Commands.literal("rename").requires(AuthServer::mayRename)
             .then(Commands.argument("player",StringArgumentType.word()).suggests((c,b)->ServerCommands.suggest(b))
                 .then(Commands.argument("newName",StringArgumentType.word()).executes(c->rename(c.getSource(),StringArgumentType.getString(c,"player"),StringArgumentType.getString(c,"newName"))))));

@@ -21,6 +21,13 @@ public final class ApiServerHarness {
     private static boolean enabled() { return "true".equals(System.getenv("RIVET_API_SMOKE")); }
     @SubscribeEvent public static void started(ServerStartedEvent event) throws Exception {
         if (!enabled()) return;
+        if(!AuthServer.enabled()){
+            var cached=new com.mojang.authlib.GameProfile(java.util.UUID.randomUUID(),"RivetCacheProbe");event.getServer().getProfileCache().add(cached);
+            var identities=ServerProviders.identities();
+            if(!identities.byName("rivetcacheprobe").orElseThrow().getId().equals(cached.getId()))throw new IllegalStateException("Auth-off cached name lost its real UUID");
+            if(!identities.byId(cached.getId()).orElseThrow().getName().equals(cached.getName()))throw new IllegalStateException("Auth-off cached UUID lookup failed");
+            if(identities.byName("UnknownProbe").isPresent())throw new IllegalStateException("Directory fabricated an offline account");
+        }
         retained = RivetApi.connect("rivet").orElseThrow();
         var snapshot = retained.serverStatus();
         if (snapshot.status().onlinePlayers() != 0 || !snapshot.status().capabilities().contains("server.status"))
@@ -71,7 +78,7 @@ public final class ApiServerHarness {
         checks=java.util.concurrent.Executors.newSingleThreadExecutor();
         inspector=new dev.abros.rivet.core.api.ApiKeys(ServerDatabase.get(),dev.abros.rivet.core.api.ApiKeys.Limits.from(ServerDatabase.settings()),java.time.Clock.systemUTC());
         String application="native_"+java.util.UUID.randomUUID().toString().replace("-", "");
-        server.getCommands().performPrefixedCommand(console,"rivet api keys create "+application+" \"server.status.read,sessions.link,events.read,map.read,map.tiles.read,map.tiles.profile.staff,map.tiles.profile.caves,map.render.manage,tasks.read,chat.read,tasks.write,websocket.connect,websocket.ticket\" 1 60");
+        server.getCommands().performPrefixedCommand(console,"rivet api keys create "+application+" \"server.status.read,sessions.link,groups.read,map.read,map.tiles.read,map.tiles.profile.staff,map.tiles.profile.caves,map.render.manage,notifications.read,chat.read,groups.write,websocket.connect,websocket.ticket\" 1 60");
         deadline=System.currentTimeMillis()+45000;
         keyCheck=checks.submit(()->{
             while(System.currentTimeMillis()<deadline){
@@ -119,7 +126,7 @@ public final class ApiServerHarness {
             nativeServer.submit(()->nativeServer.getCommands().performPrefixedCommand(nativeServer.createCommandSourceStack(),"lp user "+id+" permission unset rivet.reports")).get(3,java.util.concurrent.TimeUnit.SECONDS);
             until=System.currentTimeMillis()+5000;while(ServerDomainAccess.allowed(id,"rivet.reports")&&System.currentTimeMillis()<until)Thread.sleep(50);
             try{api.staffReports("all","").get(5,java.util.concurrent.TimeUnit.SECONDS);throw new IllegalStateException("Revoked offline staff permission accepted");}catch(java.util.concurrent.ExecutionException denied){if(!(denied.getCause() instanceof ApiException e)||e.code()!=ApiException.Code.FORBIDDEN)throw denied;}
-            for(String right:java.util.List.of("rivet.restart","rivet.maintenance","rivet.announce","rivet.events")){
+            for(String right:java.util.List.of("rivet.restart","rivet.maintenance","rivet.announce")){
                 nativeServer.submit(()->nativeServer.getCommands().performPrefixedCommand(nativeServer.createCommandSourceStack(),"lp user "+id+" permission set "+right+" true")).get(3,java.util.concurrent.TimeUnit.SECONDS);
                 long ready=System.currentTimeMillis()+5000;while(!ServerDomainAccess.allowed(id,right)&&System.currentTimeMillis()<ready)Thread.sleep(50);
             }
@@ -140,12 +147,11 @@ public final class ApiServerHarness {
             var markers=api.groupMarkers(groupId,"").get();
             if(markers.items().size()!=1||!markers.items().getFirst().location().membersOnly())throw new IllegalStateException("Private marker mismatch");
             api.execute(java.util.UUID.randomUUID(),System.currentTimeMillis(),new DomainCommand.DeleteGroupMarker(groupId,markers.revision(),java.util.UUID.fromString(marker.id()),Long.parseLong(marker.revision()))).get();
-            var event=api.execute(java.util.UUID.randomUUID(),System.currentTimeMillis(),new DomainCommand.CreateScheduledEvent("Native private series","Details",java.time.Instant.now().plusSeconds(3600).toString(),10,"invited",java.util.Optional.empty(),java.util.List.of(),60,"weekly",2,"Europe/Warsaw")).get();
-            if(api.eventSchedule(java.util.UUID.fromString(event.id())).get().occurrences().size()!=2)throw new IllegalStateException("Event series mismatch");
+            try{api.execute(java.util.UUID.randomUUID(),System.currentTimeMillis(),new DomainCommand.CreateScheduledEvent("Retired series","Details",java.time.Instant.now().plusSeconds(3600).toString(),10,"invited",java.util.Optional.empty(),java.util.List.of(),60,"weekly",2,"Europe/Warsaw")).get();throw new IllegalStateException("Retired events accepted");}catch(java.util.concurrent.ExecutionException denied){if(!(denied.getCause() instanceof ApiException e)||e.code()!=ApiException.Code.UNAVAILABLE)throw denied;}
             var announcement=api.execute(java.util.UUID.randomUUID(),System.currentTimeMillis(),new DomainCommand.ScheduleAnnouncement("Native scheduled",java.time.Instant.now().plusSeconds(600).toString())).get();
             if(api.scheduledAnnouncements().get().items().size()!=1)throw new IllegalStateException("Announcement schedule mismatch");
             api.execute(java.util.UUID.randomUUID(),System.currentTimeMillis(),new DomainCommand.CancelAnnouncement(java.util.UUID.fromString(announcement.id()),Long.parseLong(announcement.revision()))).get();
-            System.out.println("RIVET_COMMUNITY_DETAILS_NATIVE_OK markers=true members=true series=true announcements=true");
+            System.out.println("RIVET_COMMUNITY_DETAILS_NATIVE_OK markers=true members=true retiredEventsDenied=true announcements=true");
             System.out.println("RIVET_SERVER_CONTROL_NATIVE_OK offline=true maintenance=true restart=true cancellation=true");
             System.out.println("RIVET_OFFLINE_STAFF_NATIVE_OK luckperms=true granted=true revoked=true");
         }
@@ -318,14 +324,14 @@ public final class ApiServerHarness {
                 if(client.send(request,java.net.http.HttpResponse.BodyHandlers.ofString()).statusCode()!=401)throw new IllegalStateException("Revoked REST key accepted with ETag");
                 System.out.println("RIVET_REST_NATIVE_OK authentication=true conditional=true revoked=true scope=true query=true");return;
             }
-            var mutation=java.net.http.HttpRequest.newBuilder(java.net.URI.create(base+"/tasks")).header("Authorization","Bearer "+secret).header("Content-Type","application/json").POST(java.net.http.HttpRequest.BodyPublishers.ofString("{}")).build();
+            var mutation=java.net.http.HttpRequest.newBuilder(java.net.URI.create(base+"/groups")).header("Authorization","Bearer "+secret).header("Content-Type","application/json").POST(java.net.http.HttpRequest.BodyPublishers.ofString("{}")).build();
             if(client.send(mutation,java.net.http.HttpResponse.BodyHandlers.ofString()).statusCode()!=401)throw new IllegalStateException("Native command did not require player session");
             var link=java.net.http.HttpRequest.newBuilder(java.net.URI.create(base+"/sessions/link")).header("Authorization","Bearer "+secret).header("Content-Type","application/json").POST(java.net.http.HttpRequest.BodyPublishers.ofString("{}")).build();
             var linked=client.send(link,java.net.http.HttpResponse.BodyHandlers.ofString());
             if(linked.statusCode()!=200||!com.google.gson.JsonParser.parseString(linked.body()).getAsJsonObject().has("pollToken"))throw new IllegalStateException("Native session link POST failed: "+linked.statusCode());
-            var domain=java.net.http.HttpRequest.newBuilder(java.net.URI.create(base+"/events")).header("Authorization","Bearer "+secret).GET().build();
-            if(client.send(domain,java.net.http.HttpResponse.BodyHandlers.ofString()).statusCode()!=200)throw new IllegalStateException("Native event read failed");
-            for(String route:java.util.List.of("map/objects","map/territories","tasks","chat/history")){
+            var domain=java.net.http.HttpRequest.newBuilder(java.net.URI.create(base+"/groups")).header("Authorization","Bearer "+secret).GET().build();
+            if(client.send(domain,java.net.http.HttpResponse.BodyHandlers.ofString()).statusCode()!=200)throw new IllegalStateException("Native group read failed");
+            for(String route:java.util.List.of("map/objects","map/territories","me/notifications","chat/history")){
                 var resource=java.net.http.HttpRequest.newBuilder(java.net.URI.create(base+"/"+route)).header("Authorization","Bearer "+secret).GET().build();
                 int expected=route.startsWith("map/")?200:401;
                 if(client.send(resource,java.net.http.HttpResponse.BodyHandlers.ofString()).statusCode()!=expected)throw new IllegalStateException("Native resource policy failed: "+route);

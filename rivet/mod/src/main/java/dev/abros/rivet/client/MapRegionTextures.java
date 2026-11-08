@@ -43,6 +43,7 @@ final class MapRegionTextures {
     private static int scans;
     private static final Set<Key> scanQueue=new LinkedHashSet<>();
     private static Set<Key> visible=Set.of();
+    private static final MapCoverage coverage=new MapCoverage();
     private static int textureLimit=2048;
     /** Geometric coverage is independent of the asynchronously loaded exploration index. */
     static Set<Key> viewKeys(dev.abros.rivet.core.map.MapLayer layer,dev.abros.rivet.core.map.MapViewport view,int width,int height,double scale){
@@ -53,13 +54,7 @@ final class MapRegionTextures {
         for(int z=minZ;z<=maxZ;z++)for(int x=minX;x<=maxX;x++)keys.add(new Key(layer,x,z,level));
         return keys;
     }
-    private static Set<Key> coverage(Set<Key> keys){
-        var all=new LinkedHashSet<Key>(keys);
-        for(var key:keys)for(int level=key.level()+1;level<=4;level++){
-            int scale=1<<(level-key.level());all.add(new Key(key.layer(),Math.floorDiv(key.x(),scale),Math.floorDiv(key.z(),scale),level));
-        }
-        return all.stream().sorted(Comparator.comparingInt(Key::level).reversed()).collect(java.util.stream.Collectors.toCollection(LinkedHashSet::new));
-    }
+    private static Set<Key> coverage(Set<Key> keys){return coverage.get(keys);}
     /** Read a view in one IO job and publish its saved pixels together, ahead of terrain work. */
     static void warm(Set<Key> keys){
         var repo=WorldMapClient.ownRepository();if(repo==null)return;
@@ -215,6 +210,6 @@ final class MapRegionTextures {
         var matrix=g.pose().last().pose();var vertices=com.mojang.blaze3d.vertex.Tesselator.getInstance().begin(com.mojang.blaze3d.vertex.VertexFormat.Mode.QUADS,com.mojang.blaze3d.vertex.DefaultVertexFormat.POSITION_TEX);
         vertices.addVertex(matrix,left,top,0).setUv(u0,v0);vertices.addVertex(matrix,left,bottom,0).setUv(u0,v1);vertices.addVertex(matrix,right,bottom,0).setUv(u1,v1);vertices.addVertex(matrix,right,top,0).setUv(u1,v0);com.mojang.blaze3d.vertex.BufferUploader.drawWithShader(vertices.buildOrThrow());com.mojang.blaze3d.systems.RenderSystem.disableBlend();
     }
-    static void reset(){generation++;invalidated.clear();empty.clear();scanQueue.clear();visible=Set.of();textureLimit=2048;for(var texture:textures.values())Minecraft.getInstance().getTextureManager().release(texture.id());textures.clear();for(var image:prepared.values())image.image().close();prepared.clear();pending.clear();checked.clear();saved.clear();saveRetry.clear();previewReads.clear();previewPending.clear();}
+    static void reset(){generation++;invalidated.clear();empty.clear();scanQueue.clear();visible=Set.of();coverage.clear();textureLimit=2048;for(var texture:textures.values())Minecraft.getInstance().getTextureManager().release(texture.id());textures.clear();for(var image:prepared.values())image.image().close();prepared.clear();pending.clear();checked.clear();saved.clear();saveRetry.clear();previewReads.clear();previewPending.clear();}
     private MapRegionTextures(){}
 }

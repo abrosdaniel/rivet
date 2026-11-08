@@ -16,6 +16,8 @@ public interface RivetApi {
     /** A new owner lease. Keep it and close it when this integration disables. */
     default MapLayersApi mapLayers(){throw new ApiException(ApiException.Code.MODULE_DISABLED,"Map layers unavailable");}
     default TerrainApi terrain(){throw new ApiException(ApiException.Code.MODULE_DISABLED,"Server terrain disabled");}
+    /** A new owner lease for persistent notification types. */
+    default NotificationsApi notifications(){throw new ApiException(ApiException.Code.MODULE_DISABLED,"Notifications unavailable");}
 
     /** Public resources only. No player identity and no player writes. */
     default DomainApi publicDomains(){return domains(null);}

@@ -6,6 +6,8 @@ import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.screens.ChatScreen;
 /** Destination feedback is independent of the optional chat help panel. */
 final class ChatChannelIndicator {
+ private static java.lang.ref.WeakReference<ChatScreen> rendered=new java.lang.ref.WeakReference<>(null);private static dev.abros.rivet.core.NativeLayout.Box bounds=new dev.abros.rivet.core.NativeLayout.Box(0,0,0,0);
+ static boolean hit(ChatScreen chat,double x,double y){return rendered.get()==chat&&bounds.contains(x,y);}
  static String label(String input){
   if(input.startsWith("/"))return "";
   var state=ServerMenuClient.state;
@@ -19,12 +21,12 @@ final class ChatChannelIndicator {
  private static String name(String key,String fallback){String name=Json.opt(ServerMenuClient.state,key,"");return name.isBlank()?fallback:name;}
  static int color(ChatChannels.Channel channel){String key=switch(channel){case LOCAL->"chatLocalColor";case GLOBAL->"chatGlobalColor";case GROUP->"chatGroupColor";};String fallback=switch(channel){case LOCAL->ChatChannels.LOCAL_COLOR;case GLOBAL->ChatChannels.GLOBAL_COLOR;case GROUP->ChatChannels.GROUP_COLOR;};try{return ChatChannels.color(Json.opt(ServerMenuClient.state,key,fallback));}catch(IllegalArgumentException invalid){return ChatChannels.color(fallback);}}
  static void draw(GuiGraphics g,ChatScreen chat,String text){
-  String label=label(text);if(label.isEmpty())return;
+  rendered=new java.lang.ref.WeakReference<>(chat);bounds=new dev.abros.rivet.core.NativeLayout.Box(0,0,0,0);String label=label(text);if(label.isEmpty())return;label+=" ▾";
   var mc=Minecraft.getInstance();var accessor=(dev.abros.rivet.mixin.ChatInputAccessor)chat;var input=accessor.rivet$input();
   int max=Math.min(input.getWidth(),g.guiWidth()-8);if(max<12)return;String fitted=UiKit.fit(mc.font,label,max-8);int w=mc.font.width(fitted)+8,h=13;
   // Native completions occupy the left edge above input; move the badge to the right while they are open.
   int x=accessor.rivet$suggestions().isVisible()?g.guiWidth()-w-4:Math.max(4,input.getX());int y=Math.max(0,input.getY()-h-2);
-  g.fill(x,y,x+w,y+h,0xD0000000);g.fill(x,y,x+2,y+h,0xFF000000|color(ChatChannels.parse(text,ChatHints.enabled("chatLocalEnabled")).channel()));
+  bounds=new dev.abros.rivet.core.NativeLayout.Box(x,y,w,h);UiKit.plate(g,x,y,w,h,UiKit.surface());
   g.drawString(mc.font,fitted,x+4,y+2,0xFF000000|color(ChatChannels.parse(text,ChatHints.enabled("chatLocalEnabled")).channel()),false);
  }
  private ChatChannelIndicator(){}

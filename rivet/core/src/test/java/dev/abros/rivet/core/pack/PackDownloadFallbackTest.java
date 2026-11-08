@@ -35,6 +35,13 @@ class PackDownloadFallbackTest {
    client.download(manifest.hash(),file,object(),new AtomicBoolean(),s->{});assertEquals("abcdefgh",Files.readString(object()));
   }
  }
+ @Test void cancelledSourceWithValidatorResumesAndStillVerifiesHash()throws Exception{
+  Files.createDirectories(object().getParent());var cancel=new AtomicBoolean();
+  assertThrows(InterruptedIOException.class,()->PackDownloads.source(file,object(),cancel,s->{},(url,target,size,token)->{Files.writeString(target,"abc");Files.writeString(target.resolveSibling(target.getFileName()+".etag"),"\"revision-1\"");token.set(true);throw new IOException("cancelled");}));
+  Path partial=object().resolveSibling(file.hash()+".source.part");assertEquals("abc",Files.readString(partial));
+  assertTrue(PackDownloads.source(file,object(),new AtomicBoolean(),s->{},(url,target,size,token)->{assertEquals("abc",Files.readString(target));Files.writeString(target,"defgh",StandardOpenOption.APPEND);}));
+  assertEquals(file.hash(),Hashes.sha256(object()));assertFalse(Files.exists(partial));assertFalse(Files.exists(partial.resolveSibling(partial.getFileName()+".etag")));
+ }
  @Test void cancellationNeverFallsBackAndDoesNotPoisonConnection()throws Exception{
   var cancel=new AtomicBoolean();var progress=new ArrayList<String>();try(var server=new PackServer(publisher,root.resolve("identity"),"127.0.0.1",0,true,0,0,0);var client=new PackClient("127.0.0.1",server.port(),server.fingerprint(),(url,target,size,token)->{Files.writeString(target,"abc");token.set(true);throw new IOException("cancelled");})){
    assertThrows(InterruptedIOException.class,()->client.download(manifest.hash(),file,object(),cancel,progress::add));assertFalse(Files.exists(object()));assertFalse(progress.stream().anyMatch(s->s.contains("Загрузка с сервера")));assertFalse(Files.exists(object().resolveSibling(file.hash()+".source.part")));

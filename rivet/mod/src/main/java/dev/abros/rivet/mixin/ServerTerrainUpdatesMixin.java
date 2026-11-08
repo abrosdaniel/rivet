@@ -13,5 +13,5 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 public abstract class ServerTerrainUpdatesMixin {
  @Shadow @Final private ServerLevel level;
  @Inject(method="blockChanged",at=@At("TAIL"))
- private void rivet$terrainChanged(BlockPos pos,CallbackInfo ci){dev.abros.rivet.server.ServerTaskStocks.changed(level,pos);ServerTerrain.changed(level,Math.floorDiv(pos.getX(),16),Math.floorDiv(pos.getZ(),16));}
+ private void rivet$terrainChanged(BlockPos pos,CallbackInfo ci){ServerTerrain.changed(level,Math.floorDiv(pos.getX(),16),Math.floorDiv(pos.getZ(),16));}
 }

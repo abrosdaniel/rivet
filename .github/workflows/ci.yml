@@ -100,6 +100,10 @@ jobs:
         shell: bash
         run: bash rivet/tooling/prepare_gradle.sh
       - run: ./gradlew :core:postgresTest --no-daemon
+      - name: Verify read-only feature archive
+        env:
+          RIVET_TEST_ARCHIVE_CONTAINER: ${{ job.services.database.id }}
+        run: python3 -m unittest discover -s rivet/tooling/tests -p test_feature_archive_postgres.py
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
         if: always()
         with:

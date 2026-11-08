@@ -56,8 +56,16 @@ public final class MapPersistenceHarness {
     Files.delete(markerFile.resolve("block"));Files.delete(markerFile);Files.delete(tileFile.resolve("block"));Files.delete(tileFile);stage=4;at=System.currentTimeMillis();return;
    }
    if(stage==4){if(!Files.isRegularFile(markerFile)||!Files.isRegularFile(tileFile))return;
+    var keyMethod=WorldMapClient.class.getDeclaredMethod("writeKey",MapRepository.class,Object.class);keyMethod.setAccessible(true);if(((RetryingWrites<Object,Object>)get("writes")).pending(keyMethod.invoke(null,repo,key))!=null)return;
     check(repo.markers().contains(marker),"Marker did not recover after disk failure");check(repo.read(layer,10000,10000).orElseThrow().color(0,0)==0xff123456,"Evicted terrain did not recover");
-    System.out.println("RIVET_MAP_PERSISTENCE_OK marker-read index-read marker-write evicted-tile-write recovery");stage=5;WorldMapClient.reset();mc.stop();
+    Files.write(tileFile,new byte[]{1,2,3});((Map<?,?>)get("tiles")).remove(key);((Set<?>)get("indexed")).clear();((Map<?,?>)get("regions")).clear();
+    WorldMapClient.tile(layer,10000,10000);stage=6;at=System.currentTimeMillis();return;
+   }
+   if(stage==6){var restored=WorldMapClient.loaded(key);if(restored==null)return;
+    check(restored.color(0,0)==0,"Damaged tile was not reset for local resampling");check(repo.markers().contains(marker),"Terrain recovery changed markers");
+    try(var files=Files.list(tileFile.getParent())){check(files.anyMatch(p->p.getFileName().toString().startsWith("10000_10000.tile.corrupt-")),"Damaged terrain bytes were not preserved");}
+    check(!((Set<?>)get("diskErrors")).contains(key),"Recovered terrain kept a permanent disk error");
+    System.out.println("RIVET_MAP_PERSISTENCE_OK marker-read index-read marker-write evicted-tile-write malformed-tile recovery");stage=5;WorldMapClient.reset();mc.stop();
    }
   }catch(Throwable failure){System.out.println("RIVET_MAP_PERSISTENCE_FAILED stage="+stage);failure.printStackTrace();stage=5;WorldMapClient.reset();mc.stop();}
  }

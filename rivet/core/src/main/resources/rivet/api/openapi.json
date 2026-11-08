@@ -1307,6 +1307,76 @@
         },
         "additionalProperties": false,
         "description": "Inclusive cave search band, 4–256 blocks. Absent on surface/isometric. Only enclosed floors with at least two air blocks beneath an opaque roof inside this band are rendered."
+      },
+      "PublishedNotification": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "title",
+          "body"
+        ],
+        "properties": {
+          "title": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 300
+          },
+          "body": {
+            "type": "string",
+            "maxLength": 1000
+          },
+          "expiresAt": {
+            "type": "integer",
+            "format": "int64",
+            "minimum": 0,
+            "description": "Unix milliseconds; 0 means no expiry."
+          },
+          "translations": {
+            "type": "object",
+            "maxProperties": 8,
+            "additionalProperties": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "title",
+                "body"
+              ],
+              "properties": {
+                "title": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 300
+                },
+                "body": {
+                  "type": "string",
+                  "maxLength": 1000
+                }
+              }
+            }
+          },
+          "action": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "type",
+              "id"
+            ],
+            "properties": {
+              "type": {
+                "type": "string",
+                "enum": [
+                  "openGroup",
+                  "openReport",
+                  "openOwnPublication"
+                ]
+              },
+              "id": {
+                "type": "string",
+                "format": "uuid"
+              }
+            }
+          }
+        }
       }
     }
   },
@@ -2452,7 +2522,7 @@
     "/api/v1/events": {
       "get": {
         "summary": "List events",
-        "description": "Requires events.read. Backend only, no Origin. Current visibility and module policy apply. No admin elevation. Live keyset pages; cursor is not an authorization grant.",
+        "description": "Retired resource. Authenticated requests cannot read or mutate this domain; they return UNAVAILABLE. Saved data is available to the server owner through archive export.",
         "security": [
           {
             "applicationKey": []
@@ -2552,7 +2622,7 @@
             }
           },
           "503": {
-            "description": "Request denied or invalid; no secrets in error details.",
+            "description": "UNAVAILABLE: this domain has been retired.",
             "content": {
               "application/json": {
                 "schema": {
@@ -2560,39 +2630,13 @@
                 }
               }
             }
-          },
-          "200": {
-            "description": "Success; Cache-Control: no-store",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "object",
-                  "properties": {
-                    "items": {
-                      "type": "array",
-                      "maxItems": 10,
-                      "items": {
-                        "$ref": "#/components/schemas/DomainItem"
-                      }
-                    },
-                    "nextCursor": {
-                      "type": "string"
-                    }
-                  },
-                  "required": [
-                    "items",
-                    "nextCursor"
-                  ],
-                  "additionalProperties": false
-                }
-              }
-            }
           }
-        }
+        },
+        "deprecated": true
       },
       "post": {
         "summary": "events.write command",
-        "description": "Player session required. Current game permissions, module state, revision and atomic idempotency receipt are checked. Staff operations support offline accounts using static LuckPerms context. Retry identical operationId/issuedAt/payload. Extended creation includes all scheduling fields. invitees is a comma-separated list of known UUIDs/names (up to 30), group empty or joined group UUID; timezone is an IANA zone. Repetition preserves local wall time across DST. Old basic body remains supported.",
+        "description": "Retired resource. Authenticated requests cannot read or mutate this domain; they return UNAVAILABLE. Saved data is available to the server owner through archive export.",
         "security": [
           {
             "applicationKey": []
@@ -2682,21 +2726,11 @@
             }
           },
           "503": {
-            "description": "Request denied or invalid; no secrets in error details.",
+            "description": "UNAVAILABLE: this domain has been retired.",
             "content": {
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/Error"
-                }
-              }
-            }
-          },
-          "200": {
-            "description": "Success; Cache-Control: no-store",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/CommandReceipt"
                 }
               }
             }
@@ -2829,13 +2863,14 @@
             }
           }
         },
-        "x-rivet-scope": "events.write"
+        "x-rivet-scope": "events.write",
+        "deprecated": true
       }
     },
     "/api/v1/events/{id}": {
       "get": {
         "summary": "Read events",
-        "description": "Requires events.read. Backend only, no Origin. Current visibility and module policy apply. No admin elevation. Live keyset pages; cursor is not an authorization grant.",
+        "description": "Retired resource. Authenticated requests cannot read or mutate this domain; they return UNAVAILABLE. Saved data is available to the server owner through archive export.",
         "security": [
           {
             "applicationKey": []
@@ -2935,7 +2970,7 @@
             }
           },
           "503": {
-            "description": "Request denied or invalid; no secrets in error details.",
+            "description": "UNAVAILABLE: this domain has been retired.",
             "content": {
               "application/json": {
                 "schema": {
@@ -2943,33 +2978,15 @@
                 }
               }
             }
-          },
-          "200": {
-            "description": "Success; Cache-Control: no-store",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "object",
-                  "properties": {
-                    "item": {
-                      "$ref": "#/components/schemas/DomainItem"
-                    }
-                  },
-                  "required": [
-                    "item"
-                  ],
-                  "additionalProperties": false
-                }
-              }
-            }
           }
-        }
+        },
+        "deprecated": true
       }
     },
     "/api/v1/board": {
       "get": {
         "summary": "List board",
-        "description": "Requires board.read. Backend only, no Origin. Current visibility and module policy apply. No admin elevation. Live keyset pages; cursor is not an authorization grant.",
+        "description": "Retired resource. Authenticated requests cannot read or mutate this domain; they return UNAVAILABLE. Saved data is available to the server owner through archive export.",
         "security": [
           {
             "applicationKey": []
@@ -3069,7 +3086,7 @@
             }
           },
           "503": {
-            "description": "Request denied or invalid; no secrets in error details.",
+            "description": "UNAVAILABLE: this domain has been retired.",
             "content": {
               "application/json": {
                 "schema": {
@@ -3077,39 +3094,13 @@
                 }
               }
             }
-          },
-          "200": {
-            "description": "Success; Cache-Control: no-store",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "object",
-                  "properties": {
-                    "items": {
-                      "type": "array",
-                      "maxItems": 10,
-                      "items": {
-                        "$ref": "#/components/schemas/DomainItem"
-                      }
-                    },
-                    "nextCursor": {
-                      "type": "string"
-                    }
-                  },
-                  "required": [
-                    "items",
-                    "nextCursor"
-                  ],
-                  "additionalProperties": false
-                }
-              }
-            }
           }
-        }
+        },
+        "deprecated": true
       },
       "post": {
         "summary": "board.write command",
-        "description": "Player session required. Current game permissions, module state, revision and atomic idempotency receipt are checked. Staff operations support offline accounts using static LuckPerms context. Retry identical operationId/issuedAt/payload.",
+        "description": "Retired resource. Authenticated requests cannot read or mutate this domain; they return UNAVAILABLE. Saved data is available to the server owner through archive export.",
         "security": [
           {
             "applicationKey": []
@@ -3199,21 +3190,11 @@
             }
           },
           "503": {
-            "description": "Request denied or invalid; no secrets in error details.",
+            "description": "UNAVAILABLE: this domain has been retired.",
             "content": {
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/Error"
-                }
-              }
-            }
-          },
-          "200": {
-            "description": "Success; Cache-Control: no-store",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/CommandReceipt"
                 }
               }
             }
@@ -3272,13 +3253,14 @@
             }
           }
         },
-        "x-rivet-scope": "board.write"
+        "x-rivet-scope": "board.write",
+        "deprecated": true
       }
     },
     "/api/v1/board/{id}": {
       "get": {
         "summary": "Read board",
-        "description": "Requires board.read. Backend only, no Origin. Current visibility and module policy apply. No admin elevation. Live keyset pages; cursor is not an authorization grant.",
+        "description": "Retired resource. Authenticated requests cannot read or mutate this domain; they return UNAVAILABLE. Saved data is available to the server owner through archive export.",
         "security": [
           {
             "applicationKey": []
@@ -3378,7 +3360,7 @@
             }
           },
           "503": {
-            "description": "Request denied or invalid; no secrets in error details.",
+            "description": "UNAVAILABLE: this domain has been retired.",
             "content": {
               "application/json": {
                 "schema": {
@@ -3386,33 +3368,15 @@
                 }
               }
             }
-          },
-          "200": {
-            "description": "Success; Cache-Control: no-store",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "object",
-                  "properties": {
-                    "item": {
-                      "$ref": "#/components/schemas/DomainItem"
-                    }
-                  },
-                  "required": [
-                    "item"
-                  ],
-                  "additionalProperties": false
-                }
-              }
-            }
           }
-        }
+        },
+        "deprecated": true
       }
     },
     "/api/v1/polls": {
       "get": {
         "summary": "List polls",
-        "description": "Requires polls.read. Backend only, no Origin. Current visibility and module policy apply. No admin elevation. Live keyset pages; cursor is not an authorization grant.",
+        "description": "Retired resource. Authenticated requests cannot read or mutate this domain; they return UNAVAILABLE. Saved data is available to the server owner through archive export.",
         "security": [
           {
             "applicationKey": []
@@ -3512,7 +3476,7 @@
             }
           },
           "503": {
-            "description": "Request denied or invalid; no secrets in error details.",
+            "description": "UNAVAILABLE: this domain has been retired.",
             "content": {
               "application/json": {
                 "schema": {
@@ -3520,39 +3484,13 @@
                 }
               }
             }
-          },
-          "200": {
-            "description": "Success; Cache-Control: no-store",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "object",
-                  "properties": {
-                    "items": {
-                      "type": "array",
-                      "maxItems": 10,
-                      "items": {
-                        "$ref": "#/components/schemas/DomainItem"
-                      }
-                    },
-                    "nextCursor": {
-                      "type": "string"
-                    }
-                  },
-                  "required": [
-                    "items",
-                    "nextCursor"
-                  ],
-                  "additionalProperties": false
-                }
-              }
-            }
           }
-        }
+        },
+        "deprecated": true
       },
       "post": {
         "summary": "polls.write command",
-        "description": "Player session required. Current game permissions, module state, revision and atomic idempotency receipt are checked. Staff operations support offline accounts using static LuckPerms context. Retry identical operationId/issuedAt/payload.",
+        "description": "Retired resource. Authenticated requests cannot read or mutate this domain; they return UNAVAILABLE. Saved data is available to the server owner through archive export.",
         "security": [
           {
             "applicationKey": []
@@ -3642,21 +3580,11 @@
             }
           },
           "503": {
-            "description": "Request denied or invalid; no secrets in error details.",
+            "description": "UNAVAILABLE: this domain has been retired.",
             "content": {
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/Error"
-                }
-              }
-            }
-          },
-          "200": {
-            "description": "Success; Cache-Control: no-store",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/CommandReceipt"
                 }
               }
             }
@@ -3729,13 +3657,14 @@
             }
           }
         },
-        "x-rivet-scope": "polls.write"
+        "x-rivet-scope": "polls.write",
+        "deprecated": true
       }
     },
     "/api/v1/polls/{id}": {
       "get": {
         "summary": "Read polls",
-        "description": "Requires polls.read. Backend only, no Origin. Current visibility and module policy apply. No admin elevation. Live keyset pages; cursor is not an authorization grant.",
+        "description": "Retired resource. Authenticated requests cannot read or mutate this domain; they return UNAVAILABLE. Saved data is available to the server owner through archive export.",
         "security": [
           {
             "applicationKey": []
@@ -3835,7 +3764,7 @@
             }
           },
           "503": {
-            "description": "Request denied or invalid; no secrets in error details.",
+            "description": "UNAVAILABLE: this domain has been retired.",
             "content": {
               "application/json": {
                 "schema": {
@@ -3843,33 +3772,15 @@
                 }
               }
             }
-          },
-          "200": {
-            "description": "Success; Cache-Control: no-store",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "object",
-                  "properties": {
-                    "item": {
-                      "$ref": "#/components/schemas/DomainItem"
-                    }
-                  },
-                  "required": [
-                    "item"
-                  ],
-                  "additionalProperties": false
-                }
-              }
-            }
           }
-        }
+        },
+        "deprecated": true
       }
     },
     "/api/v1/ideas": {
       "get": {
         "summary": "List ideas",
-        "description": "Requires ideas.read. Backend only, no Origin. Current visibility and module policy apply. No admin elevation. Live keyset pages; cursor is not an authorization grant.",
+        "description": "Retired resource. Authenticated requests cannot read or mutate this domain; they return UNAVAILABLE. Saved data is available to the server owner through archive export.",
         "security": [
           {
             "applicationKey": []
@@ -3969,7 +3880,7 @@
             }
           },
           "503": {
-            "description": "Request denied or invalid; no secrets in error details.",
+            "description": "UNAVAILABLE: this domain has been retired.",
             "content": {
               "application/json": {
                 "schema": {
@@ -3977,39 +3888,13 @@
                 }
               }
             }
-          },
-          "200": {
-            "description": "Success; Cache-Control: no-store",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "object",
-                  "properties": {
-                    "items": {
-                      "type": "array",
-                      "maxItems": 10,
-                      "items": {
-                        "$ref": "#/components/schemas/DomainItem"
-                      }
-                    },
-                    "nextCursor": {
-                      "type": "string"
-                    }
-                  },
-                  "required": [
-                    "items",
-                    "nextCursor"
-                  ],
-                  "additionalProperties": false
-                }
-              }
-            }
           }
-        }
+        },
+        "deprecated": true
       },
       "post": {
         "summary": "ideas.write command",
-        "description": "Player session required. Current game permissions, module state, revision and atomic idempotency receipt are checked. Staff operations support offline accounts using static LuckPerms context. Retry identical operationId/issuedAt/payload.",
+        "description": "Retired resource. Authenticated requests cannot read or mutate this domain; they return UNAVAILABLE. Saved data is available to the server owner through archive export.",
         "security": [
           {
             "applicationKey": []
@@ -4099,21 +3984,11 @@
             }
           },
           "503": {
-            "description": "Request denied or invalid; no secrets in error details.",
+            "description": "UNAVAILABLE: this domain has been retired.",
             "content": {
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/Error"
-                }
-              }
-            }
-          },
-          "200": {
-            "description": "Success; Cache-Control: no-store",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/CommandReceipt"
                 }
               }
             }
@@ -4162,13 +4037,14 @@
             }
           }
         },
-        "x-rivet-scope": "ideas.write"
+        "x-rivet-scope": "ideas.write",
+        "deprecated": true
       }
     },
     "/api/v1/ideas/{id}": {
       "get": {
         "summary": "Read ideas",
-        "description": "Requires ideas.read. Backend only, no Origin. Current visibility and module policy apply. No admin elevation. Live keyset pages; cursor is not an authorization grant.",
+        "description": "Retired resource. Authenticated requests cannot read or mutate this domain; they return UNAVAILABLE. Saved data is available to the server owner through archive export.",
         "security": [
           {
             "applicationKey": []
@@ -4268,7 +4144,7 @@
             }
           },
           "503": {
-            "description": "Request denied or invalid; no secrets in error details.",
+            "description": "UNAVAILABLE: this domain has been retired.",
             "content": {
               "application/json": {
                 "schema": {
@@ -4276,27 +4152,9 @@
                 }
               }
             }
-          },
-          "200": {
-            "description": "Success; Cache-Control: no-store",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "object",
-                  "properties": {
-                    "item": {
-                      "$ref": "#/components/schemas/DomainItem"
-                    }
-                  },
-                  "required": [
-                    "item"
-                  ],
-                  "additionalProperties": false
-                }
-              }
-            }
           }
-        }
+        },
+        "deprecated": true
       }
     },
     "/api/v1/sessions/password": {
@@ -4323,6 +4181,11 @@
                     "type": "string",
                     "maxLength": 128,
                     "writeOnly": true
+                  },
+                  "code": {
+                    "type": "string",
+                    "maxLength": 22,
+                    "description": "Required when TOTP is enabled: six-digit authenticator code or a one-time backup code."
                   }
                 },
                 "required": [
@@ -4747,7 +4610,7 @@
     "/api/v1/tasks": {
       "get": {
         "summary": "Read tasks",
-        "description": "Requires tasks.read. Backend key and current visibility checks. X-Rivet-Session required. No caller-selected actor.",
+        "description": "Retired resource. Authenticated requests cannot read or mutate this domain; they return UNAVAILABLE. Saved data is available to the server owner through archive export.",
         "security": [
           {
             "applicationKey": []
@@ -4857,7 +4720,7 @@
             }
           },
           "503": {
-            "description": "Request denied or invalid; no secrets in error details.",
+            "description": "UNAVAILABLE: this domain has been retired.",
             "content": {
               "application/json": {
                 "schema": {
@@ -4865,39 +4728,13 @@
                 }
               }
             }
-          },
-          "200": {
-            "description": "Success; Cache-Control: no-store",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "object",
-                  "properties": {
-                    "items": {
-                      "type": "array",
-                      "maxItems": 20,
-                      "items": {
-                        "$ref": "#/components/schemas/TaskItem"
-                      }
-                    },
-                    "nextCursor": {
-                      "type": "string"
-                    }
-                  },
-                  "required": [
-                    "items",
-                    "nextCursor"
-                  ],
-                  "additionalProperties": false
-                }
-              }
-            }
           }
-        }
+        },
+        "deprecated": true
       },
       "post": {
         "summary": "tasks.write command",
-        "description": "Authenticated player command. No administration elevation. Same operationId, issuedAt, path, data and If-Match must be retained on retries (24 hour window). Application and player bound receipt commits atomically with data.",
+        "description": "Retired resource. Authenticated requests cannot read or mutate this domain; they return UNAVAILABLE. Saved data is available to the server owner through archive export.",
         "security": [
           {
             "applicationKey": []
@@ -4987,21 +4824,11 @@
             }
           },
           "503": {
-            "description": "Request denied or invalid; no secrets in error details.",
+            "description": "UNAVAILABLE: this domain has been retired.",
             "content": {
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/Error"
-                }
-              }
-            }
-          },
-          "200": {
-            "description": "Success; Cache-Control: no-store",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/CommandReceipt"
                 }
               }
             }
@@ -5055,13 +4882,14 @@
               }
             }
           }
-        }
+        },
+        "deprecated": true
       }
     },
     "/api/v1/tasks/{id}": {
       "get": {
         "summary": "Read tasks/{id}",
-        "description": "Requires tasks.read. Backend key and current visibility checks. X-Rivet-Session required. No caller-selected actor.",
+        "description": "Retired resource. Authenticated requests cannot read or mutate this domain; they return UNAVAILABLE. Saved data is available to the server owner through archive export.",
         "security": [
           {
             "applicationKey": []
@@ -5160,7 +4988,7 @@
             }
           },
           "503": {
-            "description": "Request denied or invalid; no secrets in error details.",
+            "description": "UNAVAILABLE: this domain has been retired.",
             "content": {
               "application/json": {
                 "schema": {
@@ -5168,31 +4996,13 @@
                 }
               }
             }
-          },
-          "200": {
-            "description": "Success; Cache-Control: no-store",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "object",
-                  "properties": {
-                    "item": {
-                      "$ref": "#/components/schemas/TaskItem"
-                    }
-                  },
-                  "required": [
-                    "item"
-                  ],
-                  "additionalProperties": false
-                }
-              }
-            }
           }
-        }
+        },
+        "deprecated": true
       },
       "put": {
         "summary": "tasks.write command",
-        "description": "Authenticated player command. No administration elevation. Same operationId, issuedAt, path, data and If-Match must be retained on retries (24 hour window). Application and player bound receipt commits atomically with data.",
+        "description": "Retired resource. Authenticated requests cannot read or mutate this domain; they return UNAVAILABLE. Saved data is available to the server owner through archive export.",
         "security": [
           {
             "applicationKey": []
@@ -5299,21 +5109,11 @@
             }
           },
           "503": {
-            "description": "Request denied or invalid; no secrets in error details.",
+            "description": "UNAVAILABLE: this domain has been retired.",
             "content": {
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/Error"
-                }
-              }
-            }
-          },
-          "200": {
-            "description": "Success; Cache-Control: no-store",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/CommandReceipt"
                 }
               }
             }
@@ -5362,7 +5162,8 @@
               }
             }
           }
-        }
+        },
+        "deprecated": true
       }
     },
     "/api/v1/profiles/{id}": {
@@ -5527,6 +5328,16 @@
               "maxLength": 1024
             },
             "description": "Continuation or explicit group filter; never a permission grant."
+          },
+          {
+            "in": "query",
+            "name": "locale",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "pattern": "^[a-z]{2,3}_[a-z]{2}$"
+            },
+            "description": "Explicit notification locale, e.g. ru_ru. Missing translations use stored fallback text."
           }
         ],
         "responses": {
@@ -6368,7 +6179,7 @@
     "/api/v1/tasks/{id}/status": {
       "post": {
         "summary": "tasks.write command",
-        "description": "Authenticated player command. No administration elevation. Same operationId, issuedAt, path, data and If-Match must be retained on retries (24 hour window). Application and player bound receipt commits atomically with data.",
+        "description": "Retired resource. Authenticated requests cannot read or mutate this domain; they return UNAVAILABLE. Saved data is available to the server owner through archive export.",
         "security": [
           {
             "applicationKey": []
@@ -6475,21 +6286,11 @@
             }
           },
           "503": {
-            "description": "Request denied or invalid; no secrets in error details.",
+            "description": "UNAVAILABLE: this domain has been retired.",
             "content": {
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/Error"
-                }
-              }
-            }
-          },
-          "200": {
-            "description": "Success; Cache-Control: no-store",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/CommandReceipt"
                 }
               }
             }
@@ -6536,13 +6337,14 @@
               }
             }
           }
-        }
+        },
+        "deprecated": true
       }
     },
     "/api/v1/tasks/{id}/location": {
       "post": {
         "summary": "tasks.write command",
-        "description": "Authenticated player command. No administration elevation. Same operationId, issuedAt, path, data and If-Match must be retained on retries (24 hour window). Application and player bound receipt commits atomically with data.",
+        "description": "Retired resource. Authenticated requests cannot read or mutate this domain; they return UNAVAILABLE. Saved data is available to the server owner through archive export.",
         "security": [
           {
             "applicationKey": []
@@ -6649,21 +6451,11 @@
             }
           },
           "503": {
-            "description": "Request denied or invalid; no secrets in error details.",
+            "description": "UNAVAILABLE: this domain has been retired.",
             "content": {
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/Error"
-                }
-              }
-            }
-          },
-          "200": {
-            "description": "Success; Cache-Control: no-store",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/CommandReceipt"
                 }
               }
             }
@@ -6744,13 +6536,14 @@
               }
             }
           }
-        }
+        },
+        "deprecated": true
       }
     },
     "/api/v1/tasks/{id}/delete": {
       "post": {
         "summary": "tasks.write command",
-        "description": "Authenticated player command. No administration elevation. Same operationId, issuedAt, path, data and If-Match must be retained on retries (24 hour window). Application and player bound receipt commits atomically with data.",
+        "description": "Retired resource. Authenticated requests cannot read or mutate this domain; they return UNAVAILABLE. Saved data is available to the server owner through archive export.",
         "security": [
           {
             "applicationKey": []
@@ -6857,21 +6650,11 @@
             }
           },
           "503": {
-            "description": "Request denied or invalid; no secrets in error details.",
+            "description": "UNAVAILABLE: this domain has been retired.",
             "content": {
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/Error"
-                }
-              }
-            }
-          },
-          "200": {
-            "description": "Success; Cache-Control: no-store",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/CommandReceipt"
                 }
               }
             }
@@ -6908,7 +6691,8 @@
               }
             }
           }
-        }
+        },
+        "deprecated": true
       }
     },
     "/api/v1/map/objects/{id}/draft": {
@@ -7585,7 +7369,7 @@
     "/api/v1/events/{id}/actions/join": {
       "post": {
         "summary": "events.write command",
-        "description": "Authenticated player command. No administration elevation. Same operationId, issuedAt, path, data and If-Match must be retained on retries (24 hour window). Application and player bound receipt commits atomically with data.",
+        "description": "Retired resource. Authenticated requests cannot read or mutate this domain; they return UNAVAILABLE. Saved data is available to the server owner through archive export.",
         "security": [
           {
             "applicationKey": []
@@ -7692,21 +7476,11 @@
             }
           },
           "503": {
-            "description": "Request denied or invalid; no secrets in error details.",
+            "description": "UNAVAILABLE: this domain has been retired.",
             "content": {
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/Error"
-                }
-              }
-            }
-          },
-          "200": {
-            "description": "Success; Cache-Control: no-store",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/CommandReceipt"
                 }
               }
             }
@@ -7743,13 +7517,14 @@
               }
             }
           }
-        }
+        },
+        "deprecated": true
       }
     },
     "/api/v1/events/{id}/actions/leave": {
       "post": {
         "summary": "events.write command",
-        "description": "Authenticated player command. No administration elevation. Same operationId, issuedAt, path, data and If-Match must be retained on retries (24 hour window). Application and player bound receipt commits atomically with data.",
+        "description": "Retired resource. Authenticated requests cannot read or mutate this domain; they return UNAVAILABLE. Saved data is available to the server owner through archive export.",
         "security": [
           {
             "applicationKey": []
@@ -7856,21 +7631,11 @@
             }
           },
           "503": {
-            "description": "Request denied or invalid; no secrets in error details.",
+            "description": "UNAVAILABLE: this domain has been retired.",
             "content": {
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/Error"
-                }
-              }
-            }
-          },
-          "200": {
-            "description": "Success; Cache-Control: no-store",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/CommandReceipt"
                 }
               }
             }
@@ -7907,7 +7672,8 @@
               }
             }
           }
-        }
+        },
+        "deprecated": true
       }
     },
     "/api/v1/groups/{id}/actions/apply": {
@@ -8412,7 +8178,7 @@
     "/api/v1/board/{id}/actions/respond": {
       "post": {
         "summary": "board.write command",
-        "description": "Authenticated player command. No administration elevation. Same operationId, issuedAt, path, data and If-Match must be retained on retries (24 hour window). Application and player bound receipt commits atomically with data.",
+        "description": "Retired resource. Authenticated requests cannot read or mutate this domain; they return UNAVAILABLE. Saved data is available to the server owner through archive export.",
         "security": [
           {
             "applicationKey": []
@@ -8519,21 +8285,11 @@
             }
           },
           "503": {
-            "description": "Request denied or invalid; no secrets in error details.",
+            "description": "UNAVAILABLE: this domain has been retired.",
             "content": {
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/Error"
-                }
-              }
-            }
-          },
-          "200": {
-            "description": "Success; Cache-Control: no-store",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/CommandReceipt"
                 }
               }
             }
@@ -8577,13 +8333,14 @@
               }
             }
           }
-        }
+        },
+        "deprecated": true
       }
     },
     "/api/v1/board/{id}/actions/close": {
       "post": {
         "summary": "board.write command",
-        "description": "Authenticated player command. No administration elevation. Same operationId, issuedAt, path, data and If-Match must be retained on retries (24 hour window). Application and player bound receipt commits atomically with data.",
+        "description": "Retired resource. Authenticated requests cannot read or mutate this domain; they return UNAVAILABLE. Saved data is available to the server owner through archive export.",
         "security": [
           {
             "applicationKey": []
@@ -8690,21 +8447,11 @@
             }
           },
           "503": {
-            "description": "Request denied or invalid; no secrets in error details.",
+            "description": "UNAVAILABLE: this domain has been retired.",
             "content": {
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/Error"
-                }
-              }
-            }
-          },
-          "200": {
-            "description": "Success; Cache-Control: no-store",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/CommandReceipt"
                 }
               }
             }
@@ -8741,13 +8488,14 @@
               }
             }
           }
-        }
+        },
+        "deprecated": true
       }
     },
     "/api/v1/board/{id}/actions/complete": {
       "post": {
         "summary": "board.write command",
-        "description": "Authenticated player command. No administration elevation. Same operationId, issuedAt, path, data and If-Match must be retained on retries (24 hour window). Application and player bound receipt commits atomically with data.",
+        "description": "Retired resource. Authenticated requests cannot read or mutate this domain; they return UNAVAILABLE. Saved data is available to the server owner through archive export.",
         "security": [
           {
             "applicationKey": []
@@ -8854,21 +8602,11 @@
             }
           },
           "503": {
-            "description": "Request denied or invalid; no secrets in error details.",
+            "description": "UNAVAILABLE: this domain has been retired.",
             "content": {
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/Error"
-                }
-              }
-            }
-          },
-          "200": {
-            "description": "Success; Cache-Control: no-store",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/CommandReceipt"
                 }
               }
             }
@@ -8905,13 +8643,14 @@
               }
             }
           }
-        }
+        },
+        "deprecated": true
       }
     },
     "/api/v1/ideas/{id}/actions/support": {
       "post": {
         "summary": "ideas.write command",
-        "description": "Authenticated player command. No administration elevation. Same operationId, issuedAt, path, data and If-Match must be retained on retries (24 hour window). Application and player bound receipt commits atomically with data.",
+        "description": "Retired resource. Authenticated requests cannot read or mutate this domain; they return UNAVAILABLE. Saved data is available to the server owner through archive export.",
         "security": [
           {
             "applicationKey": []
@@ -9018,21 +8757,11 @@
             }
           },
           "503": {
-            "description": "Request denied or invalid; no secrets in error details.",
+            "description": "UNAVAILABLE: this domain has been retired.",
             "content": {
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/Error"
-                }
-              }
-            }
-          },
-          "200": {
-            "description": "Success; Cache-Control: no-store",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/CommandReceipt"
                 }
               }
             }
@@ -9069,13 +8798,14 @@
               }
             }
           }
-        }
+        },
+        "deprecated": true
       }
     },
     "/api/v1/polls/{id}/actions/vote": {
       "post": {
         "summary": "polls.write command",
-        "description": "Authenticated player command. No administration elevation. Same operationId, issuedAt, path, data and If-Match must be retained on retries (24 hour window). Application and player bound receipt commits atomically with data.",
+        "description": "Retired resource. Authenticated requests cannot read or mutate this domain; they return UNAVAILABLE. Saved data is available to the server owner through archive export.",
         "security": [
           {
             "applicationKey": []
@@ -9182,21 +8912,11 @@
             }
           },
           "503": {
-            "description": "Request denied or invalid; no secrets in error details.",
+            "description": "UNAVAILABLE: this domain has been retired.",
             "content": {
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/Error"
-                }
-              }
-            }
-          },
-          "200": {
-            "description": "Success; Cache-Control: no-store",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/CommandReceipt"
                 }
               }
             }
@@ -9247,7 +8967,8 @@
               }
             }
           }
-        }
+        },
+        "deprecated": true
       }
     },
     "/api/v1/me/map/objects": {
@@ -14054,7 +13775,7 @@
     "/api/v1/board/{id}/actions/edit": {
       "post": {
         "summary": "board.write command",
-        "description": "Player session required. Current game permissions, module state, revision and atomic idempotency receipt are checked. Staff operations support offline accounts using static LuckPerms context. Retry identical operationId/issuedAt/payload.",
+        "description": "Retired resource. Authenticated requests cannot read or mutate this domain; they return UNAVAILABLE. Saved data is available to the server owner through archive export.",
         "security": [
           {
             "applicationKey": []
@@ -14161,21 +13882,11 @@
             }
           },
           "503": {
-            "description": "Request denied or invalid; no secrets in error details.",
+            "description": "UNAVAILABLE: this domain has been retired.",
             "content": {
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/Error"
-                }
-              }
-            }
-          },
-          "200": {
-            "description": "Success; Cache-Control: no-store",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/CommandReceipt"
                 }
               }
             }
@@ -14224,13 +13935,14 @@
             }
           }
         },
-        "x-rivet-scope": "board.write"
+        "x-rivet-scope": "board.write",
+        "deprecated": true
       }
     },
     "/api/v1/board/{id}/actions/delete": {
       "post": {
         "summary": "board.write command",
-        "description": "Player session required. Current game permissions, module state, revision and atomic idempotency receipt are checked. Staff operations support offline accounts using static LuckPerms context. Retry identical operationId/issuedAt/payload.",
+        "description": "Retired resource. Authenticated requests cannot read or mutate this domain; they return UNAVAILABLE. Saved data is available to the server owner through archive export.",
         "security": [
           {
             "applicationKey": []
@@ -14337,21 +14049,11 @@
             }
           },
           "503": {
-            "description": "Request denied or invalid; no secrets in error details.",
+            "description": "UNAVAILABLE: this domain has been retired.",
             "content": {
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/Error"
-                }
-              }
-            }
-          },
-          "200": {
-            "description": "Success; Cache-Control: no-store",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/CommandReceipt"
                 }
               }
             }
@@ -14390,13 +14092,14 @@
             }
           }
         },
-        "x-rivet-scope": "board.write"
+        "x-rivet-scope": "board.write",
+        "deprecated": true
       }
     },
     "/api/v1/board/{id}/actions/restore": {
       "post": {
         "summary": "board.write command",
-        "description": "Player session required. Current game permissions, module state, revision and atomic idempotency receipt are checked. Staff operations support offline accounts using static LuckPerms context. Retry identical operationId/issuedAt/payload.",
+        "description": "Retired resource. Authenticated requests cannot read or mutate this domain; they return UNAVAILABLE. Saved data is available to the server owner through archive export.",
         "security": [
           {
             "applicationKey": []
@@ -14503,21 +14206,11 @@
             }
           },
           "503": {
-            "description": "Request denied or invalid; no secrets in error details.",
+            "description": "UNAVAILABLE: this domain has been retired.",
             "content": {
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/Error"
-                }
-              }
-            }
-          },
-          "200": {
-            "description": "Success; Cache-Control: no-store",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/CommandReceipt"
                 }
               }
             }
@@ -14556,13 +14249,14 @@
             }
           }
         },
-        "x-rivet-scope": "board.write"
+        "x-rivet-scope": "board.write",
+        "deprecated": true
       }
     },
     "/api/v1/events/{id}/actions/edit": {
       "post": {
         "summary": "events.write command",
-        "description": "Player session required. Current game permissions, module state, revision and atomic idempotency receipt are checked. Staff operations support offline accounts using static LuckPerms context. Retry identical operationId/issuedAt/payload.",
+        "description": "Retired resource. Authenticated requests cannot read or mutate this domain; they return UNAVAILABLE. Saved data is available to the server owner through archive export.",
         "security": [
           {
             "applicationKey": []
@@ -14669,21 +14363,11 @@
             }
           },
           "503": {
-            "description": "Request denied or invalid; no secrets in error details.",
+            "description": "UNAVAILABLE: this domain has been retired.",
             "content": {
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/Error"
-                }
-              }
-            }
-          },
-          "200": {
-            "description": "Success; Cache-Control: no-store",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/CommandReceipt"
                 }
               }
             }
@@ -14732,13 +14416,14 @@
             }
           }
         },
-        "x-rivet-scope": "events.write"
+        "x-rivet-scope": "events.write",
+        "deprecated": true
       }
     },
     "/api/v1/events/{id}/actions/delete": {
       "post": {
         "summary": "events.write command",
-        "description": "Player session required. Current game permissions, module state, revision and atomic idempotency receipt are checked. Staff operations support offline accounts using static LuckPerms context. Retry identical operationId/issuedAt/payload.",
+        "description": "Retired resource. Authenticated requests cannot read or mutate this domain; they return UNAVAILABLE. Saved data is available to the server owner through archive export.",
         "security": [
           {
             "applicationKey": []
@@ -14845,21 +14530,11 @@
             }
           },
           "503": {
-            "description": "Request denied or invalid; no secrets in error details.",
+            "description": "UNAVAILABLE: this domain has been retired.",
             "content": {
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/Error"
-                }
-              }
-            }
-          },
-          "200": {
-            "description": "Success; Cache-Control: no-store",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/CommandReceipt"
                 }
               }
             }
@@ -14898,13 +14573,14 @@
             }
           }
         },
-        "x-rivet-scope": "events.write"
+        "x-rivet-scope": "events.write",
+        "deprecated": true
       }
     },
     "/api/v1/events/{id}/actions/restore": {
       "post": {
         "summary": "events.write command",
-        "description": "Player session required. Current game permissions, module state, revision and atomic idempotency receipt are checked. Staff operations support offline accounts using static LuckPerms context. Retry identical operationId/issuedAt/payload.",
+        "description": "Retired resource. Authenticated requests cannot read or mutate this domain; they return UNAVAILABLE. Saved data is available to the server owner through archive export.",
         "security": [
           {
             "applicationKey": []
@@ -15011,21 +14687,11 @@
             }
           },
           "503": {
-            "description": "Request denied or invalid; no secrets in error details.",
+            "description": "UNAVAILABLE: this domain has been retired.",
             "content": {
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/Error"
-                }
-              }
-            }
-          },
-          "200": {
-            "description": "Success; Cache-Control: no-store",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/CommandReceipt"
                 }
               }
             }
@@ -15064,13 +14730,14 @@
             }
           }
         },
-        "x-rivet-scope": "events.write"
+        "x-rivet-scope": "events.write",
+        "deprecated": true
       }
     },
     "/api/v1/polls/{id}/actions/edit": {
       "post": {
         "summary": "polls.write command",
-        "description": "Player session required. Current game permissions, module state, revision and atomic idempotency receipt are checked. Staff operations support offline accounts using static LuckPerms context. Retry identical operationId/issuedAt/payload.",
+        "description": "Retired resource. Authenticated requests cannot read or mutate this domain; they return UNAVAILABLE. Saved data is available to the server owner through archive export.",
         "security": [
           {
             "applicationKey": []
@@ -15177,21 +14844,11 @@
             }
           },
           "503": {
-            "description": "Request denied or invalid; no secrets in error details.",
+            "description": "UNAVAILABLE: this domain has been retired.",
             "content": {
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/Error"
-                }
-              }
-            }
-          },
-          "200": {
-            "description": "Success; Cache-Control: no-store",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/CommandReceipt"
                 }
               }
             }
@@ -15240,13 +14897,14 @@
             }
           }
         },
-        "x-rivet-scope": "polls.write"
+        "x-rivet-scope": "polls.write",
+        "deprecated": true
       }
     },
     "/api/v1/polls/{id}/actions/delete": {
       "post": {
         "summary": "polls.write command",
-        "description": "Player session required. Current game permissions, module state, revision and atomic idempotency receipt are checked. Staff operations support offline accounts using static LuckPerms context. Retry identical operationId/issuedAt/payload.",
+        "description": "Retired resource. Authenticated requests cannot read or mutate this domain; they return UNAVAILABLE. Saved data is available to the server owner through archive export.",
         "security": [
           {
             "applicationKey": []
@@ -15353,21 +15011,11 @@
             }
           },
           "503": {
-            "description": "Request denied or invalid; no secrets in error details.",
+            "description": "UNAVAILABLE: this domain has been retired.",
             "content": {
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/Error"
-                }
-              }
-            }
-          },
-          "200": {
-            "description": "Success; Cache-Control: no-store",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/CommandReceipt"
                 }
               }
             }
@@ -15406,13 +15054,14 @@
             }
           }
         },
-        "x-rivet-scope": "polls.write"
+        "x-rivet-scope": "polls.write",
+        "deprecated": true
       }
     },
     "/api/v1/polls/{id}/actions/restore": {
       "post": {
         "summary": "polls.write command",
-        "description": "Player session required. Current game permissions, module state, revision and atomic idempotency receipt are checked. Staff operations support offline accounts using static LuckPerms context. Retry identical operationId/issuedAt/payload.",
+        "description": "Retired resource. Authenticated requests cannot read or mutate this domain; they return UNAVAILABLE. Saved data is available to the server owner through archive export.",
         "security": [
           {
             "applicationKey": []
@@ -15519,21 +15168,11 @@
             }
           },
           "503": {
-            "description": "Request denied or invalid; no secrets in error details.",
+            "description": "UNAVAILABLE: this domain has been retired.",
             "content": {
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/Error"
-                }
-              }
-            }
-          },
-          "200": {
-            "description": "Success; Cache-Control: no-store",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/CommandReceipt"
                 }
               }
             }
@@ -15572,13 +15211,14 @@
             }
           }
         },
-        "x-rivet-scope": "polls.write"
+        "x-rivet-scope": "polls.write",
+        "deprecated": true
       }
     },
     "/api/v1/ideas/{id}/actions/edit": {
       "post": {
         "summary": "ideas.write command",
-        "description": "Player session required. Current game permissions, module state, revision and atomic idempotency receipt are checked. Staff operations support offline accounts using static LuckPerms context. Retry identical operationId/issuedAt/payload.",
+        "description": "Retired resource. Authenticated requests cannot read or mutate this domain; they return UNAVAILABLE. Saved data is available to the server owner through archive export.",
         "security": [
           {
             "applicationKey": []
@@ -15685,21 +15325,11 @@
             }
           },
           "503": {
-            "description": "Request denied or invalid; no secrets in error details.",
+            "description": "UNAVAILABLE: this domain has been retired.",
             "content": {
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/Error"
-                }
-              }
-            }
-          },
-          "200": {
-            "description": "Success; Cache-Control: no-store",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/CommandReceipt"
                 }
               }
             }
@@ -15748,13 +15378,14 @@
             }
           }
         },
-        "x-rivet-scope": "ideas.write"
+        "x-rivet-scope": "ideas.write",
+        "deprecated": true
       }
     },
     "/api/v1/ideas/{id}/actions/delete": {
       "post": {
         "summary": "ideas.write command",
-        "description": "Player session required. Current game permissions, module state, revision and atomic idempotency receipt are checked. Staff operations support offline accounts using static LuckPerms context. Retry identical operationId/issuedAt/payload.",
+        "description": "Retired resource. Authenticated requests cannot read or mutate this domain; they return UNAVAILABLE. Saved data is available to the server owner through archive export.",
         "security": [
           {
             "applicationKey": []
@@ -15861,21 +15492,11 @@
             }
           },
           "503": {
-            "description": "Request denied or invalid; no secrets in error details.",
+            "description": "UNAVAILABLE: this domain has been retired.",
             "content": {
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/Error"
-                }
-              }
-            }
-          },
-          "200": {
-            "description": "Success; Cache-Control: no-store",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/CommandReceipt"
                 }
               }
             }
@@ -15914,13 +15535,14 @@
             }
           }
         },
-        "x-rivet-scope": "ideas.write"
+        "x-rivet-scope": "ideas.write",
+        "deprecated": true
       }
     },
     "/api/v1/ideas/{id}/actions/restore": {
       "post": {
         "summary": "ideas.write command",
-        "description": "Player session required. Current game permissions, module state, revision and atomic idempotency receipt are checked. Staff operations support offline accounts using static LuckPerms context. Retry identical operationId/issuedAt/payload.",
+        "description": "Retired resource. Authenticated requests cannot read or mutate this domain; they return UNAVAILABLE. Saved data is available to the server owner through archive export.",
         "security": [
           {
             "applicationKey": []
@@ -16027,21 +15649,11 @@
             }
           },
           "503": {
-            "description": "Request denied or invalid; no secrets in error details.",
+            "description": "UNAVAILABLE: this domain has been retired.",
             "content": {
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/Error"
-                }
-              }
-            }
-          },
-          "200": {
-            "description": "Success; Cache-Control: no-store",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/CommandReceipt"
                 }
               }
             }
@@ -16080,7 +15692,8 @@
             }
           }
         },
-        "x-rivet-scope": "ideas.write"
+        "x-rivet-scope": "ideas.write",
+        "deprecated": true
       }
     },
     "/api/v1/groups/{id}/actions/invite": {
@@ -17120,7 +16733,7 @@
     "/api/v1/events/{id}/actions/reschedule": {
       "post": {
         "summary": "events.write command",
-        "description": "Player session required. Current game permissions, module state, revision and atomic idempotency receipt are checked. Staff operations support offline accounts using static LuckPerms context. Retry identical operationId/issuedAt/payload.",
+        "description": "Retired resource. Authenticated requests cannot read or mutate this domain; they return UNAVAILABLE. Saved data is available to the server owner through archive export.",
         "security": [
           {
             "applicationKey": []
@@ -17227,21 +16840,11 @@
             }
           },
           "503": {
-            "description": "Request denied or invalid; no secrets in error details.",
+            "description": "UNAVAILABLE: this domain has been retired.",
             "content": {
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/Error"
-                }
-              }
-            }
-          },
-          "200": {
-            "description": "Success; Cache-Control: no-store",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/CommandReceipt"
                 }
               }
             }
@@ -17286,13 +16889,14 @@
             }
           }
         },
-        "x-rivet-scope": "events.write"
+        "x-rivet-scope": "events.write",
+        "deprecated": true
       }
     },
     "/api/v1/events/{id}/actions/cancel": {
       "post": {
         "summary": "events.write command",
-        "description": "Player session required. Current game permissions, module state, revision and atomic idempotency receipt are checked. Staff operations support offline accounts using static LuckPerms context. Retry identical operationId/issuedAt/payload.",
+        "description": "Retired resource. Authenticated requests cannot read or mutate this domain; they return UNAVAILABLE. Saved data is available to the server owner through archive export.",
         "security": [
           {
             "applicationKey": []
@@ -17399,21 +17003,11 @@
             }
           },
           "503": {
-            "description": "Request denied or invalid; no secrets in error details.",
+            "description": "UNAVAILABLE: this domain has been retired.",
             "content": {
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/Error"
-                }
-              }
-            }
-          },
-          "200": {
-            "description": "Success; Cache-Control: no-store",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/CommandReceipt"
                 }
               }
             }
@@ -17458,13 +17052,14 @@
             }
           }
         },
-        "x-rivet-scope": "events.write"
+        "x-rivet-scope": "events.write",
+        "deprecated": true
       }
     },
     "/api/v1/board/{id}/actions/withdrawResponse": {
       "post": {
         "summary": "board.write command",
-        "description": "Player session required. Current game permissions, module state, revision and atomic idempotency receipt are checked. Staff operations support offline accounts using static LuckPerms context. Retry identical operationId/issuedAt/payload.",
+        "description": "Retired resource. Authenticated requests cannot read or mutate this domain; they return UNAVAILABLE. Saved data is available to the server owner through archive export.",
         "security": [
           {
             "applicationKey": []
@@ -17571,21 +17166,11 @@
             }
           },
           "503": {
-            "description": "Request denied or invalid; no secrets in error details.",
+            "description": "UNAVAILABLE: this domain has been retired.",
             "content": {
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/Error"
-                }
-              }
-            }
-          },
-          "200": {
-            "description": "Success; Cache-Control: no-store",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/CommandReceipt"
                 }
               }
             }
@@ -17630,13 +17215,14 @@
             }
           }
         },
-        "x-rivet-scope": "board.write"
+        "x-rivet-scope": "board.write",
+        "deprecated": true
       }
     },
     "/api/v1/board/{id}/actions/respondDecision": {
       "post": {
         "summary": "board.write command",
-        "description": "Player session required. Current game permissions, module state, revision and atomic idempotency receipt are checked. Staff operations support offline accounts using static LuckPerms context. Retry identical operationId/issuedAt/payload.",
+        "description": "Retired resource. Authenticated requests cannot read or mutate this domain; they return UNAVAILABLE. Saved data is available to the server owner through archive export.",
         "security": [
           {
             "applicationKey": []
@@ -17743,21 +17329,11 @@
             }
           },
           "503": {
-            "description": "Request denied or invalid; no secrets in error details.",
+            "description": "UNAVAILABLE: this domain has been retired.",
             "content": {
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/Error"
-                }
-              }
-            }
-          },
-          "200": {
-            "description": "Success; Cache-Control: no-store",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/CommandReceipt"
                 }
               }
             }
@@ -17810,13 +17386,14 @@
             }
           }
         },
-        "x-rivet-scope": "board.write"
+        "x-rivet-scope": "board.write",
+        "deprecated": true
       }
     },
     "/api/v1/tasks/{id}/assign": {
       "post": {
         "summary": "tasks.write command",
-        "description": "Player session required. Current game permissions, module state, revision and atomic idempotency receipt are checked. Staff operations support offline accounts using static LuckPerms context. Retry identical operationId/issuedAt/payload.",
+        "description": "Retired resource. Authenticated requests cannot read or mutate this domain; they return UNAVAILABLE. Saved data is available to the server owner through archive export.",
         "security": [
           {
             "applicationKey": []
@@ -17923,21 +17500,11 @@
             }
           },
           "503": {
-            "description": "Request denied or invalid; no secrets in error details.",
+            "description": "UNAVAILABLE: this domain has been retired.",
             "content": {
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/Error"
-                }
-              }
-            }
-          },
-          "200": {
-            "description": "Success; Cache-Control: no-store",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/CommandReceipt"
                 }
               }
             }
@@ -17982,13 +17549,14 @@
             }
           }
         },
-        "x-rivet-scope": "tasks.write"
+        "x-rivet-scope": "tasks.write",
+        "deprecated": true
       }
     },
     "/api/v1/tasks/{id}/due": {
       "post": {
         "summary": "tasks.write command",
-        "description": "Player session required. Current game permissions, module state, revision and atomic idempotency receipt are checked. Staff operations support offline accounts using static LuckPerms context. Retry identical operationId/issuedAt/payload.",
+        "description": "Retired resource. Authenticated requests cannot read or mutate this domain; they return UNAVAILABLE. Saved data is available to the server owner through archive export.",
         "security": [
           {
             "applicationKey": []
@@ -18095,21 +17663,11 @@
             }
           },
           "503": {
-            "description": "Request denied or invalid; no secrets in error details.",
+            "description": "UNAVAILABLE: this domain has been retired.",
             "content": {
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/Error"
-                }
-              }
-            }
-          },
-          "200": {
-            "description": "Success; Cache-Control: no-store",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/CommandReceipt"
                 }
               }
             }
@@ -18156,13 +17714,14 @@
             }
           }
         },
-        "x-rivet-scope": "tasks.write"
+        "x-rivet-scope": "tasks.write",
+        "deprecated": true
       }
     },
     "/api/v1/tasks/{id}/comment": {
       "post": {
         "summary": "tasks.write command",
-        "description": "Player session required. Current game permissions, module state, revision and atomic idempotency receipt are checked. Staff operations support offline accounts using static LuckPerms context. Retry identical operationId/issuedAt/payload.",
+        "description": "Retired resource. Authenticated requests cannot read or mutate this domain; they return UNAVAILABLE. Saved data is available to the server owner through archive export.",
         "security": [
           {
             "applicationKey": []
@@ -18269,21 +17828,11 @@
             }
           },
           "503": {
-            "description": "Request denied or invalid; no secrets in error details.",
+            "description": "UNAVAILABLE: this domain has been retired.",
             "content": {
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/Error"
-                }
-              }
-            }
-          },
-          "200": {
-            "description": "Success; Cache-Control: no-store",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/CommandReceipt"
                 }
               }
             }
@@ -18328,13 +17877,14 @@
             }
           }
         },
-        "x-rivet-scope": "tasks.write"
+        "x-rivet-scope": "tasks.write",
+        "deprecated": true
       }
     },
     "/api/v1/tasks/{id}/restore": {
       "post": {
         "summary": "tasks.write command",
-        "description": "Player session required. Current game permissions, module state, revision and atomic idempotency receipt are checked. Staff operations support offline accounts using static LuckPerms context. Retry identical operationId/issuedAt/payload.",
+        "description": "Retired resource. Authenticated requests cannot read or mutate this domain; they return UNAVAILABLE. Saved data is available to the server owner through archive export.",
         "security": [
           {
             "applicationKey": []
@@ -18441,21 +17991,11 @@
             }
           },
           "503": {
-            "description": "Request denied or invalid; no secrets in error details.",
+            "description": "UNAVAILABLE: this domain has been retired.",
             "content": {
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/Error"
-                }
-              }
-            }
-          },
-          "200": {
-            "description": "Success; Cache-Control: no-store",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/CommandReceipt"
                 }
               }
             }
@@ -18494,13 +18034,14 @@
             }
           }
         },
-        "x-rivet-scope": "tasks.write"
+        "x-rivet-scope": "tasks.write",
+        "deprecated": true
       }
     },
     "/api/v1/tasks/{id}/dependencies": {
       "post": {
         "summary": "tasks.write command",
-        "description": "Player session required. Current game permissions, module state, revision and atomic idempotency receipt are checked. Staff operations support offline accounts using static LuckPerms context. Retry identical operationId/issuedAt/payload.",
+        "description": "Retired resource. Authenticated requests cannot read or mutate this domain; they return UNAVAILABLE. Saved data is available to the server owner through archive export.",
         "security": [
           {
             "applicationKey": []
@@ -18607,21 +18148,11 @@
             }
           },
           "503": {
-            "description": "Request denied or invalid; no secrets in error details.",
+            "description": "UNAVAILABLE: this domain has been retired.",
             "content": {
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/Error"
-                }
-              }
-            }
-          },
-          "200": {
-            "description": "Success; Cache-Control: no-store",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/CommandReceipt"
                 }
               }
             }
@@ -18666,13 +18197,14 @@
             }
           }
         },
-        "x-rivet-scope": "tasks.write"
+        "x-rivet-scope": "tasks.write",
+        "deprecated": true
       }
     },
     "/api/v1/tasks/{id}/repeat": {
       "post": {
         "summary": "tasks.write command",
-        "description": "Player session required. Current game permissions, module state, revision and atomic idempotency receipt are checked. Staff operations support offline accounts using static LuckPerms context. Retry identical operationId/issuedAt/payload.",
+        "description": "Retired resource. Authenticated requests cannot read or mutate this domain; they return UNAVAILABLE. Saved data is available to the server owner through archive export.",
         "security": [
           {
             "applicationKey": []
@@ -18779,21 +18311,11 @@
             }
           },
           "503": {
-            "description": "Request denied or invalid; no secrets in error details.",
+            "description": "UNAVAILABLE: this domain has been retired.",
             "content": {
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/Error"
-                }
-              }
-            }
-          },
-          "200": {
-            "description": "Success; Cache-Control: no-store",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/CommandReceipt"
                 }
               }
             }
@@ -18840,13 +18362,14 @@
             }
           }
         },
-        "x-rivet-scope": "tasks.write"
+        "x-rivet-scope": "tasks.write",
+        "deprecated": true
       }
     },
     "/api/v1/tasks/{id}/reserve": {
       "post": {
         "summary": "tasks.write command",
-        "description": "Player session required. Current game permissions, module state, revision and atomic idempotency receipt are checked. Staff operations support offline accounts using static LuckPerms context. Retry identical operationId/issuedAt/payload.",
+        "description": "Retired resource. Authenticated requests cannot read or mutate this domain; they return UNAVAILABLE. Saved data is available to the server owner through archive export.",
         "security": [
           {
             "applicationKey": []
@@ -18953,21 +18476,11 @@
             }
           },
           "503": {
-            "description": "Request denied or invalid; no secrets in error details.",
+            "description": "UNAVAILABLE: this domain has been retired.",
             "content": {
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/Error"
-                }
-              }
-            }
-          },
-          "200": {
-            "description": "Success; Cache-Control: no-store",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/CommandReceipt"
                 }
               }
             }
@@ -19012,7 +18525,8 @@
             }
           }
         },
-        "x-rivet-scope": "tasks.write"
+        "x-rivet-scope": "tasks.write",
+        "deprecated": true
       }
     },
     "/api/v1/admin/map/objects/{id}": {
@@ -19891,7 +19405,7 @@
     "/api/v1/tasks/{id}/subtask-add": {
       "post": {
         "summary": "tasks.write command",
-        "description": "Requires tasks.write and a player session. Existing ownership and membership rules apply. Retain operationId, issuedAt, data and If-Match on retry. Changes and receipt commit together.",
+        "description": "Retired resource. Authenticated requests cannot read or mutate this domain; they return UNAVAILABLE. Saved data is available to the server owner through archive export.",
         "security": [
           {
             "applicationKey": []
@@ -19998,21 +19512,11 @@
             }
           },
           "503": {
-            "description": "Request denied or invalid; no secrets in error details.",
+            "description": "UNAVAILABLE: this domain has been retired.",
             "content": {
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/Error"
-                }
-              }
-            }
-          },
-          "200": {
-            "description": "Success; Cache-Control: no-store",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/CommandReceipt"
                 }
               }
             }
@@ -20061,13 +19565,14 @@
               }
             }
           }
-        }
+        },
+        "deprecated": true
       }
     },
     "/api/v1/tasks/{id}/subtask-edit": {
       "post": {
         "summary": "tasks.write command",
-        "description": "Requires tasks.write and a player session. Existing ownership and membership rules apply. Retain operationId, issuedAt, data and If-Match on retry. Changes and receipt commit together.",
+        "description": "Retired resource. Authenticated requests cannot read or mutate this domain; they return UNAVAILABLE. Saved data is available to the server owner through archive export.",
         "security": [
           {
             "applicationKey": []
@@ -20174,21 +19679,11 @@
             }
           },
           "503": {
-            "description": "Request denied or invalid; no secrets in error details.",
+            "description": "UNAVAILABLE: this domain has been retired.",
             "content": {
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/Error"
-                }
-              }
-            }
-          },
-          "200": {
-            "description": "Success; Cache-Control: no-store",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/CommandReceipt"
                 }
               }
             }
@@ -20238,13 +19733,14 @@
               }
             }
           }
-        }
+        },
+        "deprecated": true
       }
     },
     "/api/v1/tasks/{id}/subtask-toggle": {
       "post": {
         "summary": "tasks.write command",
-        "description": "Requires tasks.write and a player session. Existing ownership and membership rules apply. Retain operationId, issuedAt, data and If-Match on retry. Changes and receipt commit together.",
+        "description": "Retired resource. Authenticated requests cannot read or mutate this domain; they return UNAVAILABLE. Saved data is available to the server owner through archive export.",
         "security": [
           {
             "applicationKey": []
@@ -20351,21 +19847,11 @@
             }
           },
           "503": {
-            "description": "Request denied or invalid; no secrets in error details.",
+            "description": "UNAVAILABLE: this domain has been retired.",
             "content": {
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/Error"
-                }
-              }
-            }
-          },
-          "200": {
-            "description": "Success; Cache-Control: no-store",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/CommandReceipt"
                 }
               }
             }
@@ -20410,13 +19896,14 @@
               }
             }
           }
-        }
+        },
+        "deprecated": true
       }
     },
     "/api/v1/tasks/{id}/subtask-remove": {
       "post": {
         "summary": "tasks.write command",
-        "description": "Requires tasks.write and a player session. Existing ownership and membership rules apply. Retain operationId, issuedAt, data and If-Match on retry. Changes and receipt commit together.",
+        "description": "Retired resource. Authenticated requests cannot read or mutate this domain; they return UNAVAILABLE. Saved data is available to the server owner through archive export.",
         "security": [
           {
             "applicationKey": []
@@ -20523,21 +20010,11 @@
             }
           },
           "503": {
-            "description": "Request denied or invalid; no secrets in error details.",
+            "description": "UNAVAILABLE: this domain has been retired.",
             "content": {
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/Error"
-                }
-              }
-            }
-          },
-          "200": {
-            "description": "Success; Cache-Control: no-store",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/CommandReceipt"
                 }
               }
             }
@@ -20582,13 +20059,14 @@
               }
             }
           }
-        }
+        },
+        "deprecated": true
       }
     },
     "/api/v1/tasks/{id}/resources": {
       "post": {
         "summary": "tasks.write command",
-        "description": "Requires tasks.write and a player session. Existing ownership and membership rules apply. Retain operationId, issuedAt, data and If-Match on retry. Changes and receipt commit together.",
+        "description": "Retired resource. Authenticated requests cannot read or mutate this domain; they return UNAVAILABLE. Saved data is available to the server owner through archive export.",
         "security": [
           {
             "applicationKey": []
@@ -20695,21 +20173,11 @@
             }
           },
           "503": {
-            "description": "Request denied or invalid; no secrets in error details.",
+            "description": "UNAVAILABLE: this domain has been retired.",
             "content": {
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/Error"
-                }
-              }
-            }
-          },
-          "200": {
-            "description": "Success; Cache-Control: no-store",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/CommandReceipt"
                 }
               }
             }
@@ -20781,13 +20249,14 @@
               }
             }
           }
-        }
+        },
+        "deprecated": true
       }
     },
     "/api/v1/tasks/{id}/details": {
       "get": {
         "summary": "Read task details; tasks.read and task visibility required",
-        "description": "Read task details; tasks.read and task visibility required",
+        "description": "Retired resource. Authenticated requests cannot read or mutate this domain; they return UNAVAILABLE. Saved data is available to the server owner through archive export.",
         "security": [
           {
             "applicationKey": []
@@ -20916,7 +20385,7 @@
             }
           },
           "503": {
-            "description": "Request denied or invalid; no secrets in error details.",
+            "description": "UNAVAILABLE: this domain has been retired.",
             "content": {
               "application/json": {
                 "schema": {
@@ -20924,171 +20393,15 @@
                 }
               }
             }
-          },
-          "200": {
-            "description": "Success; Cache-Control: no-store",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "object",
-                  "properties": {
-                    "item": {
-                      "type": "object",
-                      "properties": {
-                        "id": {
-                          "type": "string",
-                          "format": "uuid"
-                        },
-                        "revision": {
-                          "type": "integer",
-                          "minimum": 0,
-                          "maximum": 2147483647
-                        },
-                        "assignee": {
-                          "type": "string",
-                          "maxLength": 36
-                        },
-                        "dueAt": {
-                          "type": "integer",
-                          "minimum": 0
-                        },
-                        "subtaskOffset": {
-                          "type": "integer",
-                          "minimum": 0,
-                          "maximum": 2147483647
-                        },
-                        "subtaskCount": {
-                          "type": "integer",
-                          "minimum": 0,
-                          "maximum": 2147483647
-                        },
-                        "commentOffset": {
-                          "type": "integer",
-                          "minimum": 0,
-                          "maximum": 2147483647
-                        },
-                        "commentCount": {
-                          "type": "integer",
-                          "minimum": 0,
-                          "maximum": 2147483647
-                        },
-                        "subtasks": {
-                          "type": "array",
-                          "items": {
-                            "type": "object",
-                            "properties": {
-                              "title": {
-                                "type": "string",
-                                "maxLength": 100
-                              },
-                              "done": {
-                                "type": "boolean"
-                              },
-                              "assignee": {
-                                "type": "string",
-                                "maxLength": 36
-                              }
-                            },
-                            "required": [
-                              "title",
-                              "done",
-                              "assignee"
-                            ],
-                            "additionalProperties": false
-                          },
-                          "maxItems": 20
-                        },
-                        "comments": {
-                          "type": "array",
-                          "items": {
-                            "type": "object",
-                            "properties": {
-                              "author": {
-                                "type": "string",
-                                "maxLength": 500
-                              },
-                              "text": {
-                                "type": "string",
-                                "maxLength": 500
-                              },
-                              "at": {
-                                "type": "integer",
-                                "minimum": 0
-                              }
-                            },
-                            "required": [
-                              "author",
-                              "text",
-                              "at"
-                            ],
-                            "additionalProperties": false
-                          },
-                          "maxItems": 20
-                        },
-                        "resources": {
-                          "type": "array",
-                          "items": {
-                            "type": "object",
-                            "properties": {
-                              "item": {
-                                "type": "string",
-                                "maxLength": 200
-                              },
-                              "amount": {
-                                "type": "integer",
-                                "minimum": 1,
-                                "maximum": 1000000
-                              },
-                              "alternatives": {
-                                "type": "array",
-                                "items": {
-                                  "type": "string",
-                                  "maxLength": 200
-                                },
-                                "maxItems": 16
-                              }
-                            },
-                            "required": [
-                              "item",
-                              "amount",
-                              "alternatives"
-                            ],
-                            "additionalProperties": false
-                          },
-                          "maxItems": 30
-                        }
-                      },
-                      "required": [
-                        "id",
-                        "revision",
-                        "assignee",
-                        "dueAt",
-                        "subtaskOffset",
-                        "subtaskCount",
-                        "commentOffset",
-                        "commentCount",
-                        "subtasks",
-                        "comments",
-                        "resources"
-                      ],
-                      "additionalProperties": false
-                    }
-                  },
-                  "required": [
-                    "item"
-                  ],
-                  "additionalProperties": false
-                }
-              }
-            }
           }
-        }
+        },
+        "deprecated": true
       }
     },
     "/api/v1/events/{id}/actions/reminder": {
       "post": {
         "summary": "events.write command",
-        "description": "Requires events.write and a player session. Existing ownership and membership rules apply. Retain operationId, issuedAt, data and If-Match on retry. Changes and receipt commit together.",
+        "description": "Retired resource. Authenticated requests cannot read or mutate this domain; they return UNAVAILABLE. Saved data is available to the server owner through archive export.",
         "security": [
           {
             "applicationKey": []
@@ -21195,21 +20508,11 @@
             }
           },
           "503": {
-            "description": "Request denied or invalid; no secrets in error details.",
+            "description": "UNAVAILABLE: this domain has been retired.",
             "content": {
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/Error"
-                }
-              }
-            }
-          },
-          "200": {
-            "description": "Success; Cache-Control: no-store",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/CommandReceipt"
                 }
               }
             }
@@ -21258,13 +20561,14 @@
               }
             }
           }
-        }
+        },
+        "deprecated": true
       }
     },
     "/api/v1/events/{id}/actions/cancelSeries": {
       "post": {
         "summary": "events.write command",
-        "description": "Requires events.write and a player session. Existing ownership and membership rules apply. Retain operationId, issuedAt, data and If-Match on retry. Changes and receipt commit together.",
+        "description": "Retired resource. Authenticated requests cannot read or mutate this domain; they return UNAVAILABLE. Saved data is available to the server owner through archive export.",
         "security": [
           {
             "applicationKey": []
@@ -21371,21 +20675,11 @@
             }
           },
           "503": {
-            "description": "Request denied or invalid; no secrets in error details.",
+            "description": "UNAVAILABLE: this domain has been retired.",
             "content": {
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/Error"
-                }
-              }
-            }
-          },
-          "200": {
-            "description": "Success; Cache-Control: no-store",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/CommandReceipt"
                 }
               }
             }
@@ -21422,7 +20716,8 @@
               }
             }
           }
-        }
+        },
+        "deprecated": true
       }
     },
     "/api/v1/groups/{id}/actions/removeMember": {
@@ -21986,7 +21281,7 @@
     "/api/v1/board/{id}/actions/location": {
       "post": {
         "summary": "board.write command",
-        "description": "Requires board.write and a player session. Existing ownership and membership rules apply. Retain operationId, issuedAt, data and If-Match on retry. Changes and receipt commit together.",
+        "description": "Retired resource. Authenticated requests cannot read or mutate this domain; they return UNAVAILABLE. Saved data is available to the server owner through archive export.",
         "security": [
           {
             "applicationKey": []
@@ -22093,21 +21388,11 @@
             }
           },
           "503": {
-            "description": "Request denied or invalid; no secrets in error details.",
+            "description": "UNAVAILABLE: this domain has been retired.",
             "content": {
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/Error"
-                }
-              }
-            }
-          },
-          "200": {
-            "description": "Success; Cache-Control: no-store",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/CommandReceipt"
                 }
               }
             }
@@ -22188,13 +21473,14 @@
               }
             }
           }
-        }
+        },
+        "deprecated": true
       }
     },
     "/api/v1/events/{id}/actions/location": {
       "post": {
         "summary": "events.write command",
-        "description": "Requires events.write and a player session. Existing ownership and membership rules apply. Retain operationId, issuedAt, data and If-Match on retry. Changes and receipt commit together.",
+        "description": "Retired resource. Authenticated requests cannot read or mutate this domain; they return UNAVAILABLE. Saved data is available to the server owner through archive export.",
         "security": [
           {
             "applicationKey": []
@@ -22301,21 +21587,11 @@
             }
           },
           "503": {
-            "description": "Request denied or invalid; no secrets in error details.",
+            "description": "UNAVAILABLE: this domain has been retired.",
             "content": {
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/Error"
-                }
-              }
-            }
-          },
-          "200": {
-            "description": "Success; Cache-Control: no-store",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/CommandReceipt"
                 }
               }
             }
@@ -22396,13 +21672,14 @@
               }
             }
           }
-        }
+        },
+        "deprecated": true
       }
     },
     "/api/v1/polls/{id}/actions/location": {
       "post": {
         "summary": "polls.write command",
-        "description": "Requires polls.write and a player session. Existing ownership and membership rules apply. Retain operationId, issuedAt, data and If-Match on retry. Changes and receipt commit together.",
+        "description": "Retired resource. Authenticated requests cannot read or mutate this domain; they return UNAVAILABLE. Saved data is available to the server owner through archive export.",
         "security": [
           {
             "applicationKey": []
@@ -22509,21 +21786,11 @@
             }
           },
           "503": {
-            "description": "Request denied or invalid; no secrets in error details.",
+            "description": "UNAVAILABLE: this domain has been retired.",
             "content": {
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/Error"
-                }
-              }
-            }
-          },
-          "200": {
-            "description": "Success; Cache-Control: no-store",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/CommandReceipt"
                 }
               }
             }
@@ -22604,13 +21871,14 @@
               }
             }
           }
-        }
+        },
+        "deprecated": true
       }
     },
     "/api/v1/ideas/{id}/actions/location": {
       "post": {
         "summary": "ideas.write command",
-        "description": "Requires ideas.write and a player session. Existing ownership and membership rules apply. Retain operationId, issuedAt, data and If-Match on retry. Changes and receipt commit together.",
+        "description": "Retired resource. Authenticated requests cannot read or mutate this domain; they return UNAVAILABLE. Saved data is available to the server owner through archive export.",
         "security": [
           {
             "applicationKey": []
@@ -22717,21 +21985,11 @@
             }
           },
           "503": {
-            "description": "Request denied or invalid; no secrets in error details.",
+            "description": "UNAVAILABLE: this domain has been retired.",
             "content": {
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/Error"
-                }
-              }
-            }
-          },
-          "200": {
-            "description": "Success; Cache-Control: no-store",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/CommandReceipt"
                 }
               }
             }
@@ -22812,13 +22070,14 @@
               }
             }
           }
-        }
+        },
+        "deprecated": true
       }
     },
     "/api/v1/board/{id}/actions/hide": {
       "post": {
         "summary": "board.write command",
-        "description": "Requires board.write and a player session. Current rivet.admin is required, including on receipt replay. Retain operationId, issuedAt, data and If-Match on retry. Changes and receipt commit together.",
+        "description": "Retired resource. Authenticated requests cannot read or mutate this domain; they return UNAVAILABLE. Saved data is available to the server owner through archive export.",
         "security": [
           {
             "applicationKey": []
@@ -22925,21 +22184,11 @@
             }
           },
           "503": {
-            "description": "Request denied or invalid; no secrets in error details.",
+            "description": "UNAVAILABLE: this domain has been retired.",
             "content": {
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/Error"
-                }
-              }
-            }
-          },
-          "200": {
-            "description": "Success; Cache-Control: no-store",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/CommandReceipt"
                 }
               }
             }
@@ -22983,13 +22232,14 @@
               }
             }
           }
-        }
+        },
+        "deprecated": true
       }
     },
     "/api/v1/events/{id}/actions/hide": {
       "post": {
         "summary": "events.write command",
-        "description": "Requires events.write and a player session. Current rivet.admin is required, including on receipt replay. Retain operationId, issuedAt, data and If-Match on retry. Changes and receipt commit together.",
+        "description": "Retired resource. Authenticated requests cannot read or mutate this domain; they return UNAVAILABLE. Saved data is available to the server owner through archive export.",
         "security": [
           {
             "applicationKey": []
@@ -23096,21 +22346,11 @@
             }
           },
           "503": {
-            "description": "Request denied or invalid; no secrets in error details.",
+            "description": "UNAVAILABLE: this domain has been retired.",
             "content": {
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/Error"
-                }
-              }
-            }
-          },
-          "200": {
-            "description": "Success; Cache-Control: no-store",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/CommandReceipt"
                 }
               }
             }
@@ -23154,13 +22394,14 @@
               }
             }
           }
-        }
+        },
+        "deprecated": true
       }
     },
     "/api/v1/polls/{id}/actions/hide": {
       "post": {
         "summary": "polls.write command",
-        "description": "Requires polls.write and a player session. Current rivet.admin is required, including on receipt replay. Retain operationId, issuedAt, data and If-Match on retry. Changes and receipt commit together.",
+        "description": "Retired resource. Authenticated requests cannot read or mutate this domain; they return UNAVAILABLE. Saved data is available to the server owner through archive export.",
         "security": [
           {
             "applicationKey": []
@@ -23267,21 +22508,11 @@
             }
           },
           "503": {
-            "description": "Request denied or invalid; no secrets in error details.",
+            "description": "UNAVAILABLE: this domain has been retired.",
             "content": {
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/Error"
-                }
-              }
-            }
-          },
-          "200": {
-            "description": "Success; Cache-Control: no-store",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/CommandReceipt"
                 }
               }
             }
@@ -23325,13 +22556,14 @@
               }
             }
           }
-        }
+        },
+        "deprecated": true
       }
     },
     "/api/v1/ideas/{id}/actions/hide": {
       "post": {
         "summary": "ideas.write command",
-        "description": "Requires ideas.write and a player session. Current rivet.admin is required, including on receipt replay. Retain operationId, issuedAt, data and If-Match on retry. Changes and receipt commit together.",
+        "description": "Retired resource. Authenticated requests cannot read or mutate this domain; they return UNAVAILABLE. Saved data is available to the server owner through archive export.",
         "security": [
           {
             "applicationKey": []
@@ -23438,21 +22670,11 @@
             }
           },
           "503": {
-            "description": "Request denied or invalid; no secrets in error details.",
+            "description": "UNAVAILABLE: this domain has been retired.",
             "content": {
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/Error"
-                }
-              }
-            }
-          },
-          "200": {
-            "description": "Success; Cache-Control: no-store",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/CommandReceipt"
                 }
               }
             }
@@ -23496,7 +22718,8 @@
               }
             }
           }
-        }
+        },
+        "deprecated": true
       }
     },
     "/api/v1/groups/{id}/actions/hide": {
@@ -23673,7 +22896,7 @@
     "/api/v1/ideas/{id}/actions/status": {
       "post": {
         "summary": "ideas.write command",
-        "description": "Requires ideas.write and a player session. Current rivet.admin is required, including on receipt replay. Retain operationId, issuedAt, data and If-Match on retry. Changes and receipt commit together.",
+        "description": "Retired resource. Authenticated requests cannot read or mutate this domain; they return UNAVAILABLE. Saved data is available to the server owner through archive export.",
         "security": [
           {
             "applicationKey": []
@@ -23780,21 +23003,11 @@
             }
           },
           "503": {
-            "description": "Request denied or invalid; no secrets in error details.",
+            "description": "UNAVAILABLE: this domain has been retired.",
             "content": {
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/Error"
-                }
-              }
-            }
-          },
-          "200": {
-            "description": "Success; Cache-Control: no-store",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/CommandReceipt"
                 }
               }
             }
@@ -23848,7 +23061,8 @@
               }
             }
           }
-        }
+        },
+        "deprecated": true
       }
     },
     "/api/v1/groups/{id}/members": {
@@ -24866,7 +24080,7 @@
     "/api/v1/events/{id}/schedule": {
       "get": {
         "summary": "events.read and player session; current visibility applies. Invitees are returned only to the event owner. Occurrences exclude hidden/deleted entries.",
-        "description": "events.read and player session; current visibility applies. Invitees are returned only to the event owner. Occurrences exclude hidden/deleted entries.",
+        "description": "Retired resource. Authenticated requests cannot read or mutate this domain; they return UNAVAILABLE. Saved data is available to the server owner through archive export.",
         "security": [
           {
             "applicationKey": []
@@ -24965,7 +24179,7 @@
             }
           },
           "503": {
-            "description": "Request denied or invalid; no secrets in error details.",
+            "description": "UNAVAILABLE: this domain has been retired.",
             "content": {
               "application/json": {
                 "schema": {
@@ -24973,100 +24187,9 @@
                 }
               }
             }
-          },
-          "200": {
-            "description": "Success; Cache-Control: no-store",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "object",
-                  "properties": {
-                    "item": {
-                      "type": "object",
-                      "properties": {
-                        "id": {
-                          "type": "string",
-                          "format": "uuid"
-                        },
-                        "revision": {
-                          "type": "integer"
-                        },
-                        "visibility": {
-                          "type": "string"
-                        },
-                        "group": {
-                          "type": "string"
-                        },
-                        "startsAt": {
-                          "type": "integer"
-                        },
-                        "durationMinutes": {
-                          "type": "integer"
-                        },
-                        "repeat": {
-                          "type": "string"
-                        },
-                        "series": {
-                          "type": "string"
-                        },
-                        "invitees": {
-                          "type": "array",
-                          "items": {
-                            "type": "string",
-                            "format": "uuid"
-                          },
-                          "maxItems": 30
-                        },
-                        "occurrences": {
-                          "type": "array",
-                          "items": {
-                            "type": "object",
-                            "properties": {
-                              "id": {
-                                "type": "string",
-                                "format": "uuid"
-                              },
-                              "revision": {
-                                "type": "integer"
-                              },
-                              "startsAt": {
-                                "type": "integer"
-                              },
-                              "status": {
-                                "type": "string"
-                              }
-                            },
-                            "required": [
-                              "id",
-                              "revision",
-                              "startsAt",
-                              "status"
-                            ],
-                            "additionalProperties": false
-                          },
-                          "maxItems": 26
-                        }
-                      },
-                      "required": [
-                        "id",
-                        "revision",
-                        "visibility",
-                        "startsAt",
-                        "durationMinutes",
-                        "occurrences"
-                      ],
-                      "additionalProperties": false
-                    }
-                  },
-                  "required": [
-                    "item"
-                  ],
-                  "additionalProperties": false
-                }
-              }
-            }
           }
-        }
+        },
+        "deprecated": true
       }
     },
     "/api/v1/admin/server/announcements": {
@@ -26657,6 +25780,313 @@
         },
         "parameters": [],
         "summary": "List terrain profiles authorized for the key"
+      }
+    },
+    "/api/v1/notifications/{type}/{recipient}/{key}": {
+      "put": {
+        "summary": "Publish or update an application notification",
+        "description": "Backend only. Ownership is the immutable application ID of the key, preserved on rotation. A player session is not required. Only own types and records are writable. Opening an action rechecks the recipient permission.",
+        "security": [
+          {
+            "applicationKey": []
+          }
+        ],
+        "x-rivet-scope": "notifications.publish",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "type",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "pattern": "^[a-zA-Z0-9_][a-zA-Z0-9_.-]{0,63}$"
+            }
+          },
+          {
+            "in": "path",
+            "name": "recipient",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "in": "path",
+            "name": "key",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "pattern": "^[a-zA-Z0-9_][a-zA-Z0-9_.-]{0,63}$"
+            }
+          },
+          {
+            "in": "header",
+            "name": "If-Match",
+            "required": true,
+            "description": "Quoted revision. PUT creation uses \"0\". Retry with the same key and revision. DELETE requires a positive revision.",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "400": {
+            "description": "Request denied or invalid; no secrets in error details.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Request denied or invalid; no secrets in error details.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Request denied or invalid; no secrets in error details.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Request denied or invalid; no secrets in error details.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Request denied or invalid; no secrets in error details.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "413": {
+            "description": "Request denied or invalid; no secrets in error details.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Request denied or invalid; no secrets in error details.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Request denied or invalid; no secrets in error details.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "200": {
+            "description": "Receipt; no read state changes.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "id": {
+                      "type": "integer",
+                      "format": "int64"
+                    },
+                    "revision": {
+                      "type": "integer",
+                      "format": "int64"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PublishedNotification"
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "summary": "Revoke an application notification",
+        "description": "Backend only. Ownership is the immutable application ID of the key, preserved on rotation. A player session is not required. Only own types and records are writable. Opening an action rechecks the recipient permission.",
+        "security": [
+          {
+            "applicationKey": []
+          }
+        ],
+        "x-rivet-scope": "notifications.revoke",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "type",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "pattern": "^[a-zA-Z0-9_][a-zA-Z0-9_.-]{0,63}$"
+            }
+          },
+          {
+            "in": "path",
+            "name": "recipient",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "in": "path",
+            "name": "key",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "pattern": "^[a-zA-Z0-9_][a-zA-Z0-9_.-]{0,63}$"
+            }
+          },
+          {
+            "in": "header",
+            "name": "If-Match",
+            "required": true,
+            "description": "Quoted revision. PUT creation uses \"0\". Retry with the same key and revision. DELETE requires a positive revision.",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "400": {
+            "description": "Request denied or invalid; no secrets in error details.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Request denied or invalid; no secrets in error details.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Request denied or invalid; no secrets in error details.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Request denied or invalid; no secrets in error details.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Request denied or invalid; no secrets in error details.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "413": {
+            "description": "Request denied or invalid; no secrets in error details.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Request denied or invalid; no secrets in error details.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Request denied or invalid; no secrets in error details.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "200": {
+            "description": "Receipt; no read state changes.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "revoked": {
+                      "type": "boolean"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
       }
     }
   }

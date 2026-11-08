@@ -21,7 +21,7 @@ class BrowserTicketsTest {
  Time clock=new Time();
  @BeforeEach void setup()throws Exception{
   var db=TestDatabase.database(root);keys=new ApiKeys(db,new ApiKeys.Limits(100,8,10000,30,30,1000),Clock.systemUTC());
-  var key=keys.create(root,"website",Set.of("websocket.connect","websocket.ticket","sessions.link","events.read","server.status.subscribe"),1,10000);secret=Files.readString(key.deliveryFile()).trim();grant=keys.authorize(secret,"websocket.ticket");
+  var key=keys.create(root,"website",Set.of("websocket.connect","websocket.ticket","sessions.link","groups.read","server.status.subscribe"),1,10000);secret=Files.readString(key.deliveryFile()).trim();grant=keys.authorize(secret,"websocket.ticket");
   sessions=new PlayerSessions(keys,new AuthStore(db),false,Clock.systemUTC(),1,100);var c=sessions.challenge(grant);sessions.confirm(c.code(),"website",UUID.randomUUID().toString(),"Player");session=sessions.exchange(grant,c.code(),c.pollToken()).token();
   tickets=new BrowserTickets(keys,sessions,clock,new BrowserTickets.Limits(30,8,2),Set.of(ORIGIN));
   domain=new DomainRest(keys,sessions,new CommunityStore(db,CommunityStore.defaults()));rest=new RestApi(RestApiTest.feed(),RestApi.authorization(keys),RestApiTest.settings(Set.of()),new BrowserTicketRest(keys,tickets,domain));
@@ -58,9 +58,9 @@ class BrowserTicketsTest {
  ApiWebSocketServer server()throws Exception{int port;try(var socket=new ServerSocket(0,0,InetAddress.getLoopbackAddress())){port=socket.getLocalPort();}var server=new ApiWebSocketServer(new WebSocketSettings(true,"127.0.0.1",port,4,1000),rest,RestApiTest.feed(),keys,new DomainSubscriptions(domain),null,tickets);server.start();return server;}
  WebSocket connect(HttpClient client,ApiWebSocketServer server,String ticket,Listener listener)throws Exception{return client.newWebSocketBuilder().header("Origin",ORIGIN).subprotocols("rivet.v1","rivet.ticket."+ticket).buildAsync(URI.create("ws://127.0.0.1:"+server.port()+"/api/v1/ws"),listener).get(5,TimeUnit.SECONDS);}
  @Test void browserHandshakeSubscribesWithoutKeyAndClosesOnSessionRevoke()throws Exception{
-  try(var server=server();var client=HttpClient.newHttpClient()){
+  try(var client=HttpClient.newHttpClient();var server=server()){
    var issued=tickets.issue(grant,session,ORIGIN);var listener=new Listener();var ws=connect(client,server,issued.ticket(),listener);assertEquals("rivet.v1",ws.getSubprotocol());
-   ws.sendText("{\"type\":\"watch\",\"id\":\"events\",\"path\":\"events\",\"query\":{},\"session\":null,\"cursor\":null}",true).join();var message=listener.messages.poll(5,TimeUnit.SECONDS);assertNotNull(message);assertEquals("resource.snapshot",JsonParser.parseString(message).getAsJsonObject().get("type").getAsString());assertFalse(message.contains(session));assertFalse(message.contains(secret));
+   ws.sendText("{\"type\":\"watch\",\"id\":\"groups\",\"path\":\"groups\",\"query\":{},\"session\":null,\"cursor\":null}",true).join();var message=listener.messages.poll(5,TimeUnit.SECONDS);assertNotNull(message);assertEquals("resource.snapshot",JsonParser.parseString(message).getAsJsonObject().get("type").getAsString());assertFalse(message.contains(session));assertFalse(message.contains(secret));
    assertThrows(Exception.class,()->connect(client,server,issued.ticket(),new Listener()));sessions.revoke(grant,session);listener.closed.get(5,TimeUnit.SECONDS);ws.abort();
   }
  }
@@ -71,8 +71,8 @@ class BrowserTicketsTest {
   }
  }
  @Test void browserCannotSwapSessionOrTunnelMutations()throws Exception{
-  try(var server=server();var client=HttpClient.newHttpClient()){
-   for(String command:List.of("{\"type\":\"watch\",\"id\":\"events\",\"path\":\"events\",\"query\":{},\"session\":\""+session+"\",\"cursor\":null}","{\"type\":\"request\"}")){
+  try(var client=HttpClient.newHttpClient();var server=server()){
+   for(String command:List.of("{\"type\":\"watch\",\"id\":\"groups\",\"path\":\"groups\",\"query\":{},\"session\":\""+session+"\",\"cursor\":null}","{\"type\":\"request\"}")){
     var listener=new Listener();var ws=connect(client,server,tickets.issue(grant,session,ORIGIN).ticket(),listener);ws.sendText(command,true).join();String message=listener.messages.poll(5,TimeUnit.SECONDS);assertNotNull(message);assertTrue(message.contains("FORBIDDEN"));listener.closed.get(5,TimeUnit.SECONDS);ws.abort();
    }
   }

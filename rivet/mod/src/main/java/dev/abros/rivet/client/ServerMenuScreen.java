@@ -15,7 +15,7 @@ final class ServerMenuScreen extends ScrollScreen implements CommunityScreen.Rec
     
     ServerMenuScreen(Screen parent,String tab){super(Client.tr("server.menu"));this.parent=parent;this.tab=tab;}
     private String stateKey="";
-    private final RequestSession overviewSession=new RequestSession();private JsonObject overviewData=new JsonObject();private boolean overviewLoaded,overviewBusy,refreshOnReturn;private String overviewNotice="";private Button overviewRefresh;
+    private final RequestSession overviewSession=new RequestSession();private JsonObject overviewData=new JsonObject();private boolean overviewLoaded,overviewBusy,refreshOnReturn;private long overviewDirtyAt;private String overviewNotice="";private Button overviewRefresh;
     private record Summary(String title,String value,List<String> details,int accent,Runnable action){}
     private final List<Summary> summaries=new ArrayList<>();
     private record DashboardSection(String title,List<Summary> items){}
@@ -24,8 +24,10 @@ final class ServerMenuScreen extends ScrollScreen implements CommunityScreen.Rec
 
     private String metric(String key){return dev.abros.rivet.core.DisplayCounts.text(overviewData,key,overviewBusy?"…":"—");}
     private void group(String group){adminGroup=group;resetScroll();rebuildWidgets();}
-    private void loadOverview(){if(overviewBusy||!ServerMenuClient.admin()||!ServerMenuClient.supports("player-tools"))return;overviewLoaded=true;overviewBusy=true;if(overviewRefresh!=null)overviewRefresh.active=false;overviewNotice=Client.text("ui.updating_summary_e06b0a85");var q=new JsonObject();q.addProperty("action","adminDashboard");ServerMenuClient.request(overviewSession.begin(q,false,System.currentTimeMillis()));}
-    public void receiveCommunity(JsonObject response){if(!overviewSession.receive(response))return;overviewBusy=false;overviewNotice=response.has("error")?Json.opt(response,"text",Client.text("ui.summary_unavailable_f9423eba")):"";if(overviewRefresh!=null)overviewRefresh.active=true;if(!response.has("error")&&!UiPayload.same(overviewData,response)){overviewData=response.deepCopy();rebuildWidgets();}}
+    boolean overviewSubscription(){return tab.equals("admin")&&ServerMenuClient.admin();}
+    void invalidateOverview(JsonObject hint){if(overviewSubscription()&&dev.abros.rivet.core.MenuChangeHint.dashboard(hint)&&overviewDirtyAt==0)overviewDirtyAt=System.currentTimeMillis()+250;}
+    private void loadOverview(){if(overviewBusy||!ServerMenuClient.admin()||!ServerMenuClient.supports("player-tools"))return;overviewDirtyAt=0;overviewLoaded=true;overviewBusy=true;if(overviewRefresh!=null)overviewRefresh.active=false;overviewNotice=Client.text("ui.updating_summary_e06b0a85");var q=new JsonObject();q.addProperty("action","adminDashboard");ServerMenuClient.request(overviewSession.begin(q,false,System.currentTimeMillis()));}
+    public void receiveCommunity(JsonObject response){if(!overviewSession.receive(response))return;overviewBusy=false;overviewNotice=response.has("error")?Json.opt(response,"text",Client.text("ui.summary_unavailable_f9423eba")):"";if(overviewRefresh!=null)overviewRefresh.active=true;if(!response.has("error")&&!UiPayload.same(overviewData,response)){overviewData=dev.abros.rivet.core.AdminDashboardView.filter(response,ServerMenuClient.dashboardAccess());rebuildWidgets();}}
 
     private boolean stateFlag(String key){return ServerMenuClient.state.has(key)&&ServerMenuClient.state.get(key).getAsBoolean();}
     private boolean scheduled(){return ServerMenuClient.state.has("restartAt")&&ServerMenuClient.state.get("restartAt").getAsLong()>0;}
@@ -70,7 +72,10 @@ final class ServerMenuScreen extends ScrollScreen implements CommunityScreen.Rec
                     section(Client.text("ui.player_reports_2b875ea4"));
                 }
                 }
-                if(adminGroup.equals("overview")&&ServerMenuClient.admin()&&MapPublications.available()){card(Client.text("map.publications"),Client.text("map.awaitingApproval"),Client.text("flow.publicationReviewHint"),Client.text("map.publicationModeration"),UiKit.accent(),()->minecraft.setScreen(MapPublicationsScreen.moderation(this)));section(Client.text("map.publications"));}
+                if(adminGroup.equals("overview")&&ServerMenuClient.admin()&&MapPublications.available()){
+                    if(overviewData.has("attentionPublications"))for(var entry:overviewData.getAsJsonArray("attentionPublications")){var publication=entry.getAsJsonObject();card(Json.str(publication,"name"),Client.text("map.awaitingApproval"),Json.opt(publication,"author",""),Client.text(Json.str(publication,"type").equals("marker")?"map.markerType":"map.territory"),UiKit.accent(),()->{if(ServerMenuClient.admin()&&MapPublications.available())minecraft.setScreen(MapPublicationsScreen.review(this,java.util.UUID.fromString(Json.str(publication,"id"))));});}
+                    card(Client.text("map.publications"),Client.text("map.awaitingApproval")+": "+metric("pendingPublications"),Client.text("flow.publicationReviewHint"),Client.text("map.publicationModeration"),UiKit.accent(),()->minecraft.setScreen(MapPublicationsScreen.moderation(this)));section(Client.text("map.publications"));}
+                if(adminGroup.equals("overview")&&ServerMenuClient.may("rivet.pack")&&Set.of("unpublished","invalid").contains(Json.opt(overviewData,"packStatus","")))card(Client.text("permissions.pack"),AdminDashboardScreen.packSummary(overviewData),Client.text("builder.status.action"),"/rivet pack check",UiKit.accent(),()->{if(ServerMenuClient.may("rivet.pack"))minecraft.setScreen(new AdminDashboardScreen(this,true));});
                 boolean rivetErrors=overviewData.has("recentErrors")&&!overviewData.getAsJsonArray("recentErrors").isEmpty();
                 if(Set.of("overview","diagnostics").contains(adminGroup)&&rivetErrors)card(Client.text("ui.rivet_errors_72a769f5"),overviewData.getAsJsonArray("recentErrors").size()+Client.text("ui.recent_errors_8b705430"),Client.text("ui.open_diagnostics_64fa5b35"),Client.text("ui.details_and_log_29abf380"),0xFFEF7777,()->minecraft.setScreen(new AdminDashboardScreen(this,true)));
                 if(adminGroup.equals("overview")&&server&&(stateFlag("maintenance")||scheduled())){card(Client.text("ui.server_status_6081a1b2"),stateFlag("maintenance")?Client.text("ui.maintenance_enabled_76d9d6ea"):Client.text("ui.shutdown_scheduled_a649930e"),Client.text("ui.check_mode_and_shutdown_time_f69fb895"),Client.text("ui.open_server_management_35d6f85a"),0xFFF0A77C,()->group("server"));}
@@ -139,8 +144,8 @@ final class ServerMenuScreen extends ScrollScreen implements CommunityScreen.Rec
         }else minecraft.setScreen(new ActionForm(this,name));
     }
     @Override public void removed(){refreshOnReturn=true;}
-    void refreshPermissions(){if(!ServerMenuClient.admin()){overviewSession.cancel();overviewBusy=false;overviewData=new JsonObject();}rebuildWidgets();}
-    @Override public void tick(){if(tab.equals("admin")&&!ServerMenuClient.staff()){CommunityScreen.open(parent,"home");}else if(tab.equals("admin")&&!stateKey.equals(modeKey())||tab.equals("help")&&!stateKey.equals(stateFlag("hasLinks")+":"+Json.opt(ServerMenuClient.state,"help","")))rebuildWidgets();if(overviewSession.timeout(System.currentTimeMillis())){overviewBusy=false;overviewNotice=Client.text("ui.no_response_refresh_the_summary_84f5f501");if(overviewRefresh!=null)overviewRefresh.active=true;}}
+    void refreshPermissions(){overviewSession.cancel();overviewBusy=false;overviewLoaded=false;overviewData=ServerMenuClient.admin()?dev.abros.rivet.core.AdminDashboardView.filter(overviewData,ServerMenuClient.dashboardAccess()):new JsonObject();rebuildWidgets();}
+    @Override public void tick(){if(overviewDirtyAt>0&&System.currentTimeMillis()>=overviewDirtyAt&&!overviewBusy){overviewDirtyAt=0;if(overviewSubscription())loadOverview();}if(tab.equals("admin")&&!ServerMenuClient.staff()){CommunityScreen.open(parent,"home");}else if(tab.equals("admin")&&!stateKey.equals(modeKey())||tab.equals("help")&&!stateKey.equals(stateFlag("hasLinks")+":"+Json.opt(ServerMenuClient.state,"help","")))rebuildWidgets();if(overviewSession.timeout(System.currentTimeMillis())){overviewBusy=false;overviewNotice=Client.text("ui.no_response_refresh_the_summary_84f5f501");if(overviewRefresh!=null)overviewRefresh.active=true;}}
     private String body(){var j=ServerMenuClient.state;
         if(tab.equals("help"))return Json.opt(j,"help","")+"\n\n"+Client.tr("server.helptext").getString();
         return Client.tr("server.admintext").getString();

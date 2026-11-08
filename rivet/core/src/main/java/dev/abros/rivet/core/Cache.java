@@ -27,7 +27,7 @@ public final class Cache {
                 try(var lease=lease(path(hash),new AtomicBoolean(),false)){
                     if(lease==null)continue;
                     boolean object=name.equals(hash);
-                    boolean partial=name.matches("[0-9a-f]{64}\\.([0-9a-f]{64}|pack)\\.part(\\.etag)?");
+                    boolean partial=name.matches("[0-9a-f]{64}\\.([0-9a-f]{64}|pack|source)\\.part(\\.etag)?");
                     if(Files.exists(p)&&((object&&!protectedHashes.contains(hash)&&(objectCutoff==0||Files.getLastModifiedTime(p).toMillis()<objectCutoff))||(partial&&Files.getLastModifiedTime(p).toMillis()<System.currentTimeMillis()-java.time.Duration.ofDays(7).toMillis()))){freed+=Files.size(p);Files.delete(p);}
                 }catch(InterruptedException interrupted){Thread.currentThread().interrupt();throw new IOException("Cache cleanup interrupted",interrupted);}finally{lock.unlock();}
             }

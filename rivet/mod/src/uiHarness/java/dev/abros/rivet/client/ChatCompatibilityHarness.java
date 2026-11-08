@@ -70,7 +70,27 @@ public final class ChatCompatibilityHarness {
     var real=player(ChatType.CHAT);ClientChat.chat(real);var sober=real.getMessage();listener.invoke(null,real);check(real.getMessage().equals(sober),"Actual B&C sober adapter changed message");
     var utils=Class.forName("umpaz.brewinandchewin.client.utility.BnCClientTextUtils");utils.getField("tipsyMessageLevel").setInt(null,4);utils.getField("randomSeed").setLong(null,12345L);listener.invoke(null,real);
     check(ClientChat.formatted(real.getMessage()),"Actual B&C tipsy effect lost Rivet format");check(!real.getMessage().equals(sober),"Actual B&C effect was not applied");
-    System.out.println("RIVET_BREWIN_ADAPTER_OK actual 4.5.0 sober/tipsy");
+    for(String channel:java.util.List.of("Local","Group","API website")){
+     var identity=dev.abros.rivet.network.ChatPresentation.identity("STAFF","Reader","VIP");
+     var body=link("Testing beautifully preserved clickable navigation coordinates", "/rivet direction minecraft:overworld 1 2 64 Reader")
+       .withStyle(style->style.withInsertion(new dev.abros.rivet.core.ChatEffectEnvelope(4,12345L).encode()));
+     var line=dev.abros.rivet.network.ChatPresentation.format(dev.abros.rivet.core.ChatFormat.DEFAULT,dev.abros.rivet.core.ChatFormat.CHANNEL_DEFAULT,channel,mc.player.getUUID(),identity,body)
+       .copy().withStyle(style->style.withHoverEvent(new HoverEvent(HoverEvent.Action.SHOW_ENTITY,new HoverEvent.EntityTooltipInfo(net.minecraft.world.entity.EntityType.PLAYER,mc.player.getUUID(),identity))));
+     utils.getField("tipsyMessageLevel").setInt(null,2);long oldSeed=utils.getField("randomSeed").getLong(null);
+     ClientChat.reset();var received=system(line).getMessage();
+     check(received.getString().contains("Reader")&&received.getString().contains("STAFF")&&received.getString().contains("VIP")&&received.getString().contains(channel),"Channel or identity scrambled");
+     check(!received.getString().contains(body.getString()),"Channel body effect missing");
+     check(hasClick(received,"/rivet direction minecraft:overworld 1 2 64 Reader"),"Channel action lost");
+     check(utils.getField("tipsyMessageLevel").getInt(null)==2&&utils.getField("randomSeed").getLong(null)==oldSeed,"Channel effect consumed signed chat state");
+     check(dev.abros.rivet.compat.BrewinChannelEffects.apply(received).equals(received),"Channel effect applied twice");
+     check(dev.abros.rivet.network.ChatPresentation.heads(line,false).getString().equals(line.getString()),"History text changed");
+     var inherited=Component.empty().withStyle(style->style.withClickEvent(new ClickEvent(ClickEvent.Action.RUN_COMMAND,"/help")).withColor(0x83C6C4)
+       .withInsertion(new dev.abros.rivet.core.ChatEffectEnvelope(4,12345L).encode())).append("Testing inherited clickable navigation");
+     var transformed=dev.abros.rivet.compat.BrewinChannelEffects.apply(inherited);
+     check(transformed.getStyle().getClickEvent().equals(inherited.getStyle().getClickEvent())&&transformed.getStyle().getColor().equals(inherited.getStyle().getColor()),"Empty body container lost inherited style");
+    }
+    utils.getField("tipsyMessageLevel").setInt(null,0);
+    System.out.println("RIVET_BREWIN_ADAPTER_OK actual 4.5.0 sober/tipsy + channel envelopes");
    }catch(ReflectiveOperationException failure){throw new IllegalStateException(failure);}
   }
   var normal=player(ChatType.CHAT);var before=normal.getMessage();ClientChat.chat(normal);check(!normal.getMessage().equals(before),"Public chat not formatted");
@@ -91,5 +111,6 @@ public final class ChatCompatibilityHarness {
  private static ClientChatReceivedEvent.Player player(ResourceKey<ChatType> type){var mc=Minecraft.getInstance();var bound=ChatType.bind(type,mc.level.registryAccess(),Component.literal("Sender")).withTargetName(Component.literal("Recipient"));var message=PlayerChatMessage.unsigned(mc.player.getUUID(),"Test body");return new ClientChatReceivedEvent.Player(bound,bound.decorate(message.decoratedContent()),message,mc.player.getUUID());}
  private static MutableComponent link(String text,String command){return Component.literal(text).withStyle(style->style.withClickEvent(new ClickEvent(ClickEvent.Action.RUN_COMMAND,command)));}
  private static ClientChatReceivedEvent.System system(Component message){var event=new ClientChatReceivedEvent.System(message,false);ClientChat.system(event);if(!event.isCanceled())Minecraft.getInstance().gui.getChat().addMessage(event.getMessage());return event;}
+ private static boolean hasClick(Component value,String command){if(value.getStyle().getClickEvent()!=null&&value.getStyle().getClickEvent().getValue().equals(command))return true;for(var child:value.getSiblings())if(hasClick(child,command))return true;return false;}
  private static void check(boolean ok,String message){if(!ok)throw new IllegalStateException(message);}
 }

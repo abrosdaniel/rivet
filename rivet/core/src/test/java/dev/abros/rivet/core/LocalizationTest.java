@@ -7,6 +7,23 @@ import org.junit.jupiter.api.Test;
 import static org.junit.jupiter.api.Assertions.*;
 
 class LocalizationTest {
+    @Test void explicitVariantsPreserveFallbackAndNeverResolveKeys() throws Exception {
+        var notice=Json.parse("{\"title\":\"Fallback\",\"titleI18n\":{\"en_us\":\"English\",\"ru_ru\":\"Русский\"},\"body\":\"rivet.locale\"}");
+        assertEquals("Fallback",LocalizedText.render(notice,"title"));
+        try(var scope=Messages.locale("en-US")) {
+            var localized=LocalizedText.localize(notice).getAsJsonObject();
+            assertEquals("English",Json.str(localized,"title"));
+            assertFalse(localized.has("titleI18n"));
+            assertTrue(notice.has("titleI18n"));
+            assertEquals("rivet.locale",Json.str(localized,"body"));
+            assertEquals("Fallback",Json.str(notice,"title"));
+        }
+        try(var scope=Messages.locale("fr_fr")){assertEquals("Fallback",LocalizedText.render(notice,"title"));}
+        try(var scope=Messages.locale("ru_ru")){assertEquals("Русский",LocalizedText.render(notice,"title"));}
+        notice.getAsJsonObject("titleI18n").addProperty("en_us",42);
+        try(var scope=Messages.locale("en_us")){assertEquals("Fallback",LocalizedText.render(notice,"title"));}
+    }
+
     @Test void persistedNotificationsRenderForEachRecipientWithoutTranslatingPlayerText() {
         var notice=new JsonObject();
         String playerTitle="rivet.core.unknown_action_0f4eef3d — пользовательский текст";

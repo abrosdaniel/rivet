@@ -11,7 +11,7 @@ import net.minecraft.network.chat.Component;
 class MapSettingsScreen extends ScrollScreen implements SettingsTarget, CommunityScreen.Receiver, UiParentScreen {
  static final List<String> CATEGORIES=Client.labels(()->List.of(Client.text("ui.rendering_b735d754"),Client.text("map.minimap"),Client.text("map.tool.markers"),Client.text("map.tool.navigate"),Client.text("ui.radar_0451ab68"),Client.text("map.caves")));
  static List<String> categories(){var result=new ArrayList<>(CATEGORIES);if(MapPositions.available())result.add(Client.text("ui.visibility_bd3fe393"));return List.copyOf(result);}
- private final Screen parent;private UiDialog dialog;private int category;
+ private final Screen parent;private UiDialog dialog;private int category;private boolean advanced;
  private final MapPositionSettings privacy=new MapPositionSettings(this,this::rebuildWidgets);private NativeLayout.Box panelArea;
  private final String dimension;private String draft,error="";
  MapSettingsScreen(Screen parent){this(parent,0);}
@@ -24,14 +24,14 @@ class MapSettingsScreen extends ScrollScreen implements SettingsTarget, Communit
  private void toggle(String label,int x,int y,int w,boolean value,Runnable action){addRenderableWidget(new UiToggle(label,x,y,w,value,()->change(action)));}
  private void choice(String label,int x,int y,int w,List<String> values,int selected,java.util.function.IntConsumer apply){addRenderableWidget(UiActions.button(Component.literal(label+": "+values.get(selected)+" ▾"),UiActions.Tone.NORMAL,"",b->minecraft.setScreen(new ChoicePopup(this,label,values,n->change(()->apply.accept(n)),b).current(selected))).bounds(x,y,w,24).build());}
  @Override protected void init(){
-  if(category>=categories().size())category=0;int count=category<6?new int[]{12,9,3,3,6,11}[category]:6;
+  if(category>=categories().size())category=0;int count=category<6?new int[]{renderRows().size(),9,3,3,6,11}[category]:6;
   dialog=UiSettingsShell.module(width,height,category,this,this::addRenderableWidget,categories(),n->{selectCategory(n);rebuildWidgets();},()->minecraft.setScreen(new SettingsSearchScreen(this,true)),()->UiSettingsShell.confirm(this,this::reset),this::onClose);
   var rows=dialog.body();var area=scrollForm(count,rows,28);
   if(category>=6){panelArea=area.content();privacy.build(panelArea,firstRow,visibleRows,this::addRenderableWidget);for(var child:children())if(child instanceof net.minecraft.client.gui.components.Button b&&b.getMessage().getString().equals(Client.text("ui.reset_section_3a46364b")))b.visible=b.active=false;return;}
   if(category==5){caveRows(rows,area.content().width());return;}
   var s=MapSettings.INSTANCE;var r=MapRenderSettings.INSTANCE;var h=MapSettings.INSTANCE.hud;
   for(int n=firstRow;n<Math.min(count,firstRow+visibleRows);n++){int x=rows.x(),y=rows.y()+(n-firstRow)*28,w=area.content().width();
-   if(category==0)switch(n){
+   if(category==0)switch(renderRows().get(n)){
     case 0->choice(Client.text("ui.block_colors_1cae71e1"),x,y,w,List.of(Client.text("ui.accurate_a839c237"),"Minecraft"),r.blockColors,i->{r.blockColors=i;r.samplingChanged();});
     case 1->{toggle(Client.text("ui.lighting_22240aa5"),x,y,w,r.lighting,()->r.lighting=!r.lighting);((net.minecraft.client.gui.components.AbstractWidget)children().getLast()).setTooltip(net.minecraft.client.gui.components.Tooltip.create(Client.tr("ui.automatically_uses_time_of_day_weather_31ad9f37")));}
     case 2->toggle(Client.text("ui.height_shading_89016c01"),x,y,w,r.depth,()->r.depth=!r.depth);
@@ -44,6 +44,8 @@ class MapSettingsScreen extends ScrollScreen implements SettingsTarget, Communit
     case 9->toggle(Client.text("ui.block_transparency_ef7e07ea"),x,y,w,r.transparency,()->{r.transparency=!r.transparency;r.samplingChanged();});
     case 10->toggle(Client.text("ui.use_thin_block_height_db2e58ce"),x,y,w,r.shortBlocks,()->{r.shortBlocks=!r.shortBlocks;r.samplingChanged();});
     case 11->toggle(Client.text("ui.biome_under_the_world_map_cursor_762b9868"),x,y,w,r.hoverBiome,()->r.hoverBiome=!r.hoverBiome);
+    case 13->addRenderableWidget(UiActions.button(Client.tr(advanced?"map.settings.basic":"map.settings.advanced"),UiActions.Tone.NORMAL,"",button->{advanced=!advanced;rebuildWidgets();}).bounds(x,y,w,24).build());
+    case 12->addRenderableWidget(UiActions.button(Client.tr("map.data.title"),UiActions.Tone.NORMAL,"",button->minecraft.setScreen(new MapDataScreen(this))).bounds(x,y,w,24).build());
    }
    else if(category==1)switch(n){
     case 0->toggle(Client.text("ui.show_minimap_907debf3"),x,y,w,s.enabled,()->s.enabled=!s.enabled);
@@ -102,9 +104,10 @@ class MapSettingsScreen extends ScrollScreen implements SettingsTarget, Communit
  }
  private static int nearest(float[] values,float value){int n=0;for(int i=1;i<values.length;i++)if(Math.abs(values[i]-value)<Math.abs(values[n]-value))n=i;return n;}
  private void reset(){var r=MapRenderSettings.INSTANCE;var s=MapSettings.INSTANCE;var h=MapSettings.INSTANCE.hud;switch(category){case 0->{r.blockColors=0;r.biomeBlend=r.flowers=r.redstone=r.stainedGlass=r.transparency=r.shortBlocks=true;r.biomesVanilla=false;r.lighting=r.depth=r.hoverBiome=true;r.slopes=2;r.samplingChanged();}case 1->{s.enabled=s.rotate=s.coordinates=true;s.round=false;s.biome=s.time=s.weather=false;s.zoom=1;s.opacity=1;}case 2->{r.markerScale=.5f;r.markerMinZoom=0;}case 3->{h.directionEnabled=h.directionCoordinates=true;h.directionOpacity=.85f;}case 5->{MapCaves.configure(new MapCaves.Options(-1,2,1000,1000,2,true,1));MapCaves.set(dimension,new MapCaves.View(1,false,64,30,false));refreshCaveDraft();}case 4->{r.hostile=r.friendly=r.radarIcons=true;r.items=r.other=r.radarNames=false;r.radarHeight=16;}}change(()->{});}
- private static final List<List<String>> IDS=List.of(List.of("blockColors","lighting","terrainDepth","slopes","biomeBlend","biomesVanilla","flowers","redstone","stainedGlass","transparency","shortBlocks","hoverBiome"),List.of("enabled","round","rotate","zoom","opacity","coordinates","biome","time","weather"),List.of("markerScale","markerMinZoom","markerImport"),List.of(),List.of("layers","radarHostile","radarFriendly","radarIcons","radarNames","radarHeight"),List.of("caves","caveTop","caveAuto","caveDepth","caveLegible","caveDelay","caveMiniAuto","caveMiniDelay","caveZoom","caveShowTop","caveDefaultType"));
- int settingRow(String id){if(this instanceof NavigationSettingsScreen)return SettingsCatalog.row(5,id);for(var ids:IDS)if(ids.contains(id))return ids.indexOf(id);return -1;}
- public void revealSetting(String id){if(id.equals("positionPrivacy")){int index=categories().indexOf(Client.text("ui.visibility_bd3fe393"));if(index>=0){selectCategory(index);revealRow(0);rebuildWidgets();}return;}for(int i=0;i<IDS.size();i++)if(IDS.get(i).contains(id)){selectCategory(i);revealRow(IDS.get(i).indexOf(id));rebuildWidgets();return;}}
+ private static final List<List<String>> IDS=List.of(List.of("blockColors","lighting","terrainDepth","slopes","biomeBlend","biomesVanilla","flowers","redstone","stainedGlass","transparency","shortBlocks","hoverBiome","mapData"),List.of("enabled","round","rotate","zoom","opacity","coordinates","biome","time","weather"),List.of("markerScale","markerMinZoom","markerImport"),List.of(),List.of("layers","radarHostile","radarFriendly","radarIcons","radarNames","radarHeight"),List.of("caves","caveTop","caveAuto","caveDepth","caveLegible","caveDelay","caveMiniAuto","caveMiniDelay","caveZoom","caveShowTop","caveDefaultType"));
+ private List<Integer> renderRows(){return advanced?List.of(1,2,3,11,12,13,0,4,5,6,7,8,9,10):List.of(1,2,3,11,12,13);}
+ int settingRow(String id){if(this instanceof NavigationSettingsScreen)return SettingsCatalog.row(5,id);for(int i=0;i<IDS.size();i++)if(IDS.get(i).contains(id))return i==0?renderRows().indexOf(IDS.get(i).indexOf(id)):IDS.get(i).indexOf(id);return -1;}
+ public void revealSetting(String id){if(id.equals("positionPrivacy")){int index=categories().indexOf(Client.text("ui.visibility_bd3fe393"));if(index>=0){selectCategory(index);revealRow(0);rebuildWidgets();}return;}for(int i=0;i<IDS.size();i++)if(IDS.get(i).contains(id)){if(i==0&&!renderRows().contains(IDS.get(i).indexOf(id)))advanced=true;selectCategory(i);revealRow(settingRow(id));rebuildWidgets();return;}}
 
  public void receiveCommunity(com.google.gson.JsonObject j){privacy.receive(j);}
  @Override public void tick(){if(category>=categories().size()){selectCategory(0);rebuildWidgets();return;}if(category>=6){privacy.tick();}}

@@ -12,7 +12,7 @@ public final class ModerationVotes {
  public ModerationVotes(PgDatabase db,Settings settings){this.db=db;this.settings=settings;}
  public Settings settings(){return settings;}
  private JsonObject get(String id)throws Exception{try(var q=db.connection().prepareStatement("SELECT body FROM records WHERE namespace='moderation-votes' AND id=?")){q.setString(1,id);try(var row=q.executeQuery()){return row.next()?Json.parse(row.getString(1)):null;}}}
- private void put(String id,JsonObject j)throws Exception{try(var q=db.connection().prepareStatement("INSERT INTO records(namespace,id,body) VALUES('moderation-votes',?,?::jsonb) ON CONFLICT(namespace,id) DO UPDATE SET body=excluded.body")){q.setString(1,id);q.setString(2,Json.GSON.toJson(j));q.executeUpdate();}CommunityOutbox.add(db,"polls","","");}
+ private void put(String id,JsonObject j)throws Exception{try(var q=db.connection().prepareStatement("INSERT INTO records(namespace,id,body) VALUES('moderation-votes',?,?::jsonb) ON CONFLICT(namespace,id) DO UPDATE SET body=excluded.body")){q.setString(1,id);q.setString(2,Json.GSON.toJson(j));q.executeUpdate();}ChangeOutbox.add(db,"polls","","");}
  private void lock()throws Exception{db.lock("moderation-vote");}
  private static void require(boolean condition,String message){if(!condition)throw new IllegalArgumentException(message);}
  private void cooldown(String key,long now,int minutes)throws Exception{var previous=get(key);require(previous==null||now-previous.get("at").getAsLong()>=minutes*60000L,Messages.text("rivet.core.wait_before_starting_another_vote_41cecc06"));var j=new JsonObject();j.addProperty("at",now);put(key,j);}

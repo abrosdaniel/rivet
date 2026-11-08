@@ -46,6 +46,7 @@ def main():
                 finally:
                     stop(client)
             verify(work / "roles.log", "RIVET_ROLE_NETWORK_OK")
+            verify(work / "roles.log", "RIVET_AUTH_FACTOR_NETWORK_OK")
             verify(work / "server.log", "RIVET_AUTH_RENAME_PLAYER_OK")
             server.stdin.write("stop\n")
             server.stdin.flush()

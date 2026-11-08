@@ -1,0 +1,10 @@
+package dev.abros.rivet.core;
+import com.google.gson.*;
+import org.junit.jupiter.api.Test;
+import static org.junit.jupiter.api.Assertions.*;
+class AdminDashboardViewTest {
+ private JsonObject snapshot(){var data=new JsonObject();for(String k:new String[]{"kind","request","openReports","attentionReports","databaseHealthy","recentErrors","retention","packReady","packStatus","restartAt","maintenanceUntil","pendingPublications","attentionPublications","futureSensitiveField"})data.addProperty(k,"private");return data;}
+ @Test void permissionsAreIndependent(){var input=snapshot();var reports=AdminDashboardView.filter(input,new AdminDashboardView.Access(true,false,false,false,false,false));assertTrue(reports.has("attentionReports"));assertFalse(reports.has("recentErrors"));assertFalse(reports.has("packReady"));var diagnostics=AdminDashboardView.filter(input,new AdminDashboardView.Access(false,true,false,false,false,false));assertTrue(diagnostics.has("recentErrors"));assertFalse(diagnostics.has("attentionReports"));var pack=AdminDashboardView.filter(input,new AdminDashboardView.Access(false,false,true,false,false,false));assertTrue(pack.has("packReady"));assertTrue(pack.has("packStatus"));assertFalse(pack.has("retention"));}
+ @Test void revokedAccessAndUnknownFieldsFailClosed(){var response=AdminDashboardView.filter(snapshot(),new AdminDashboardView.Access(true,true,true,true,true,true));assertFalse(response.has("futureSensitiveField"));var revoked=AdminDashboardView.filter(response,new AdminDashboardView.Access(false,false,false,false,false,false));assertEquals(java.util.Set.of("kind","request"),revoked.keySet());}
+ @Test void returnedDataIsNotShared(){var input=snapshot();input.add("attentionReports",new JsonArray());var result=AdminDashboardView.filter(input,new AdminDashboardView.Access(true,false,false,false,false,false));result.getAsJsonArray("attentionReports").add("changed");assertTrue(input.getAsJsonArray("attentionReports").isEmpty());assertTrue(input.has("recentErrors"));}
+}

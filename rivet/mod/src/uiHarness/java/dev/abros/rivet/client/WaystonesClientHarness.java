@@ -53,10 +53,10 @@ public final class WaystonesClientHarness {
    MapWaystones.receive(first);check(MapWaystones.points().size()==3,"Partial snapshot replaced complete view");
    MapWaystones.receive(new dev.abros.rivet.network.WaystonesWire.Snapshot(sequence,0,2,java.util.List.of(a)));check(MapWaystones.points().size()==2,"Snapshot failed assembly");
    MapWaystones.receive(new dev.abros.rivet.network.WaystonesWire.Snapshot(sequence-1,0,1,java.util.List.of()));check(MapWaystones.points().size()==2,"Stale snapshot applied");
-   policy.addProperty("enabled",false);check(MapWaystones.points().isEmpty(),"Disabled module exposes points");policy.addProperty("enabled",enabled);
+   policy.addProperty("enabled",false);ClientMapPolicy.receive(ServerMenuClient.state);check(MapWaystones.points().isEmpty(),"Disabled module exposes points");policy.addProperty("enabled",enabled);ClientMapPolicy.receive(ServerMenuClient.state);
    field("expires").set(null,0L);check(MapWaystones.points().isEmpty(),"Expired snapshot visible");
    MapWaystones.reset();check(MapWaystones.points().isEmpty(),"Session reset retained points");
    System.out.println("RIVET_WAYSTONES_SNAPSHOT_OK codec/atomic/stale/policy/expiry/reset");
-  }finally{for(String key:keys)field(key).set(null,saved.get(key));pending.clear();pending.putAll(oldPending);policy.addProperty("enabled",enabled);}
+  }finally{for(String key:keys)field(key).set(null,saved.get(key));pending.clear();pending.putAll(oldPending);policy.addProperty("enabled",enabled);ClientMapPolicy.receive(ServerMenuClient.state);}
  }
 }

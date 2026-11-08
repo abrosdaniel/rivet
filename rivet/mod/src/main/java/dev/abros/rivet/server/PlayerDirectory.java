@@ -1,0 +1,20 @@
+package dev.abros.rivet.server;
+import com.mojang.authlib.GameProfile;
+import dev.abros.rivet.core.auth.AuthStore;
+import net.minecraft.server.MinecraftServer;
+import java.util.*;
+/** Read-only public identities. Never creates accounts or guesses Mojang ownership. */
+public final class PlayerDirectory {
+ private final MinecraftServer server;
+ public PlayerDirectory(MinecraftServer server){this.server=server;}
+ public Optional<GameProfile> byName(String name){
+  if(!AuthStore.validName(name))throw new IllegalArgumentException(dev.abros.rivet.core.Messages.text("rivet.core.invalid_player_name_31a7f70c"));
+  var saved=AuthServer.knownIdentity(name);if(saved.isPresent())return saved.map(p->new GameProfile(p.uuid(),p.name()));
+  // With Auth enabled only registered identities are authoritative.
+  if(AuthServer.enabled())return Optional.empty();
+  var online=server.getPlayerList().getPlayerByName(name);if(online!=null)return Optional.of(online.getGameProfile());
+  var cache=server.getProfileCache();return cache instanceof CachedProfiles cached?cached.rivet$cachedProfile(name):Optional.empty();
+ }
+ public Optional<GameProfile> byId(UUID id){var saved=AuthServer.knownIdentity(id);if(saved.isPresent())return saved.map(p->new GameProfile(p.uuid(),p.name()));if(AuthServer.enabled())return Optional.empty();var online=server.getPlayerList().getPlayer(id);if(online!=null)return Optional.of(online.getGameProfile());var cache=server.getProfileCache();return cache==null?Optional.empty():cache.get(id);}
+ public Optional<UUID> verifiedAlias(UUID id){return AuthServer.verifiedAlias(id).map(AuthStore.Profile::uuid);}
+}

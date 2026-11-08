@@ -11,6 +11,14 @@ class ServerPackTest {
  @org.junit.jupiter.api.BeforeEach void canonicalRoot()throws Exception{root=root.toRealPath();}
  PackPublisher publisher()throws Exception{return new PackPublisher(root.resolve("source"),root.resolve("published"));}
  void source(String path,String contents)throws Exception{var file=root.resolve("source").resolve(path);Files.createDirectories(file.getParent());Files.writeString(file,contents);}
+ @Test void rollbackPersistsHistoryAndActivatesOnlyAfterRestart()throws Exception{
+  var p=publisher();source("config/example.toml","first");var first=p.prepare("1.21.1","21.1.250");p.activate(first,false);source("config/example.toml","second");var second=p.prepare("1.21.1","21.1.250");p.activate(second,false);assertEquals(first.hash(),p.previous());p.activate(second,false);assertEquals(first.hash(),p.previous());
+  assertEquals(first,p.rollback(""));assertEquals(second,p.current());var reopened=publisher();reopened.startup();assertEquals(first,reopened.current());assertEquals(second.hash(),reopened.previous());reopened.startup();assertEquals(first,reopened.current());assertFalse(Files.exists(root.resolve("published/pending.json")));
+ }
+ @Test void corruptRollbackCannotReplacePendingOrActivePublication()throws Exception{
+  var p=publisher();source("config/example.toml","first");var first=p.prepare("1.21.1","21.1.250");p.activate(first,false);source("config/example.toml","second");var second=p.prepare("1.21.1","21.1.250");p.activate(second,false);p.activate(second,true);String pending=Files.readString(root.resolve("published/pending.json"));Files.writeString(p.object(first.files().getFirst().hash()),"broken");
+  assertThrows(java.io.IOException.class,()->p.rollback(""));assertEquals(second,p.current());assertEquals(pending,Files.readString(root.resolve("published/pending.json")));assertEquals(first.hash(),p.previous());
+ }
  @Test void requiredComponentsCannotBeDeselectedAndLegacyClientsStillInstallTheirFiles()throws Exception{
   var p=publisher();source("resourcepacks/library.zip","required");source("resourcepacks/extra.zip","optional");
   source("pack.toml","[[components]]\nid='library'\nname='Shared Library'\ndescription='Required functionality'\noptional=false\nselected=false\nfiles=['resourcepacks/library.zip']\n[[components]]\nid='extra'\noptional=true\nselected=false\nfiles=['resourcepacks/extra.zip']\n");

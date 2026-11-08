@@ -53,6 +53,21 @@ class JavaWatchesTest {
    assertEquals(ApiException.Code.UNAVAILABLE,assertThrows(ApiException.class,()->engine.add("new_mod",CompletableFuture::new)).code());
   }finally{engine.close();}
  }
+ @Test void revisionFailureClosesWatchWithoutKillingScheduler() {
+  var fail=new AtomicBoolean(true);
+  try(var engine=manual(()->{if(fail.getAndSet(false))throw new IllegalStateException("Database unavailable");return 1;},()->0)) {
+   var failed=engine.add("example",()->CompletableFuture.completedFuture(1));engine.tick();
+   assertTrue(failed.isClosed());assertEquals(Optional.of(ApiException.Code.UNAVAILABLE),((DomainSubscription.Closed<Integer>)failed.poll().orElseThrow()).error());
+   var recovered=engine.add("example",()->CompletableFuture.completedFuture(2));engine.tick();
+   assertEquals(2,((DomainSubscription.Snapshot<Integer>)recovered.poll().orElseThrow()).value());
+  }
+ }
+ @Test void notificationLocaleIsExplicitAndOldConstructorRemainsAvailable() {
+  assertEquals("",new DomainWatch.Notifications().locale());
+  assertEquals("ru_ru",new DomainWatch.Notifications("ru_ru").locale());
+  assertThrows(IllegalArgumentException.class,()->new DomainWatch.Notifications("invalid"));
+  assertThrows(NullPointerException.class,()->new DomainWatch.Notifications(null));
+ }
  @Test void lastCloseAllowsFreshIndependentSubscription(){
   try(var engine=manual(()->0,()->0)){
    var first=engine.add("example_mod",()->CompletableFuture.completedFuture(1));engine.tick();var a=(DomainSubscription.Snapshot<Integer>)first.poll().orElseThrow();first.close();

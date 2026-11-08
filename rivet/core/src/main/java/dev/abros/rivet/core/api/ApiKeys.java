@@ -14,7 +14,7 @@ import static dev.abros.rivet.api.ApiException.Code.*;
 /** PostgreSQL is authoritative on every authorization, including already issued grants. */
 public final class ApiKeys implements AutoCloseable {
     // Do not grant prospective scopes until their domain authorization exists.
-    public static final Set<String> SCOPES = Set.of("players.presence.read","map.positions.read","map.waystones.read","server.control.read","server.control.write","server.status.read", "server.status.subscribe", "sessions.password", "sessions.link", "groups.read", "events.read", "board.read", "polls.read", "ideas.read", "tasks.read", "map.read", "map.tiles.read", "map.render.manage", "profiles.read", "notifications.read", "chat.read", "chat.write", "tasks.write", "map.write", "profiles.write", "notifications.write", "groups.write", "events.write", "board.write", "polls.write", "ideas.write", "reports.read", "reports.write", "reports.manage", "moderation.manage", "statistics.read", "skins.read", "pack.read", "websocket.connect", "websocket.ticket");
+    public static final Set<String> SCOPES = Set.of("players.presence.read","map.positions.read","map.waystones.read","server.control.read","server.control.write","server.status.read", "server.status.subscribe", "sessions.password", "sessions.link", "groups.read", "events.read", "board.read", "polls.read", "ideas.read", "tasks.read", "map.read", "map.tiles.read", "map.render.manage", "profiles.read", "notifications.publish", "notifications.revoke", "notifications.read", "chat.read", "chat.write", "tasks.write", "map.write", "profiles.write", "notifications.write", "groups.write", "events.write", "board.write", "polls.write", "ideas.write", "reports.read", "reports.write", "reports.manage", "moderation.manage", "statistics.read", "skins.read", "pack.read", "websocket.connect", "websocket.ticket");
     public record Limits(int keys, int appKeys, int requestsPerMinute, int maxDays, int retentionDays, int auditEntries) {
         public Limits {
             if (keys<1||keys>4096||appKeys<1||appKeys>64||requestsPerMinute<1||requestsPerMinute>100000||maxDays<1||maxDays>3650||retentionDays<1||retentionDays>365||auditEntries<100||auditEntries>100000)
@@ -124,6 +124,19 @@ public final class ApiKeys implements AutoCloseable {
     public void revalidate(Grant grant, String scope) throws Exception {
         open();requireScope(scope);if(grant==null||grant.issuer!=this)throw denied();
         db.communityTransaction(()->{open();Key key;try{key=read(grant.key,false);}catch(ApiException missing){throw denied();}active(key,clock.millis());if(!key.scopes.contains(scope))throw new ApiException(FORBIDDEN,"Scope not granted");return null;});
+    }
+    /** Hold the key row until the enclosing mutation commits, so revocation cannot race the write. */
+    public void revalidateForWrite(Grant grant,String scope)throws Exception {
+        revalidate(grant,scope);
+        db.communityTransaction(()->{
+            try(var q=db.connection().prepareStatement("SELECT * FROM api_keys WHERE id=? FOR SHARE")) {
+                q.setObject(1,grant.key);try(var rows=q.executeQuery()) {
+                    if(!rows.next())throw denied();var key=key(rows);active(key,clock.millis());
+                    if(!key.scopes.contains(scope))throw new ApiException(FORBIDDEN,"Scope not granted");
+                }
+            }
+            return null;
+        });
     }
     public static boolean supportedScope(String scope){return scope!=null&&(SCOPES.contains(scope)||scope.startsWith("map.tiles.profile.")&&TerrainProfiles.privateName(scope.substring("map.tiles.profile.".length())));}
     private static void requireScope(String scope){if(!supportedScope(scope))throw new ApiException(FORBIDDEN,"Unsupported scope");}

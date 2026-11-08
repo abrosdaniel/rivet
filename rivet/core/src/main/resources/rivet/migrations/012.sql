@@ -1,0 +1,3 @@
+ALTER TABLE skin_profiles ADD COLUMN undo_active UUID REFERENCES skin_library(id) ON DELETE SET NULL;
+ALTER TABLE skin_profiles ADD COLUMN undo_slim BOOLEAN NOT NULL DEFAULT FALSE;
+ALTER TABLE skin_profiles ADD COLUMN undo_available BOOLEAN NOT NULL DEFAULT FALSE;

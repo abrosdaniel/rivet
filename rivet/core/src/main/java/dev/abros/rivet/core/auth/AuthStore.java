@@ -9,12 +9,17 @@ import java.util.*;
 /** Server-wide identity store. All credential revocations and password changes are atomic. */
 public final class AuthStore implements AutoCloseable {
     private final PgDatabase database;
+    private final AuthFactors factors;
+    private java.util.function.Predicate<Account> factorRequired=a->false;
+    public AuthStore requireSecondFactor(java.util.function.Predicate<Account> policy){factorRequired=Objects.requireNonNull(policy);return this;}
+    public boolean factorRequired(String name)throws Exception{return run(name,()->{var a=account(name);return a!=null&&factorRequired.test(a);});}
     private final String dummy=AuthSecrets.password(AuthSecrets.token().toCharArray());
     public record Account(String name,String uuid,String type,String official,long generation,boolean blocked) {}
     public record Device(String id,String token) {}
     private final int minimumPasswordLength;
     public AuthStore(PgDatabase database){this(database,6);}
-    public AuthStore(PgDatabase database,int minimumPasswordLength){if(minimumPasswordLength<6||minimumPasswordLength>128)throw new IllegalArgumentException("Invalid minimum password length");this.database=database;this.minimumPasswordLength=minimumPasswordLength;}
+    public AuthStore(PgDatabase database,int minimumPasswordLength){this(database,minimumPasswordLength,null);}
+    public AuthStore(PgDatabase database,int minimumPasswordLength,AuthFactorVault vault){if(minimumPasswordLength<6||minimumPasswordLength>128)throw new IllegalArgumentException("Invalid minimum password length");this.database=database;this.minimumPasswordLength=minimumPasswordLength;this.factors=new AuthFactors(database,vault);}
     public int minimumPasswordLength(){return minimumPasswordLength;}
     private Connection connection(){return database.connection();}
     private static final class RejectedCredential extends IllegalArgumentException {
@@ -43,22 +48,25 @@ public final class AuthStore implements AutoCloseable {
         String hash=AuthSecrets.password(password,minimumPasswordLength);return atomic(()->{update("INSERT INTO auth_accounts(name,uuid,type,password) VALUES(?,?,'local',?)",name,uuid,hash);audit(name,"register",name,now);return account(name);});
     });}
     /** Official proof authenticates only an already linked local account. */
-    public Account official(String name,String uuid,String official,long now)throws Exception{return run(name,()->{
+    public Account official(String name,String uuid,String official,long now)throws Exception{return official(name,uuid,official,"",now);}
+    public Account official(String name,String uuid,String official,String code,long now)throws Exception{return run(name,()->{
         checkRate(name,now);var a=account(name);identity(a,uuid);
         if(a==null||a.blocked||!a.type.equals("local")||a.official==null||!a.official.equals(official))
             throw new RejectedCredential(name,now,dev.abros.rivet.core.Messages.text("rivet.core.this_minecraft_account_is_not_linked_595d8d6d"));
-        update("DELETE FROM auth_failures WHERE lower(name)=lower(?)",name);audit(name,"official-login",name,now);return a;
+        factor(a,code,now);update("DELETE FROM auth_failures WHERE lower(name)=lower(?)",name);audit(name,"official-login",name,now);return a;
     });}
-    public Account linkOfficial(String name,String uuid,String official,char[] password,long now)throws Exception{return run(name,()->{
-        var a=login(name,uuid,password,now);String id=UUID.fromString(official).toString();
+    public Account linkOfficial(String name,String uuid,String official,char[] password,long now)throws Exception{return linkOfficial(name,uuid,official,password,"",now);}
+    public Account linkOfficial(String name,String uuid,String official,char[] password,String code,long now)throws Exception{return run(name,()->{
+        var a=login(name,uuid,password,code,now);String id=UUID.fromString(official).toString();
         database.lock("official:"+id);
         if(a.official!=null)throw new IllegalArgumentException(dev.abros.rivet.core.Messages.text("rivet.core.unlink_your_current_minecraft_account_first_a6c155d2"));
         try(var q=connection().prepareStatement("SELECT 1 FROM auth_accounts WHERE official=?")){q.setString(1,id);try(var rs=q.executeQuery()){if(rs.next())throw new IllegalArgumentException(dev.abros.rivet.core.Messages.text("rivet.core.this_minecraft_account_is_already_linked_266af040"));}}
         update("UPDATE auth_accounts SET official=?,generation=generation+1 WHERE lower(name)=lower(?)",id,a.name);
         revokeCredentials(a.name);audit(a.name,"official-linked",id,now);return account(a.name);
     });}
-    public Account unlinkOfficial(String name,String uuid,char[] password,long now)throws Exception{return run(name,()->{
-        var a=login(name,uuid,password,now);if(a.official==null)throw new IllegalArgumentException(dev.abros.rivet.core.Messages.text("rivet.core.minecraft_account_not_linked_2af15e4a"));
+    public Account unlinkOfficial(String name,String uuid,char[] password,long now)throws Exception{return unlinkOfficial(name,uuid,password,"",now);}
+    public Account unlinkOfficial(String name,String uuid,char[] password,String code,long now)throws Exception{return run(name,()->{
+        var a=login(name,uuid,password,code,now);if(a.official==null)throw new IllegalArgumentException(dev.abros.rivet.core.Messages.text("rivet.core.minecraft_account_not_linked_2af15e4a"));
         update("UPDATE auth_accounts SET official=NULL,generation=generation+1 WHERE lower(name)=lower(?)",a.name);
         revokeCredentials(a.name);audit(a.name,"official-unlinked",a.name,now);return account(a.name);
     });}
@@ -116,17 +124,34 @@ public final class AuthStore implements AutoCloseable {
         update("DELETE FROM auth_failures WHERE name NOT IN (SELECT name FROM auth_failures ORDER BY next DESC LIMIT 10000)");
         update("INSERT INTO auth_failures VALUES(?,1,?) ON CONFLICT(name) DO UPDATE SET failures=least(auth_failures.failures+1,8),next=?+least(60000,1000*(1 << auth_failures.failures))",name.toLowerCase(Locale.ROOT),now+1000,now);
     return null;});}
-    public Account login(String name,String uuid,char[] pass,long now)throws Exception{return run(name,()->{
+    public Account login(String name,String uuid,char[] pass,long now)throws Exception{return login(name,uuid,pass,"",now);}
+    public Account login(String name,String uuid,char[] pass,String code,long now)throws Exception{return run(name,()->{var a=primary(name,uuid,pass,now);factor(a,code,now);update("DELETE FROM auth_failures WHERE lower(name)=lower(?)",name);return a;});}
+    private Account primary(String name,String uuid,char[] pass,long now)throws Exception{return run(name,()->{
         checkRate(name,now);var a=account(name);String hash=password(name);
         boolean valid=AuthSecrets.verify(pass,hash==null?dummy:hash);
         if(!valid||a==null||a.blocked||!a.type.equals("local")){throw new RejectedCredential(name,now,dev.abros.rivet.core.Messages.text("rivet.core.could_not_sign_in_check_your_e6c00cb7"));}
-        identity(a,uuid);update("DELETE FROM auth_failures WHERE lower(name)=lower(?)",name);return a;
+        identity(a,uuid);return a;
     });}
     /** External login resolves the canonical UUID internally, never from an application's input. */
-    public Account apiLogin(String supplied,char[] pass,long now)throws Exception{
+    public Account apiLogin(String supplied,char[] pass,long now)throws Exception{return apiLogin(supplied,pass,"",now);}
+    public Account apiLogin(String supplied,char[] pass,String code,long now)throws Exception{
         String name=name(supplied);
-        return run(name,()->{var account=account(name);var result=login(name,account==null?"":account.uuid(),pass,now);audit("api","api-password-login",result.name(),now);return result;});
+        return run(name,()->{var account=account(name);var result=login(name,account==null?"":account.uuid(),pass,code,now);audit("api","api-password-login",result.name(),now);return result;});
     }
+    public boolean factorPolicySatisfied(String name)throws Exception{return run(name,()->{var a=account(name);return a!=null&&(!factorRequired.test(a)||factors.enabled(a.uuid()));});}
+    public boolean secondFactor(String name)throws Exception{return run(name,()->{var a=account(name);return a!=null&&factors.enabled(a.uuid());});}
+    private void factor(Account account,String code,long now)throws Exception{if(factorRequired.test(account)&&!factors.enabled(account.uuid()))throw new IllegalArgumentException(dev.abros.rivet.core.Messages.text("rivet.auth.factor.required"));if(!factors.verify(account.uuid(),code,now))throw new RejectedCredential(account.name(),now,dev.abros.rivet.core.Messages.text("rivet.auth.factor.invalid"));}
+    public String beginFactor(String name,String uuid,char[] password,long now)throws Exception{return run(name,()->{var a=primary(name,uuid,password,now);return factors.begin(a.uuid(),now);});}
+    public List<String> confirmFactor(String name,String uuid,char[] password,String code,long now)throws Exception{return run(name,()->{
+        var a=primary(name,uuid,password,now);var codes=factors.confirm(a.uuid(),code,now);if(codes==null)throw new RejectedCredential(name,now,dev.abros.rivet.core.Messages.text("rivet.auth.factor.invalid"));factorChanged(a,"factor-enabled",now);return codes;
+    });}
+    public List<String> renewBackupCodes(String name,String uuid,char[] password,String code,long now)throws Exception{return run(name,()->{
+        var a=login(name,uuid,password,code,now);if(!factors.enabled(a.uuid()))throw new IllegalArgumentException(dev.abros.rivet.core.Messages.text("rivet.auth.factor.disabled"));var codes=factors.backupCodes(a.uuid());factorChanged(a,"factor-codes-renewed",now);return codes;
+    });}
+    public void removeFactor(String name,String uuid,char[] password,String code,long now)throws Exception{run(name,()->{var a=login(name,uuid,password,code,now);if(factorRequired.test(a))throw new IllegalArgumentException(dev.abros.rivet.core.Messages.text("rivet.auth.factor.required"));factors.remove(a.uuid());factorChanged(a,"factor-disabled",now);return null;});}
+    /** Host recovery only; the caller must restrict this operation to the physical server console. */
+    public void resetFactor(String actor,String name,long now)throws Exception{run(name,()->{var a=account(name);if(a==null)throw new IllegalArgumentException(dev.abros.rivet.core.Messages.text("rivet.core.account_not_found_45c12c65"));factors.remove(a.uuid());update("UPDATE auth_accounts SET generation=generation+1 WHERE uuid=?",a.uuid());revokeCredentials(a.name());audit(actor,"factor-reset",a.name(),now);return null;});}
+    private void factorChanged(Account a,String action,long now)throws Exception{update("UPDATE auth_accounts SET generation=generation+1 WHERE uuid=?",a.uuid());revokeCredentials(a.name());update("DELETE FROM auth_failures WHERE lower(name)=lower(?)",a.name());audit(a.name(),action,a.name(),now);}
     public String invite(String actor,String name,long now)throws Exception{return run(name,()->{
         var a=account(name);if(a==null||a.blocked)throw new IllegalArgumentException(dev.abros.rivet.core.Messages.text("rivet.core.invitations_are_only_available_for_local_5ef7eb06"));
         String token=AuthSecrets.token();return atomic(()->{update("INSERT INTO auth_resets VALUES(?,?,?) ON CONFLICT(name) DO UPDATE SET hash=excluded.hash,expires=excluded.expires",a.name,AuthSecrets.digest(token),now+900000);audit(actor,"reset-invitation",a.name,now);return token;});
@@ -139,17 +164,19 @@ public final class AuthStore implements AutoCloseable {
     return null;});}
     private static boolean MessageEqual(String a,String b){return java.security.MessageDigest.isEqual(a.getBytes(java.nio.charset.StandardCharsets.US_ASCII),b.getBytes(java.nio.charset.StandardCharsets.US_ASCII));}
     private void revokeCredentials(String name)throws Exception{update("DELETE FROM auth_devices WHERE lower(name)=lower(?)",name);update("DELETE FROM auth_resets WHERE lower(name)=lower(?)",name);}
-    public void change(String name,String uuid,char[] oldPass,char[] newPass,long now)throws Exception{run(name,()->{
-        var a=login(name,uuid,oldPass,now);String hash=AuthSecrets.password(newPass,minimumPasswordLength);atomic(()->{update("UPDATE auth_accounts SET password=?,generation=generation+1 WHERE lower(name)=lower(?)",hash,a.name);revokeCredentials(a.name);audit(a.name,"password-change",a.name,now);return null;});
+    public void change(String name,String uuid,char[] oldPass,char[] newPass,long now)throws Exception{change(name,uuid,oldPass,newPass,"",now);}
+    public void change(String name,String uuid,char[] oldPass,char[] newPass,String code,long now)throws Exception{run(name,()->{
+        var a=login(name,uuid,oldPass,code,now);String hash=AuthSecrets.password(newPass,minimumPasswordLength);atomic(()->{update("UPDATE auth_accounts SET password=?,generation=generation+1 WHERE lower(name)=lower(?)",hash,a.name);revokeCredentials(a.name);audit(a.name,"password-change",a.name,now);return null;});
     return null;});}
     public Device remember(String name,String label,long now)throws Exception{return run(name,()->{
         var a=account(name);if(a==null||a.blocked||!a.type.equals("local"))throw new IllegalArgumentException("Unavailable");
         if(label.isBlank()||label.length()>48)throw new IllegalArgumentException(dev.abros.rivet.core.Messages.text("rivet.core.device_name_1_48_characters_62ad8b06"));
         String id=UUID.randomUUID().toString(),token=AuthSecrets.token();return atomic(()->{update("DELETE FROM auth_devices WHERE expires<=?",now);update("INSERT INTO auth_devices VALUES(?,?,?,?,?,?,?)",id,a.name,AuthSecrets.digest(token),label,now,now,now+30L*86400000);update("DELETE FROM auth_devices WHERE lower(name)=lower(?) AND id NOT IN (SELECT id FROM auth_devices WHERE lower(name)=lower(?) ORDER BY created DESC LIMIT 10)",a.name,a.name);audit(a.name,"device-added",id,now);return new Device(id,token);});
     });}
-    public Account deviceLogin(String name,String uuid,String token,long now)throws Exception{return run(name,()->{
+    public Account deviceLogin(String name,String uuid,String token,long now)throws Exception{return deviceLogin(name,uuid,token,"",now);}
+    public Account deviceLogin(String name,String uuid,String token,String code,long now)throws Exception{return run(name,()->{
         checkRate(name,now);var a=account(name);identity(a,uuid);
-        if(token.length()>128||a==null||a.blocked||!a.type.equals("local")||update("UPDATE auth_devices SET used=? WHERE lower(name)=lower(?) AND hash=? AND expires>?",now,a.name,AuthSecrets.digest(token),now)==0){throw new RejectedCredential(name,now,dev.abros.rivet.core.Messages.text("rivet.core.device_is_no_longer_authorized_enter_f3ec6f0f"));}return a;
+        if(token.length()>128||a==null||a.blocked||!a.type.equals("local")||update("UPDATE auth_devices SET used=? WHERE lower(name)=lower(?) AND hash=? AND expires>?",now,a.name,AuthSecrets.digest(token),now)==0){throw new RejectedCredential(name,now,dev.abros.rivet.core.Messages.text("rivet.core.device_is_no_longer_authorized_enter_f3ec6f0f"));}factor(a,code,now);update("DELETE FROM auth_failures WHERE lower(name)=lower(?)",name);return a;
     });}
     public JsonArray devices(String name,long now)throws Exception{return run(name,()->{var out=new JsonArray();try(var s=connection().prepareStatement("SELECT id,label,created,used,expires FROM auth_devices WHERE lower(name)=lower(?) AND expires>? ORDER BY used DESC")){bind(s,name,now);try(var r=s.executeQuery()){while(r.next()){var j=new JsonObject();j.addProperty("id",r.getString(1));j.addProperty("label",r.getString(2));j.addProperty("created",r.getLong(3));j.addProperty("used",r.getLong(4));j.addProperty("expires",r.getLong(5));out.add(j);}}}return out;});}
     public void revoke(String name,String device,long now)throws Exception{run(name,()->{atomic(()->{if(device.equals("all")){update("DELETE FROM auth_devices WHERE lower(name)=lower(?)",name);update("UPDATE auth_accounts SET generation=generation+1 WHERE lower(name)=lower(?)",name);}else if(update("DELETE FROM auth_devices WHERE lower(name)=lower(?) AND id=?",name,device)!=1)throw new IllegalArgumentException(dev.abros.rivet.core.Messages.text("rivet.core.device_not_found_d5aa2c85"));audit(name,"device-revoked",device,now);return null;});return null;});}
@@ -160,8 +187,8 @@ public final class AuthStore implements AutoCloseable {
     public Set<SessionKey> validSessions(Collection<SessionKey> sessions,long now)throws Exception{return database.transaction(()->{
         var accounts=new HashMap<String,Long>();var devices=new HashMap<String,String>();
         if(sessions.isEmpty())return Set.of();
-        try(var q=connection().prepareStatement("SELECT lower(name),generation FROM auth_accounts WHERE NOT blocked AND lower(name)=ANY(?)")){
-            q.setArray(1,connection().createArrayOf("text",sessions.stream().map(k->k.name.toLowerCase(Locale.ROOT)).distinct().toArray()));try(var rows=q.executeQuery()){while(rows.next())accounts.put(rows.getString(1),rows.getLong(2));}
+        try(var q=connection().prepareStatement("SELECT lower(a.name),a.generation,a.name,a.uuid,a.type,a.official,f.secret IS NOT NULL FROM auth_accounts a LEFT JOIN auth_factors f ON f.account=a.uuid WHERE NOT a.blocked AND lower(a.name)=ANY(?)")){
+            q.setArray(1,connection().createArrayOf("text",sessions.stream().map(k->k.name.toLowerCase(Locale.ROOT)).distinct().toArray()));try(var rows=q.executeQuery()){while(rows.next()){var account=new Account(rows.getString(3),rows.getString(4),rows.getString(5),rows.getString(6),rows.getLong(2),false);if(rows.getBoolean(7)||!factorRequired.test(account))accounts.put(rows.getString(1),rows.getLong(2));}}
         }
         var ids=sessions.stream().map(SessionKey::device).filter(id->!id.isEmpty()).distinct().toArray();
         if(ids.length>0)try(var q=connection().prepareStatement("SELECT id,lower(name) FROM auth_devices WHERE id=ANY(?) AND expires>?")){

@@ -11,7 +11,7 @@ final class UiNavigation {
  private static Screen outside;
  private static final Deque<Screen> history=new ArrayDeque<>();
  private static boolean returning,forward;
- static boolean mainPage(Screen screen,Screen parent){return (parent==null||pages.containsValue(screen))&&(screen instanceof CommunityScreen menu&&menu.itemId.isEmpty()||screen instanceof TaskScreen tasks&&tasks.personal()||screen instanceof FeatureListScreen list&&list.navigationPage()||screen instanceof ServerMenuScreen);}
+ static boolean mainPage(Screen screen,Screen parent){return (parent==null||pages.containsValue(screen))&&(screen instanceof CommunityScreen menu&&menu.itemId.isEmpty()||screen instanceof FeatureListScreen list&&list.navigationPage()||screen instanceof ServerMenuScreen);}
  static UiActions.Command exitCommand(Screen screen,Screen parent){return mainPage(screen,parent)?UiActions.Command.CLOSE:UiActions.Command.BACK;}
  static void back(Screen from,Screen parent){
   if(mainPage(from,parent)){history.clear();boolean wasReturning=returning;returning=true;try{var mc=Minecraft.getInstance();mc.setScreen(mc.level!=null?null:outside);}finally{returning=wasReturning;}return;}
@@ -23,15 +23,14 @@ final class UiNavigation {
   try{Minecraft.getInstance().setScreen(next);}finally{returning=wasReturning;}
  }
  static void clear(){pages.clear();history.clear();MenuSidebar.clear();outside=null;UiKeyboard.clear();}
- static void open(Screen from,String key){boolean wasForward=forward;forward=true;try{var mc=Minecraft.getInstance();
+ static void open(Screen from,String key){if(dev.abros.rivet.core.RetiredFeatures.contains(key))return;boolean wasForward=forward;forward=true;try{var mc=Minecraft.getInstance();
   if(key.equals("settings")){mc.setScreen(new GeneralSettingsScreen(from));return;}
-  if(from instanceof TaskEditScreen editor&&!editor.leavePage(key))return;
-  if(key.equals("notifications")){if(from instanceof CommunityScreen menu&&!menu.leavePage())return;if(from instanceof TaskScreen tasks){if(tasks.pendingMutation())return;tasks.cancelRead();}mc.setScreen(new NotificationPopup(from));return;}
-  if(key.equals("tasks")&&!TaskScreen.available())return;
-  if(from instanceof CommunityScreen menu&&!menu.leavePage()||from instanceof TaskScreen tasks&&!tasks.leavePage()||from instanceof CommunityForm form&&!form.leavePage())return;
+  if(from instanceof UiRecordForm editor&&!editor.leavePage(key))return;
+  if(key.equals("notifications")){if(from instanceof CommunityScreen menu&&!menu.leavePage())return;mc.setScreen(new NotificationPopup(from));return;}
+  if(from instanceof CommunityScreen menu&&!menu.leavePage()||from instanceof CommunityForm form&&!form.leavePage())return;
   if(from instanceof FeatureListScreen list)list.leavePage();
-  if(from instanceof CommunityScreen menu&&menu.itemId.isEmpty())pages.put(menu.section,from);else if(from instanceof TaskScreen tasks&&tasks.personal())pages.put("tasks",from);else if(from instanceof FeatureListScreen list&&list.navigationPage())pages.put("players",from);
-  Screen next=pages.get(key);if(next==null){if(key.equals("players")){FeatureListScreen.open(null,"players");next=mc.screen;}else{next=key.equals("tasks")?new TaskScreen(null,"",""):Set.of("help","admin").contains(key)?new ServerMenuScreen(null,key):new CommunityScreen(null,key,"");mc.setScreen(next);}pages.put(key,next);}else{mc.setScreen(next);if(next instanceof CommunityScreen menu)menu.invalidate();else if(next instanceof TaskScreen tasks)tasks.invalidate(tasks.personal()?"home":"groups","");else if(next instanceof FeatureListScreen list)list.invalidate();}
+  if(from instanceof CommunityScreen menu&&menu.itemId.isEmpty())pages.put(menu.section,from);else if(from instanceof FeatureListScreen list&&list.navigationPage())pages.put("players",from);
+  Screen next=pages.get(key);if(next==null){if(key.equals("players")){FeatureListScreen.open(null,"players");next=mc.screen;}else{next=Set.of("help","admin").contains(key)?new ServerMenuScreen(null,key):new CommunityScreen(null,key,"");mc.setScreen(next);}pages.put(key,next);}else{mc.setScreen(next);if(next instanceof CommunityScreen menu)menu.invalidate();else if(next instanceof FeatureListScreen list)list.invalidate();}
  }finally{forward=wasForward;}
  }
  static void opening(ScreenEvent.Opening event){

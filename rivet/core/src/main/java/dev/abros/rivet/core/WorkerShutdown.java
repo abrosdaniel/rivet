@@ -18,7 +18,11 @@ public final class WorkerShutdown {
     try{worker.awaitTermination(Math.max(0,deadline-System.nanoTime()),TimeUnit.NANOSECONDS);}
     catch(InterruptedException e){interrupted=true;break;}
    }
-   for(var worker:workers)if(worker!=null&&!worker.isTerminated())worker.shutdownNow();
+   for(var worker:workers)if(worker!=null&&!worker.isTerminated()){
+    // shutdownNow removes queued futures without completing them. Cancel them so
+    // callers waiting for work that can no longer run are released as well.
+    for(var pending:worker.shutdownNow())if(pending instanceof java.util.concurrent.Future<?> future)future.cancel(false);
+   }
    deadline=System.nanoTime()+forcedNanos;
    for(var worker:workers)if(worker!=null)while(!worker.isTerminated()){
     long remaining=deadline-System.nanoTime();if(remaining<=0)break;

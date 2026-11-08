@@ -6,10 +6,10 @@ import java.util.*;
 public final class MenuChangeBatch {
  private MenuChangeBatch(){}
  public static List<JsonObject> hints(JsonArray events,String recipient,String section,String target){
-  return hints(events,recipient,topic->section.equals(topic)||section.equals("home")&&Set.of("home","groups","events","players").contains(topic),target);
+  return hints(events,recipient,topic->section.equals(topic)||section.equals("home")&&Set.of("home","groups","players").contains(topic),target);
  }
  public static List<JsonObject> hudHints(JsonArray events,String recipient){
-  return hints(events,recipient,Set.of("home","groups","tasks","storage","notifications")::contains,"");
+  return hints(events,recipient,Set.of("home","groups","notifications")::contains,"");
  }
  private static List<JsonObject> hints(JsonArray events,String recipient,java.util.function.Predicate<String> includes,String target){
   var topics=new LinkedHashMap<String,Set<String>>();

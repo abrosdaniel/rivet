@@ -18,6 +18,8 @@ SCENARIOS = (
     ("chat", "RIVET_CHAT_COMPAT_ADDRESS", "RivetMapTest", "RIVET_CHAT_COMPAT_OK", 180),
     ("realtime", "RIVET_REALTIME_ADDRESS", REALTIME_PLAYER, "RIVET_REALTIME_OK", 240),
     ("skins", "RIVET_OFFLINE_HEAD_ADDRESS", "RivetMapTest", "RIVET_OFFLINE_HEAD_OK", 180),
+    ("wardrobe", "RIVET_SKIN_SMOKE_ADDRESS", "RivetSkinTest", "RIVET_SKINS_INTEGRATION_OK", 240),
+    ("module", "RIVET_MAP_MODULE_ADDRESS", "RivetMapTest", "RIVET_MAP_MODULE_OK", 240),
     ("integrations", "RIVET_MAP_INTEGRATION_ADDRESS", "RivetMapTest", "RIVET_MAP_INTEGRATION_OK", 180),
     ("notifications", "RIVET_NOTIFICATION_ADDRESS", "RivetMapTest", "RIVET_NOTIFICATIONS_OK", 240),
     ("persistence", "RIVET_MAP_PERSISTENCE", "RivetMapTest", "RIVET_MAP_PERSISTENCE_OK", 180),
@@ -143,6 +145,8 @@ def main():
                 print("Running " + name, flush=True)
                 client_env = dict(env, RIVET_MAP_NETWORK_SMOKE="true", RIVET_UI_SCREENSHOTS="false")
                 client_env[variable] = address
+                if name == "wardrobe":
+                    client_env["RIVET_SKIN_SMOKE"] = str(work / "skin-captures")
                 if name == "ingress":
                     client_env["RIVET_INGRESS_CYCLES"] = str(args.ingress_cycles)
                     limit += 15 * (args.ingress_cycles - 1)
@@ -157,8 +161,6 @@ def main():
                 verify(work / (name + ".log"), marker)
             if not args.scenario or "permissions" in args.scenario:
                 verify(work / "server.log", "RIVET_MAP_PERMISSION_SERVER_OK revoke")
-            if env.get("RIVET_STOCK_SCAN_FIXTURE") == "true":
-                verify(work / "server.log", "RIVET_STOCK_SCAN_OK")
             print("RIVET_MAP_NETWORK_OK", flush=True)
         finally:
             stop(server)

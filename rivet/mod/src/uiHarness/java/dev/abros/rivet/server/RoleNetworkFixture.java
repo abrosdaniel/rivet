@@ -64,11 +64,6 @@ public final class RoleNetworkFixture {
    if(!mode.equals("restoreModules")){String module=mode.substring(8);check(FeatureModules.OPTIONAL.contains(module),"Unknown module");String text=java.nio.file.Files.readString(net.neoforged.fml.loading.FMLPaths.GAMEDIR.get().resolve("config/rivet-server.toml"));for(String id:module.equals("tasks")?List.of("tasks","storage"):List.of(module)){int start=text.indexOf("["+id+"]"),end=text.indexOf("\n[",start+1);if(end<0)end=text.length();text=text.substring(0,start)+text.substring(start,end).replace("enabled = true","enabled = false")+text.substring(end);}next=ServerSettings.parse(text);check(originalSettings.liveFrom(next).modules().enabled(module),"Module unexpectedly reloadable");}
    var applied=next;server.submit(()->{ServerDatabase.liveSettings(applied);ServerFeatures.sendState(p,false);}).get(5,TimeUnit.SECONDS);ready(p,mode,"");return;
   }
-  if(mode.equals("eventVisitor")||mode.equals("eventOwner")){
-   var db=store();var owner=new CommunityStore.Actor(mode.equals("eventOwner")?p.getUUID().toString():UUID.randomUUID().toString(),"EventOwner",true,false);db.seen(owner);
-   var create=input("create","");create.addProperty("section","events");create.addProperty("title","Network event");create.addProperty("description","Live event roles");create.addProperty("startsAt",java.time.Instant.now().plusSeconds(3600).toString());create.addProperty("capacity",1);String id=Json.str(db.request(owner,create).getAsJsonObject("detail"),"id");
-   var join=input("join",id);join.addProperty("section","events");db.request(new CommunityStore.Actor(UUID.randomUUID().toString(),"FirstParticipant",false,false),join);ready(p,mode,id);return;
-  }
   if(mode.equals("revoke")){server.submit(()->{try{permissions(p,"");ServerFeatures.sendState(p,false);ServerFeatures.invalidate(server);}catch(Exception e){throw new RuntimeException(e);}}).get(5,TimeUnit.SECONDS);ready(p,mode,"");return;}
   check(Set.of("visitor","member","assistant","leader","moderator","admin").contains(mode),"Unknown role");
   var db=store();var self=new CommunityStore.Actor(p.getUUID().toString(),p.getGameProfile().getName(),false,false);var owner=mode.equals("leader")?self:new CommunityStore.Actor(UUID.randomUUID().toString(),"FixtureOwner",false,false);db.seen(owner);db.seen(self);

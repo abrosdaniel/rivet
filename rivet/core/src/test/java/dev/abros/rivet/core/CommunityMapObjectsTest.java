@@ -12,6 +12,13 @@ import static org.junit.jupiter.api.Assertions.*;
  JsonObject command(String op,long revision){var j=new JsonObject();j.addProperty("section","home");j.addProperty("op",op);j.addProperty("id",id);j.addProperty("revision",revision);return j;}
  JsonObject submit(String name,long revision){var j=command("mapObjectSubmit",revision);j.addProperty("type","marker");j.add("draft",MapMarkerLink.json(new MapMarker(UUID.fromString(id),"minecraft:overworld",name,1,64,2,0xffffff,"pin")));return j;}
  JsonArray publicRows()throws Exception{return store.request(other,command("mapObjects",0)).getAsJsonArray("mapObjects");}
+ @Test void moderationSummaryRequiresAdminAndContainsOnlyPendingMetadata()throws Exception{
+  store.request(owner,submit("Review me",0));assertThrows(CommunityFailure.class,()->store.mapReviewSummary(owner));
+  var summary=store.mapReviewSummary(admin);assertEquals(1,summary.get("pendingPublications").getAsInt());var row=summary.getAsJsonArray("attentionPublications").get(0).getAsJsonObject();
+  assertEquals(Set.of("id","author","type","name"),row.keySet());assertEquals("Review me",Json.str(row,"name"));
+  store.request(admin,command("mapObjectApprove",1));assertEquals(0,store.mapReviewSummary(admin).get("pendingPublications").getAsInt());
+  store.request(owner,submit("Changed",2));assertEquals("Changed",Json.str(store.mapReviewSummary(admin).getAsJsonArray("attentionPublications").get(0).getAsJsonObject(),"name"));
+ }
  @Test void approvalKeepsOldPublishedVersionUntilNewApproval()throws Exception{
   store.request(owner,submit("First",0));assertTrue(publicRows().isEmpty());
   assertThrows(CommunityFailure.class,()->store.request(owner,command("mapObjectApprove",1)));

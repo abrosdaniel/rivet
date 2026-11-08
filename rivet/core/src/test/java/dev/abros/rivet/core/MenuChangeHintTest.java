@@ -14,16 +14,20 @@ class MenuChangeHintTest {
   hint.addProperty("section","groups");hint.addProperty("resync",false);assertTrue(MenuChangeHint.territories(hint));assertTrue(MenuChangeHint.activities(hint));
  }
  @Test void unrelatedChangesDoNotEraseTerritories(){
-  var hint=new JsonObject();for(String section:new String[]{"home","events"}){hint.addProperty("section",section);assertFalse(MenuChangeHint.territories(hint));assertTrue(MenuChangeHint.activities(hint));}
+  var hint=new JsonObject();for(String section:new String[]{"home"}){hint.addProperty("section",section);assertFalse(MenuChangeHint.territories(hint));assertTrue(MenuChangeHint.activities(hint));}
   hint.addProperty("section","notifications");assertFalse(MenuChangeHint.territories(hint));assertFalse(MenuChangeHint.activities(hint));
  }
  @Test void hudRefreshesOnRelevantDataWithoutRefreshingOnSubscription(){
-  for(String section:new String[]{"", "home", "groups", "tasks", "storage", "notifications"}){
+  for(String section:new String[]{"", "home", "groups", "notifications"}){
    var hint=new JsonObject();hint.addProperty("section",section);assertTrue(MenuChangeHint.hud(hint));
    assertFalse(MenuChangeHint.hud(MenuChangeHint.subscription(section,"")));
   }
-  for(String section:new String[]{"skins", "profile", "chat"}){
+  for(String section:new String[]{"skins", "profile", "chat", "tasks", "storage", "events"}){
    var hint=new JsonObject();hint.addProperty("section",section);assertFalse(MenuChangeHint.hud(hint));
   }
+ }
+ @org.junit.jupiter.api.Test void dashboardResyncAndChangesStayScoped(){
+  for(String section:java.util.List.of("","home","reports","myReports"))org.junit.jupiter.api.Assertions.assertTrue(MenuChangeHint.dashboard(MenuChangeHint.subscription(section,"")));
+  for(String section:java.util.List.of("groups","players","notifications"))org.junit.jupiter.api.Assertions.assertFalse(MenuChangeHint.dashboard(MenuChangeHint.subscription(section,"")));
  }
 }

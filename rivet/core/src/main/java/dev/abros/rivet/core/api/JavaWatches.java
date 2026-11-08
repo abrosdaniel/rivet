@@ -23,7 +23,10 @@ final class JavaWatches implements AutoCloseable {
  }
  void tick(){
   List<Watch<?>> current;synchronized(this){if(closed)return;current=List.copyOf(watches);}
-  for(var watch:current)watch.refresh();
+  for(var watch:current) {
+   try { watch.refresh(); }
+   catch(RuntimeException error) { watch.finish(Optional.of(error instanceof ApiException api?api.code():ApiException.Code.UNAVAILABLE)); }
+  }
  }
  private synchronized void remove(Watch<?> watch){watches.remove(watch);if(watches.isEmpty()&&timer!=null){timer.shutdownNow();timer=null;}}
  @Override public void close(){

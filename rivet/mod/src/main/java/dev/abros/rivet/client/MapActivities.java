@@ -5,9 +5,9 @@ import dev.abros.rivet.core.*;
 import net.minecraft.client.Minecraft;
 import java.util.*;
 
-/** Ephemeral, permission-filtered task/event snapshots. Never saved as personal markers. */
+/** Ephemeral, permission-filtered group marker snapshots. Never saved as personal markers. */
 final class MapActivities {
- private static final List<Source> SOURCES=List.of(new Source("tasks"),new Source("events"),new Source("groupmarkers"));
+ private static final List<Source> SOURCES=List.of(new Source("groupmarkers"));
  private static MapLayerClient.Point route;private static long routeExpires;
  static boolean available(String source){return WorldMapClient.allowed()&&ServerMenuClient.available()&&ServerMenuClient.supports("map-activities")&&ServerMenuClient.module(source.equals("groupmarkers")?"groups":source)&&(!source.equals("groupmarkers")||ServerMenuClient.supports("group-map"));}
  static List<MapLayerClient.Point> points(){long now=System.currentTimeMillis();return SOURCES.stream().filter(s->available(s.name)&&now<s.expires).flatMap(s->s.points.stream()).filter(p->p.group().isEmpty()||ServerMenuClient.module("groups")).filter(p->p.endsAt()==0||now<p.endsAt()).toList();}

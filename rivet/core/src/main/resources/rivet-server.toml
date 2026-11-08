@@ -20,6 +20,8 @@ mode = "false"
 registration = true
 # Минимум для НОВЫХ паролей: 6–128 символов. Старые пароли сохраняются.
 minPasswordLength = 6
+# TOTP: optional — по выбору игрока, staff — операторы и администраторы, all — все.
+totp = "optional"
 
 [database]
 # Адрес PostgreSQL: 127.0.0.1, имя контейнера в общей сети или адрес хоста БД.
@@ -95,6 +97,14 @@ session = true
 deaths = true
 
 [skins]
+# Static PNG capes (64x32), stored by player UUID.
+capes = true
+# Maximum stored capes per player (1-8).
+maxCapesPerPlayer = 8
+# Maximum saved skin and cape combinations per player (1-8).
+maxOutfitsPerPlayer = 8
+# Maximum uploaded cape file size in KiB (16-1024).
+maxCapeSizeKiB = 256
 # Библиотека и синхронизация скинов игроков.
 enabled = true
 # Максимум загружаемого PNG в МиБ: 1–16. Разрешение: 64×64 или 64×32.
@@ -133,10 +143,9 @@ maxMemberships = 3
 categories = []
 # Типы объединений: 1–20 уникальных названий по 40 символов.
 groupTypes = ["Город", "Команда", "Гильдия", "Поселение"]
-# home = Главная, players = Игроки, board = Доска объявлений, groups = Объединения;
-# events = События, polls = Голосования, ideas = Предложения, notifications = Уведомления.
+# home = Главная, players = Игроки, groups = Объединения, notifications = Уведомления.
 # home и notifications обязательны; остальные разделы можно убрать из списка.
-sections = ["home", "players", "board", "groups", "events", "polls", "ideas", "notifications"]
+sections = ["home", "players", "groups", "notifications"]
 
 [menu]
 # Текст помощи, до 2000 символов.
@@ -164,22 +173,6 @@ auditEntries = 1000
 # Участники, роли, приглашения и общие данные объединений.
 enabled = true
 
-[board]
-# Доска объявлений, категории и отклики.
-enabled = true
-
-[events]
-# События, участники и напоминания.
-enabled = true
-
-[polls]
-# Обычные опросы; голосования о наказании настраиваются отдельно в [votes].
-enabled = true
-
-[ideas]
-# Предложения игроков и поддержка идей.
-enabled = true
-
 [reports]
 # Обращения, ответы администрации и действия модерации Rivet.
 # Права и команды модерации Minecraft и других модов не меняются.
@@ -189,23 +182,6 @@ enabled = true
 # Управление сервером: объявления администрации, обслуживание и запланированная остановка.
 # Настройки меню и диагностика остаются доступными администрации.
 enabled = true
-
-[storage]
-# Привязанные хранилища, сбор содержимого и голограммы.
-# Требует tasks.enabled = true. Для отключения задач выключите и этот модуль.
-enabled = true
-
-[tasks]
-# Личные и общие задачи, этапы, комментарии и сроки.
-# При groups.enabled = false личные задачи продолжают работать.
-enabled = true
-# Все задачи, созданные игроком: личные и задачи объединений, включая архив.
-# 0 — без ограничения. Снижение лимитов не удаляет существующие записи.
-maxPerOwner = 200
-# Подзадач на одну задачу. 0 — без ограничения.
-maxSubtasks = 30
-# Комментариев на одну задачу. 0 — без ограничения.
-maxComments = 100
 
 [spark]
 # Используется автоматически при наличии серверного spark.

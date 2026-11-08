@@ -37,6 +37,9 @@ public final class Messages {
 
     public static void clientResolver(Function<String,String> resolver) { clientResolver = resolver; }
 
+    /** Null outside an explicit request scope; consumers then retain their supplied fallback. */
+    public static String language() { return LOCALE.get(); }
+
     public static Scope locale(String language) {
         String before = LOCALE.get();
         LOCALE.set(language == null ? "en_us" : language);

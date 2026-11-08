@@ -2,6 +2,15 @@ package dev.abros.rivet.core;
 import org.junit.jupiter.api.Test;
 import static org.junit.jupiter.api.Assertions.*;
 class HudNoticeQueueTest {
+ @Test void deadlineExpiresPausedWaitingAndDeferredNotices(){
+  var q=new HudNoticeQueue();
+  var a=new HudNoticeQueue.Notice("exp","notifications","","external","Title","Body",HudNoticeQueue.Priority.ORDINARY,"",100);
+  q.add(a,1,1);q.advance(2,1,false);assertTrue(q.advance(100,1,false).isEmpty());
+  assertFalse(q.add(a,101,1));
+  q.clear();q.add(a,1,1);var shown=q.advance(1,1,true).getFirst();assertTrue(q.defer(shown,2,60000));assertTrue(q.advance(60003,1,true).isEmpty());
+  q.clear();q.add(notice("blocker","",HudNoticeQueue.Priority.IMPORTANT),1,1);q.add(a,2,1);assertTrue(q.advance(10000,1,true).isEmpty());
+ }
+
  private HudNoticeQueue.Notice notice(String id,String target,HudNoticeQueue.Priority priority){return new HudNoticeQueue.Notice(id,"events",target,"reminder","Событие","Через 10 минут",priority);}
  @Test void expiresWithoutReadAndDoesNotReplayDuplicates(){var q=new HudNoticeQueue();q.add(notice("1","a",HudNoticeQueue.Priority.ORDINARY),0,2);var e=q.advance(0,2,true).getFirst();assertEquals(1,e.remaining(0));assertTrue(q.advance(6000,2,true).isEmpty());q.add(notice("1","a",HudNoticeQueue.Priority.ORDINARY),7000,2);assertTrue(q.advance(7000,2,true).isEmpty());}
  @Test void mergesObjectEventsAndDismissReturnsAllIds(){var q=new HudNoticeQueue();q.add(notice("1","a",HudNoticeQueue.Priority.ORDINARY),0,2);q.add(notice("2","a",HudNoticeQueue.Priority.ORDINARY),1,2);var e=q.advance(1,2,true).getFirst();assertEquals(2,e.count());assertEquals(java.util.List.of("1","2"),q.dismiss(e));assertTrue(q.advance(1,2,true).isEmpty());}

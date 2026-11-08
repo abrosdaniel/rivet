@@ -52,12 +52,12 @@ OP уровня 2 и `rivet.admin` дают административный д�
 | `rivet.announce`                        | Объявления и закрепление.                         |
 | `rivet.maintenance` / `rivet.restart`   | Обслуживание / остановка.                         |
 | `rivet.reports`                         | Обращения, ответы и закрытие.                     |
+| `rivet.indexor.admin` | Полный доступ к истории и откату Indexor (`/ledger`). |
 | `rivet.diagnostics`                     | Состояние Rivet и интеграций.                        |
 | `rivet.permissions.manage` | Изменение прав групп в меню Rivet; дополнительно нужен административный доступ. |
 | `rivet.map.seeHiddenPlayers` | Просмотр скрытых игроков на карте и миникарте; входит в административный доступ. |
 | `rivet.map.teleport`                   | Телепортация с карты без OP.                      |
 | `rivet.pack`                            | Проверка и публикация клиентской сборки.           |
-| `rivet.events`                          | Управление событиями.                             |
 | `rivet.auth.reset`                      | Восстановление Auth; отдельное право даже для OP. |
 | `rivet.vote.protected`                  | Защита от голосований о наказании.                |
 

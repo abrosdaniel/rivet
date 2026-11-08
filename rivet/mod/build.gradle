@@ -167,7 +167,7 @@ tasks.register('checkModuleComposition') {
             'ServerFeatures': 'ServerModules.java', 'ServerSocial': 'ServerModules.java',
             'ServerChat': 'ServerModules.java', 'ServerNavigation': 'ServerModules.java',
             'ServerPlayerStatistics': 'ServerModules.java', 'ServerModerationVotes': 'ServerModules.java',
-            'ServerTaskStocks': 'ServerModules.java', 'ServerReportsModule': 'ServerModules.java',
+            'ServerReportsModule': 'ServerModules.java',
             'ServerTerrain': 'ServerModules.java', 'ServerApiKeys': 'ServerModules.java', 'ServerApi': 'ServerModules.java', 'ServerManagement': 'ServerModules.java', 'ServerPack': 'ServerModules.java'
         ]
         def violations = []

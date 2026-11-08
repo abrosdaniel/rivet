@@ -22,6 +22,12 @@ class CacheCleanupTest {
   new Hub(game,"1.3.2","21.1.250");
   assertTrue(Files.exists(active));assertTrue(Files.exists(recent));assertTrue(Files.exists(saved));assertFalse(Files.exists(unused));assertFalse(Files.exists(partial));
  }
+ @Test void abandonedSourceResumeFilesExpireButRecentPauseIsPreserved()throws Exception{
+  var cache=new Cache(game,new Remote());var file=object(cache,"paused",false);
+  var stale=file.resolveSibling(file.getFileName()+".source.part");var etag=stale.resolveSibling(stale.getFileName()+".etag");
+  Files.writeString(stale,"part");Files.writeString(etag,"revision");assertEquals(0,cache.cleanup(game));assertTrue(Files.exists(stale));assertTrue(Files.exists(etag));
+  age(stale);age(etag);assertEquals(12,cache.cleanup(game));assertFalse(Files.exists(stale));assertFalse(Files.exists(etag));assertTrue(Files.exists(file));
+ }
  @Test void pendingOrRecoverySkipsCleanupAndPreservesBackups()throws Exception{
   var cache=new Cache(game,new Remote());var unused=object(cache,"unused",true);
   Json.write(game.resolve("rivet/pending.json"),Map.of("id",UUID.randomUUID().toString()));assertEquals(0,cache.cleanup(game));assertTrue(Files.exists(unused));Files.delete(game.resolve("rivet/pending.json"));

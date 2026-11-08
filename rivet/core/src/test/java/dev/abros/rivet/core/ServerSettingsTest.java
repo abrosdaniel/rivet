@@ -5,6 +5,11 @@ import java.nio.file.*;
 import static org.junit.jupiter.api.Assertions.*;
 class ServerSettingsTest {
  @TempDir Path root;
+ @Test void capeSettingsUpgradeAndLimits()throws Exception{
+  String old=ServerSettings.template().replace("capes = true\n", "").replace("maxCapesPerPlayer = 8\n", "").replace("maxOutfitsPerPlayer = 8\n", "").replace("maxCapeSizeKiB = 256\n", "");
+  var file=root.resolve("config/rivet-server.toml");Files.createDirectories(file.getParent());Files.writeString(file,old);var settings=ServerSettings.load(root);assertTrue(settings.skins().capes());assertEquals(8,settings.skins().maxCapesPerPlayer());assertEquals(8,settings.skins().maxOutfitsPerPlayer());assertEquals(262144,settings.skins().maxCapeBytes());String updated=Files.readString(file);assertTrue(updated.contains("maxCapeSizeKiB = 256"));ServerSettings.load(root);assertEquals(updated,Files.readString(file));
+  for(String invalid:new String[]{updated.replace("maxCapesPerPlayer = 8","maxCapesPerPlayer = 9"),updated.replace("maxCapeSizeKiB = 256","maxCapeSizeKiB = 0"),updated.replace("maxOutfitsPerPlayer = 8","maxOutfitsPerPlayer = 9")})assertThrows(IllegalArgumentException.class,()->ServerSettings.parse(invalid));
+ }
  @Test void browserTicketLimitsAndUpgrade()throws Exception{
   String template=ServerSettings.template();
   Path file=root.resolve("config/rivet-server.toml");Files.createDirectories(file.getParent());
@@ -34,7 +39,7 @@ class ServerSettingsTest {
   assertThrows(IllegalArgumentException.class,()->ServerSettings.parse(ServerSettings.template().replace("origins = []","origins = [1]")));
  }
  @Test void configReviewHidesSecretsAndReloadsOnlyMenu()throws Exception{var original=ServerSettings.parse(ServerSettings.template());var next=ServerSettings.parse(ServerSettings.template().replace("password = \"\"","password = \"never-send-secret\"").replace("help = \"", "help = \"Изменено. "));assertFalse(original.preview(next).toString().contains("never-send-secret"));var live=original.liveFrom(next);assertEquals("",live.text("database.password"));assertTrue(live.text("menu.help").startsWith("Изменено."));}
- @Test void defaultsCoverAllModules()throws Exception{var s=ServerSettings.load(root);assertEquals("false",s.text("auth.mode"));assertEquals(6,s.number("auth.minPasswordLength"));assertFalse(s.votes().enabled());assertTrue(s.statistics().deaths());assertEquals(8,s.community().getAsJsonArray("sections").size());assertTrue(s.menu().getAsJsonArray("links").isEmpty());}
+ @Test void defaultsCoverAllModules()throws Exception{var s=ServerSettings.load(root);assertEquals("false",s.text("auth.mode"));assertEquals(6,s.number("auth.minPasswordLength"));assertFalse(s.votes().enabled());assertTrue(s.statistics().deaths());assertEquals(java.util.List.of("home","players","groups","notifications"),s.community().getAsJsonArray("sections").asList().stream().map(e->e.getAsString()).toList());assertTrue(s.menu().getAsJsonArray("links").isEmpty());}
  @Test void acceptsLinksAndStatsSettings()throws Exception{var s=ServerSettings.parse(ServerSettings.template().replace("links = []","links = [{name = 'Сайт', url = 'https://example.org'}]").replace("playTime = true","playTime = false"));assertFalse(s.statistics().totalTime());assertEquals("Сайт",s.menu().getAsJsonArray("links").get(0).getAsJsonObject().get("name").getAsString());assertFalse(s.menu().has("database"));}
  @Test void rejectsOldFlatConfigWithoutRewriting()throws Exception{Path f=root.resolve("config/rivet-server.toml");Files.createDirectories(f.getParent());String old="project = 'abrosdaniel/example'\nluckperms = true\n";Files.writeString(f,old);assertThrows(IllegalArgumentException.class,()->ServerSettings.load(root));assertEquals(old,Files.readString(f));}
  @Test void rejectsMissingAuthAndUnknownKeys()throws Exception{String t=ServerSettings.template();assertThrows(IllegalArgumentException.class,()->ServerSettings.parse(t.replace("mode = \"false\"","")));assertThrows(IllegalArgumentException.class,()->ServerSettings.parse(t+"\nunknown = true\n"));}
@@ -86,7 +91,7 @@ class ServerSettingsTest {
  @Test void obsoleteItemSharingSettingIsIgnored()throws Exception{String template=ServerSettings.template();assertDoesNotThrow(()->ServerSettings.parse(template.replace("[chat]","[chat]\nallowItems = true")));assertDoesNotThrow(()->ServerSettings.parse(template.replace("[chat]","[chat]\nallowItems = false")));}
  @Test void chatLabelsAndSharingPermissions()throws Exception{String t=ServerSettings.template();var s=ServerSettings.parse(t.replace("localName = \"Рядом\"","localName = \"Соседи\""));assertEquals("Соседи",s.text("chat.localName"));assertFalse(ServerSettings.template().contains("allowItems ="));assertTrue(s.flag("chat.coordinates"));assertThrows(IllegalArgumentException.class,()->ServerSettings.parse(t.replace("localName = \"Рядом\"","localName = \""+"x".repeat(41)+"\"")));}
  @Test void taskAndSparkPoliciesDefaultForOldConfigsAndRejectInvalidValues()throws Exception{
-  String t=ServerSettings.template();String old=t.substring(0,t.indexOf("[tasks]"))+t.substring(t.indexOf("[chat]"));var settings=ServerSettings.parse(old);
+  String current=ServerSettings.template();String t=current+"\n[tasks]\nenabled = true\nmaxPerOwner = 200\nmaxSubtasks = 30\nmaxComments = 100\n";String old=current.substring(0,current.indexOf("[spark]"))+current.substring(current.indexOf("[chat]"));var settings=ServerSettings.parse(old);
   assertEquals(TaskLimits.defaults(),settings.taskLimits());assertEquals(SparkTimeline.AlertSettings.defaults(),settings.sparkAlerts());
   var changed=ServerSettings.parse(t.replace("maxPerOwner = 200","maxPerOwner = 10").replace("durationSeconds = 30","durationSeconds = 5"));assertEquals(10,changed.taskLimits().perOwner());assertEquals(5,changed.sparkAlerts().sustainedSeconds());
   for(String replacement:new String[]{"maxPerOwner = -1","maxPerOwner = 2147483648"})assertThrows(IllegalArgumentException.class,()->ServerSettings.parse(t.replace("maxPerOwner = 200",replacement)));
@@ -105,24 +110,24 @@ class ServerSettingsTest {
  @Test void legacyIntegrationSwitchIsIgnored()throws Exception{assertNotNull(ServerSettings.parse(ServerSettings.template()+"\n[integrations]\nluckperms = false\n"));assertNotNull(ServerSettings.parse(ServerSettings.template()+"\n[integrations]\nluckperms = true\n"));}
  @Test void upgradeAddsEditableSettingsAndCommentsWithoutChangingOwnersValues()throws Exception{
   Path file=root.resolve("config/rivet-server.toml");Files.createDirectories(file.getParent());
-  String original=ServerSettings.template().replace("password = \"\"","password = \"owner-secret\"").replace("localRadius = 100","localRadius = 42").replace("group = true", "# Owner chose the available channels\ngroup = false").replace("maxComments = 100","");
+  String original=ServerSettings.template().replace("password = \"\"","password = \"owner-secret\"").replace("localRadius = 100","localRadius = 42").replace("group = true", "# Owner chose the available channels\ngroup = false").replace("totp = \"optional\"","");
   original=original.substring(0,original.indexOf("[spark]"))+original.substring(original.indexOf("[chat]"));
   Files.writeString(file,original);var settings=ServerSettings.load(root);String expanded=Files.readString(file);
   assertEquals(42,settings.number("chat.localRadius"));assertFalse(settings.flag("chat.group"));assertEquals("owner-secret",settings.text("database.password"));
-  assertTrue(expanded.contains("# Owner chose the available channels"));assertTrue(expanded.contains("maxComments = 100"));assertTrue(expanded.contains("[spark]"));assertTrue(expanded.contains("# Как долго нагрузка"));
+  assertTrue(expanded.contains("# Owner chose the available channels"));assertTrue(expanded.contains("totp = \"optional\""));assertTrue(expanded.contains("[spark]"));assertTrue(expanded.contains("# Как долго нагрузка"));
   try(var files=Files.list(file.getParent())){var backups=files.filter(p->p.toString().endsWith(".toml.bak")).toList();assertEquals(1,backups.size());assertEquals(original,Files.readString(backups.getFirst()));}
   ServerSettings.load(root);assertEquals(expanded,Files.readString(file));
   try(var files=Files.list(file.getParent())){assertEquals(1,files.filter(p->p.toString().endsWith(".toml.bak")).count());}
  }
  @Test void upgradePreservesWindowsLineEndingsAndMultilineStrings()throws Exception{
   Path file=root.resolve("config/rivet-server.toml");Files.createDirectories(file.getParent());
-  String original=ServerSettings.template().replace("\r\n","\n").replace("maxComments = 100","").replace("tab = \"auto\"", "tab = \"rivet\"");
+  String original=ServerSettings.template().replace("\r\n","\n").replace("totp = \"optional\"","").replace("tab = \"auto\"", "tab = \"rivet\"");
   original=original.replace("help = \"Откройте меню командой /rivet. За помощью обратитесь к администрации сервера.\"", "help = '''\n[chat]\nLiteral content, not a section\n''' ");
   original=original.replace("\n","\r\n");Files.writeString(file,original);ServerSettings.load(root);
   String expanded=Files.readString(file);assertFalse(expanded.replace("\r\n", "").contains("\n"));assertTrue(expanded.contains("help = '''\r\n[chat]\r\nLiteral content, not a section\r\n''' "));assertEquals("rivet",ServerSettings.parse(expanded).text("display.tab"));
  }
  @Test void invalidUpgradeLeavesConfigUntouchedAndCreatesNoBackup()throws Exception{
-  Path file=root.resolve("config/rivet-server.toml");Files.createDirectories(file.getParent());String invalid=ServerSettings.template().replace("maxComments = 100","").replace("localRadius = 100","localRadius = 0");Files.writeString(file,invalid);
+  Path file=root.resolve("config/rivet-server.toml");Files.createDirectories(file.getParent());String invalid=ServerSettings.template().replace("totp = \"optional\"","").replace("localRadius = 100","localRadius = 0");Files.writeString(file,invalid);
   assertThrows(IllegalArgumentException.class,()->ServerSettings.load(root));assertEquals(invalid,Files.readString(file));try(var files=Files.list(file.getParent())){assertEquals(1,files.count());}
  }
  @Test void upgradeSupportsQuotedSectionsAndRootDottedKeys()throws Exception{

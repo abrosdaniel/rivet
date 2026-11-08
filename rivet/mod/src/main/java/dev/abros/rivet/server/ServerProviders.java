@@ -13,6 +13,8 @@ import java.util.*;
 public final class ServerProviders {
  private static volatile IntegrationRegistry registry;
  private static IntegrationApi reader;
+ private static PlayerDirectory identities;
+ public static PlayerDirectory identities(){var current=identities;if(current==null)throw new IllegalStateException("Player directory is stopped");return current;}
  // Minecraft asks command permissions before PlayerList insertion and during logout.
  // Only the internal synchronous call supplies that exact actor; public UUID lookups stay strict.
  private static final ThreadLocal<ServerPlayer> permissionActor=new ThreadLocal<>();
@@ -26,7 +28,7 @@ public final class ServerProviders {
  }
  public static void start(MinecraftServer server){
   stop();WaystonesAdapter.CAPABILITY.reset();registry=new IntegrationRegistry();reader=registry.owner("rivet");
-  var identities=new ServerIdentityDirectory(server);
+  identities=new PlayerDirectory(server);
   owner("rivet").register(IntegrationApi.IDENTITY,"rivet",new IntegrationApi.Identity(){
    public Optional<IntegrationApi.Player> byName(String name){thread(server);return identities.byName(name).map(p->new IntegrationApi.Player(p.getId(),p.getName()));}
    public Optional<IntegrationApi.Player> byId(UUID id){thread(server);return identities.byId(id).map(p->new IntegrationApi.Player(p.getId(),p.getName()));}
@@ -66,7 +68,7 @@ public final class ServerProviders {
  }
  public static IntegrationApi owner(String id){var current=registry;if(current==null)throw new ApiException(ApiException.Code.UNAVAILABLE,"Integrations stopped");return current.owner(id);}
  public static <T> Optional<T> find(IntegrationApi.Service<T> service,String id){var current=reader;return current==null?Optional.empty():current.find(service,id);}
- public static void stop(){reader=null;var old=registry;registry=null;if(old!=null)old.close();}
+ public static void stop(){identities=null;reader=null;var old=registry;registry=null;if(old!=null)old.close();}
  private static void thread(MinecraftServer server){if(!server.isSameThread())throw new IllegalStateException("Server thread required");}
  private static ServerPlayer live(MinecraftServer server,UUID id){thread(server);var player=server.getPlayerList().getPlayer(id);if(player==null)throw new ApiException(ApiException.Code.UNAVAILABLE,"Player offline");return player;}
  private static ServerPlayer actor(MinecraftServer server,UUID id){var player=live(server,id);if(!AuthServer.authenticated(player))throw new ApiException(ApiException.Code.FORBIDDEN,"Sign in first");return player;}

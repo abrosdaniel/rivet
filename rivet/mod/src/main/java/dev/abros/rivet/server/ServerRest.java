@@ -1,7 +1,6 @@
 package dev.abros.rivet.server;
 
 import dev.abros.rivet.core.api.*;
-import dev.abros.rivet.core.auth.AuthStore;
 import java.time.Clock;
 import net.minecraft.commands.Commands;
 import net.minecraft.network.chat.Component;
@@ -26,16 +25,21 @@ final class ServerRest {
             .requires(s->sessions!=null&&s.getEntity() instanceof net.minecraft.server.level.ServerPlayer p&&AuthServer.authenticated(p))
             .executes(c->{sessions.revokePlayer(c.getSource().getPlayerOrException().getUUID().toString());c.getSource().sendSuccess(()->Component.translatable("rivet.api.link.revoked"),false);return 1;})));
     });}
+    private static NotificationRest notifications;
     static void start()throws java.io.IOException{
         var mapLayers=ServerApi.layers();var config=ServerDatabase.settings();var settings=RestSettings.from(config);var keys=ServerApiKeys.authorization();
-        sessions=new PlayerSessions(keys,new AuthStore(ServerDatabase.get(),config.number("auth.minPasswordLength")),!config.text("auth.mode").equals("false"),Clock.systemUTC(),config.number("api.sessionHours"),config.number("api.sessionLimit"));
+        sessions=new PlayerSessions(keys,AuthServer.apiStore(),!config.text("auth.mode").equals("false"),Clock.systemUTC(),config.number("api.sessionHours"),config.number("api.sessionLimit"));
         var domains=new DomainRest(keys,sessions,ServerFeatures.communityStore(),new dev.abros.rivet.core.CommunityApiResources(ServerDatabase.get(),ServerFeatures.communityStore(),config).access(ServerDomainAccess::allowed).pack(ServerPack::apiManifest).live(ServerLiveMap.ACCESS).layers(mapLayers)).commands(new dev.abros.rivet.core.CommunityApiCommands(ServerDatabase.get(),ServerFeatures.communityStore(),config).access(ServerDomainAccess::allowed).local(ServerDomainAccess::local));
         var ws=WebSocketSettings.from(config);if(ws.enabled())tickets=new BrowserTickets(keys,sessions,Clock.systemUTC(),BrowserTickets.Limits.from(config),settings.origins());
-        var api=new RestApi(ServerApi.runtime(),RestApi.authorization(keys),settings,new BrowserTicketRest(keys,tickets,new TerrainRest(RestApi.authorization(keys),ServerTerrain::api,domains)));
+        notifications=new NotificationRest(keys,ServerNotifications.publisher(),domains);
+        var api=new RestApi(ServerApi.runtime(),RestApi.authorization(keys),settings,new BrowserTicketRest(keys,tickets,new TerrainRest(RestApi.authorization(keys),ServerTerrain::api,notifications)));
         try{
             if(settings.enabled()){listener=new RestHttpServer(settings,api);listener.start();}
             if(ws.enabled()){websocket=new ApiWebSocketServer(ws,api,ServerApi.runtime(),keys,new DomainSubscriptions(domains,()->ServerDatabase.get().communityRevision()+mapLayers.revision()),ServerTerrain::api,tickets);websocket.start();}
         }catch(java.io.IOException|RuntimeException failure){stop();throw failure;}
     }
-    static void stop(){var ws=websocket;websocket=null;if(ws!=null)ws.close();var previous=listener;listener=null;if(previous!=null)previous.close();var oldTickets=tickets;tickets=null;if(oldTickets!=null)oldTickets.close();var current=sessions;sessions=null;if(current!=null)current.close();}
+    static boolean sessionsAvailable(){return sessions!=null;}
+    static com.google.gson.JsonObject playerSessions(String player,String cursor)throws Exception{var out=new com.google.gson.JsonObject();var items=new com.google.gson.JsonArray();var current=sessions;String next="";if(current!=null){var page=current.playerSessions(player,cursor);next=page.next();for(var session:page.items()){var item=new com.google.gson.JsonObject();item.addProperty("id",session.id().toString());item.addProperty("application",session.application());item.addProperty("created",session.created());item.addProperty("expires",session.expires());items.add(item);}}out.add("sessions",items);out.addProperty("next",next);return out;}
+    static void revokePlayerSession(String player,String id){var current=sessions;if(current!=null){if(id.equals("all"))current.revokePlayer(player);else current.revokePlayerSession(player,java.util.UUID.fromString(id));}}
+    static void stop(){var notices=notifications;notifications=null;if(notices!=null)notices.close();var ws=websocket;websocket=null;if(ws!=null)ws.close();var previous=listener;listener=null;if(previous!=null)previous.close();var oldTickets=tickets;tickets=null;if(oldTickets!=null)oldTickets.close();var current=sessions;sessions=null;if(current!=null)current.close();}
 }

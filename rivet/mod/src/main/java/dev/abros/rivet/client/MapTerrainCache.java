@@ -12,7 +12,12 @@ final class MapTerrainCache {
         int height(int x,int z,int fallback){int h=z==15?south[x]:east[z];return h==Integer.MIN_VALUE?fallback:h;}
         boolean same(Edge other){return other!=null&&Arrays.equals(south,other.south)&&Arrays.equals(east,other.east);}
     }
-    private record Source(MapTile tile,long revision,Edge north,Edge west,Edge corner,int top,int depth,boolean legible,MapColors.Style style){}
+    // Images must not keep evicted terrain samples alive. A later disk reload is a new source.
+    private record Source(java.lang.ref.WeakReference<MapTile> tile,long revision,Edge north,Edge west,Edge corner,int top,int depth,boolean legible,MapColors.Style style){
+        boolean same(Source other){var current=tile.get();return other!=null&&current!=null&&current==other.tile.get()&&revision==other.revision
+            &&Objects.equals(north,other.north)&&Objects.equals(west,other.west)&&Objects.equals(corner,other.corner)
+            &&top==other.top&&depth==other.depth&&legible==other.legible&&Objects.equals(style,other.style);}
+    }
     private static final Map<WorldMapClient.TileKey,Edge> edges=new LinkedHashMap<>(256,.75f,true);
     private static final ThreadPoolExecutor WORKER=new ThreadPoolExecutor(1,1,30,TimeUnit.SECONDS,new ArrayBlockingQueue<>(64),r->{var t=new Thread(r,"Rivet map colours");t.setDaemon(true);return t;});
     private static final Map<WorldMapClient.TileKey,Image> images=new LinkedHashMap<>(256,.75f,true);
@@ -66,8 +71,8 @@ final class MapTerrainCache {
         int ceiling=key.band()==MapLayer.FULL?MapLayer.FULL:key.band()==MapLayer.SURFACE?MapLayer.SURFACE:MapCaves.layer(key.dimension()).equals(key.layer())?activeTop:key.band()*16+15;
         int depth=MapCaves.view(key.dimension()).depth(),worldHeight=Minecraft.getInstance().level==null?384:Minecraft.getInstance().level.dimensionType().logicalHeight();
         var style=MapRenderSettings.INSTANCE.style(key.dimension());
-        var source=new Source(tile,tile.revision(),north,west,corner,ceiling,depth,legible,style);
-        if(cached!=null&&source.equals(sources.get(key))&&!changes.containsKey(key))return cached;
+        var source=new Source(new java.lang.ref.WeakReference<>(tile),tile.revision(),north,west,corner,ceiling,depth,legible,style);
+        if(cached!=null&&source.same(sources.get(key))&&!changes.containsKey(key))return cached;
         if(!canWork())return cached;
         var snapshot=tile.copy();rememberEdge(key,tile);long owner=generation,stamp=changes.getOrDefault(key,0L);
         pending.add(key);
@@ -89,8 +94,8 @@ final class MapTerrainCache {
                 long version=previous!=null&&Arrays.deepEquals(previous.levels(),levels)?previous.revision():++revision;
                 images.put(key,new Image(version,levels));
                 var reduced=levels.clone();reduced[0]=null;overview.put(key,new Image(version,reduced));
-                while(images.size()>8192){var oldest=images.keySet().iterator().next();images.remove(oldest);sources.remove(oldest);}
-                while(overview.size()>100000){var oldest=overview.keySet().iterator().next();overview.remove(oldest);if(!images.containsKey(oldest))changes.remove(oldest);}
+                while(images.size()>WorldMapClient.CACHE_BUDGET.tiles()){var oldest=images.keySet().iterator().next();images.remove(oldest);sources.remove(oldest);}
+                while(overview.size()>WorldMapClient.CACHE_BUDGET.overview()){var oldest=overview.keySet().iterator().next();overview.remove(oldest);if(!images.containsKey(oldest))changes.remove(oldest);}
             });
         });}catch(RejectedExecutionException ex){pending.remove(key);}
         return cached;
@@ -102,7 +107,7 @@ final class MapTerrainCache {
     }
     private static Edge rememberEdge(WorldMapClient.TileKey key,MapTile tile){
         var candidate=edge(tile);var previous=edges.get(key);if(candidate.same(previous))return previous;
-        edges.put(key,candidate);while(edges.size()>100000)edges.remove(edges.keySet().iterator().next());return candidate;
+        edges.put(key,candidate);while(edges.size()>WorldMapClient.CACHE_BUDGET.overview())edges.remove(edges.keySet().iterator().next());return candidate;
     }
     private static Edge neighbour(WorldMapClient.TileKey key){
         var cached=edges.get(key);if(cached!=null)return cached;

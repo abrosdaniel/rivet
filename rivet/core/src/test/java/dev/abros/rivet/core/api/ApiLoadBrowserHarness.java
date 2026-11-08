@@ -28,8 +28,8 @@ public final class ApiLoadBrowserHarness {
  ApiLoadBrowserHarness(Path output,String origin)throws Exception{
   this.output=output;Files.createDirectories(output);db=TestDatabase.database(output);cfg=ServerSettings.parse(ServerSettings.template());store=new CommunityStore(db,CommunityStore.defaults());
   keys=new ApiKeys(db,new ApiKeys.Limits(100,8,100000,30,30,1000),Clock.systemUTC());
-  var issued=keys.create(output,"load_browser",Set.of("sessions.link","tasks.read","tasks.write","notifications.read","chat.read","events.read","websocket.connect","websocket.ticket","server.status.read"),1,100000);
-  secret=Files.readString(issued.deliveryFile()).trim();Files.delete(issued.deliveryFile());grant=keys.authorize(secret,"tasks.read");
+  var issued=keys.create(output,"load_browser",Set.of("sessions.link","notifications.read","notifications.write","chat.read","websocket.connect","websocket.ticket","server.status.read"),1,100000);
+  secret=Files.readString(issued.deliveryFile()).trim();Files.delete(issued.deliveryFile());grant=keys.authorize(secret,"notifications.read");
   sessions=new PlayerSessions(keys,new AuthStore(db),false,Clock.systemUTC(),1,1000);
   // Loopback HTTP is a test-only injection, not a change to production HTTPS origin validation.
   tickets=new BrowserTickets(keys,sessions,Clock.systemUTC(),new BrowserTickets.Limits(5,128,128),Set.of(origin));
@@ -41,14 +41,13 @@ public final class ApiLoadBrowserHarness {
   javaDomains=new JavaDomains(db,store,cfg);http.start();ws.start();
   for(int i=0;i<100;i++){
    String id=UUID.randomUUID().toString();players.add(id);var actor=new CommunityStore.Actor(id,"Load"+i,false,false);store.seen(actor);
-   var q=new JsonObject();q.addProperty("section","home");q.addProperty("op","workSave");q.addProperty("title","Private-"+i);q.addProperty("description","Owned by "+id);store.request(actor,q);
-   store.externalNotice(id,"Notice-"+i);tokens.add(link(id,"Load"+i));
+   store.externalNotice(id,"Private-"+i);tokens.add(link(id,"Load"+i));
   }
  }
  String link(String id,String name)throws Exception{var c=sessions.challenge(grant);sessions.confirm(c.code(),grant.application(),id,name);return sessions.exchange(grant,c.code(),c.pollToken()).token();}
  HttpResponse<String> get(String path,int player)throws Exception{return client.send(HttpRequest.newBuilder(URI.create("http://127.0.0.1:"+HTTP+"/api/v1/"+path)).timeout(Duration.ofSeconds(15)).header("Authorization","Bearer "+secret).header("X-Rivet-Session",tokens.get(player)).GET().build(),HttpResponse.BodyHandlers.ofString());}
  static void check(boolean condition,String description){if(!condition)throw new AssertionError(description);}
- static void owned(String body,int player){var items=JsonParser.parseString(body).getAsJsonObject().getAsJsonArray("items");check(items.size()==1,"Unexpected private task count");check(items.get(0).getAsJsonObject().get("title").getAsString().equals("Private-"+player),"Private data crossed player boundary");}
+ static void owned(String body,int player){var items=JsonParser.parseString(body).getAsJsonObject().getAsJsonArray("items");check(items.size()==1,"Unexpected private notification count");check(items.get(0).getAsJsonObject().get("title").getAsString().equals("Private-"+player),"Private data crossed player boundary");}
  static JsonObject timing(Collection<Long> samples,long elapsed){long[] values=samples.stream().mapToLong(Long::longValue).sorted().toArray();var j=new JsonObject();j.addProperty("count",values.length);j.addProperty("p50Ms",values[values.length/2]/1e6);j.addProperty("p95Ms",values[Math.min(values.length-1,values.length*95/100)]/1e6);j.addProperty("maxMs",values[values.length-1]/1e6);j.addProperty("elapsedSeconds",elapsed/1e9);return j;}
  static final class Listener implements WebSocket.Listener{
   final BlockingQueue<JsonObject> messages=new LinkedBlockingQueue<>();final CompletableFuture<Integer> closed=new CompletableFuture<>();final StringBuilder buffer=new StringBuilder();
@@ -58,20 +57,20 @@ public final class ApiLoadBrowserHarness {
  void load()throws Exception{
   long begin=System.nanoTime();var samples=new ConcurrentLinkedQueue<Long>();var gate=new CountDownLatch(1);
   try(var workers=Executors.newFixedThreadPool(100)){
-   var futures=new ArrayList<Future<?>>();for(int p=0;p<100;p++){final int index=p;futures.add(workers.submit(()->{gate.await();for(int n=0;n<20;n++){long t=System.nanoTime();var reply=get(n%2==0?"tasks":"me/notifications",index);check(reply.statusCode()==200,"REST load status "+reply.statusCode());if(n%2==0)owned(reply.body(),index);samples.add(System.nanoTime()-t);}return null;}));}
+   var futures=new ArrayList<Future<?>>();for(int p=0;p<100;p++){final int index=p;futures.add(workers.submit(()->{gate.await();for(int n=0;n<20;n++){long t=System.nanoTime();var reply=get("me/notifications",index);check(reply.statusCode()==200,"REST load status "+reply.statusCode());owned(reply.body(),index);samples.add(System.nanoTime()-t);}return null;}));}
    gate.countDown();for(var f:futures)f.get(120,TimeUnit.SECONDS);
   }
   result.add("rest100",timing(samples,System.nanoTime()-begin));System.out.println("RIVET_API_LOAD_REST "+result.get("rest100"));
   samples.clear();begin=System.nanoTime();
   for(int round=0;round<10;round++){
-   var pending=new ArrayList<CompletableFuture<?>>();for(int p=0;p<100;p++){int index=p;long t=System.nanoTime();pending.add(javaDomains.connect("load_test",UUID.fromString(players.get(p))).tasks(Optional.empty(),"").handle((page,error)->{if(error!=null){check((error instanceof ApiException a&&a.code()==ApiException.Code.BUSY)||(error.getCause() instanceof ApiException nested&&nested.code()==ApiException.Code.BUSY),"Unexpected Java error "+error.getClass().getSimpleName());}else{check(page.items().size()==1&&page.items().getFirst().title().equals("Private-"+index),"Java isolation failed");samples.add(System.nanoTime()-t);}return null;}));}
+   var pending=new ArrayList<CompletableFuture<?>>();for(int p=0;p<100;p++){int index=p;long t=System.nanoTime();pending.add(javaDomains.connect("load_test",UUID.fromString(players.get(p))).notifications("").handle((page,error)->{if(error!=null){check((error instanceof ApiException a&&a.code()==ApiException.Code.BUSY)||(error.getCause() instanceof ApiException nested&&nested.code()==ApiException.Code.BUSY),"Unexpected Java error "+error.getClass().getSimpleName());}else{check(page.items().size()==1&&page.items().getFirst().title().equals("Private-"+index),"Java isolation failed");samples.add(System.nanoTime()-t);}return null;}));}
    CompletableFuture.allOf(pending.toArray(CompletableFuture[]::new)).get(30,TimeUnit.SECONDS);
   }
   result.add("javaAccepted",timing(samples,System.nanoTime()-begin));result.addProperty("javaBusy",1000-samples.size());
   var sockets=new ArrayList<WebSocket>();var listeners=new ArrayList<Listener>();
   try{
    for(int i=0;i<13;i++){var listener=new Listener();listeners.add(listener);sockets.add(client.newWebSocketBuilder().header("Authorization","Bearer "+secret).buildAsync(URI.create("ws://127.0.0.1:"+WS+"/api/v1/ws"),listener).get(5,TimeUnit.SECONDS));}
-   begin=System.nanoTime();for(int p=0;p<100;p++){var watch=new JsonObject();watch.addProperty("type","watch");watch.addProperty("id","p"+p);watch.addProperty("path","tasks");watch.add("query",new JsonObject());watch.addProperty("session",tokens.get(p));watch.add("cursor",JsonNull.INSTANCE);sockets.get(p/8).sendText(watch.toString(),true).join();}
+   begin=System.nanoTime();for(int p=0;p<100;p++){var watch=new JsonObject();watch.addProperty("type","watch");watch.addProperty("id","p"+p);watch.addProperty("path","me/notifications");watch.add("query",new JsonObject());watch.addProperty("session",tokens.get(p));watch.add("cursor",JsonNull.INSTANCE);sockets.get(p/8).sendText(watch.toString(),true).join();}
    int count=0;long deadline=System.nanoTime()+TimeUnit.SECONDS.toNanos(30);while(count<100&&System.nanoTime()<deadline){for(var listener:listeners){var msg=listener.messages.poll(100,TimeUnit.MILLISECONDS);if(msg==null)continue;check(msg.get("type").getAsString().equals("resource.snapshot"),"Subscription failed: "+msg.get("type"));var data=msg.getAsJsonObject("data");owned(data.get("resource").toString(),Integer.parseInt(data.get("id").getAsString().substring(1)));count++;}}
    check(count==100,"Missing subscriptions");result.addProperty("wsInitialMs",(System.nanoTime()-begin)/1e6);
    // Sustained 100 requests/second alongside 100 independently authorized subscriptions.
@@ -79,7 +78,7 @@ public final class ApiLoadBrowserHarness {
    var cpu=(com.sun.management.OperatingSystemMXBean)java.lang.management.ManagementFactory.getOperatingSystemMXBean();long cpuStart=cpu.getProcessCpuTime();
    try(var requestWorkers=Executors.newFixedThreadPool(16)){
     for(int second=0;second<60;second++){
-     var requests=new ArrayList<Future<?>>();for(int p=0;p<100;p++){int index=p;long queued=System.nanoTime();requests.add(requestWorkers.submit(()->{var response=get("tasks",index);check(response.statusCode()==200,"Sustained HTTP failure");owned(response.body(),index);sustained.add(System.nanoTime()-queued);return null;}));}
+     var requests=new ArrayList<Future<?>>();for(int p=0;p<100;p++){int index=p;long queued=System.nanoTime();requests.add(requestWorkers.submit(()->{var response=get("me/notifications",index);check(response.statusCode()==200,"Sustained HTTP failure");owned(response.body(),index);sustained.add(System.nanoTime()-queued);return null;}));}
      for(var request:requests)request.get(15,TimeUnit.SECONDS);
      for(var listener:listeners)check(!listener.closed.isDone(),"Unexpected connection loss under load");
      peakHeap=Math.max(peakHeap,java.lang.management.ManagementFactory.getMemoryMXBean().getHeapMemoryUsage().getUsed());
@@ -93,7 +92,7 @@ public final class ApiLoadBrowserHarness {
    check(count==100,"Revoked subscriptions stayed open");result.addProperty("wsRevokeMs",(System.nanoTime()-begin)/1e6);result.addProperty("wsUsers",100);result.addProperty("wsConnections",13);
   }finally{for(var socket:sockets)socket.abort();}
   for(int p=0;p<100;p++)tokens.set(p,link(players.get(p),"Load"+p));
-  check(get("tasks",0).statusCode()==200,"Listener did not recover");
+  check(get("me/notifications",0).statusCode()==200,"Listener did not recover");
   var memory=java.lang.management.ManagementFactory.getMemoryMXBean().getHeapMemoryUsage();result.addProperty("heapUsedMiB",memory.getUsed()/1048576.0);result.addProperty("heapMaxMiB",memory.getMax()/1048576.0);
   Files.writeString(output.resolve("load.json"),result.toString());System.out.println("RIVET_API_LOAD_OK "+result);
  }

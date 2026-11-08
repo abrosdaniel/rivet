@@ -66,7 +66,7 @@ public final class PagedMenuController {
         return new Outcome(true, changed, false);
     }
     private static JsonObject metadata(JsonObject response) {
-        var metadata = new JsonObject(); for (String key : java.util.List.of("actions", "preferences"))
+        var metadata = new JsonObject(); for (String key : java.util.List.of("actions", "preferences", "notificationCategories"))
             if (response.has(key)) metadata.add(key, response.get(key).deepCopy()); return metadata;
     }
 }

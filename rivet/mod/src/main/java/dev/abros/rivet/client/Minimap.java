@@ -35,14 +35,14 @@ final class Minimap {
  private static void drawContents(GuiGraphics g,boolean preview){
   hits.clear();if(!preview&&!visible()){bounds=new NativeLayout.Box(0,0,0,0);return;}
   var mc=Minecraft.getInstance();var s=MapSettings.INSTANCE;var captions=captions();int wanted=(int)Math.round(s.size*(!preview&&EXPAND.isDown()?1.6:1));
-  int side=Math.max(32,Math.min(wanted,Math.min(g.guiWidth()-16,g.guiHeight()-40-captions.size()*11)));var hud=MapSettings.INSTANCE.hud;
-  bounds=HudPlacement.fit(g.guiWidth(),g.guiHeight(),side,side+(captions.isEmpty()?0:captions.size()*11+6),hud.mapAnchorX,hud.mapAnchorY,hud.mapOffsetX,hud.mapOffsetY);side=bounds.width();
+  int side=Math.max(32,Math.min(wanted,Math.min(HudViewport.width(g)-16,HudViewport.height(g)-40-captions.size()*11)));var hud=MapSettings.INSTANCE.hud;
+  bounds=HudPlacement.fit(HudViewport.width(g),HudViewport.height(g),side,side+(captions.isEmpty()?0:captions.size()*11+6),hud.mapAnchorX,hud.mapAnchorY,hud.mapOffsetX,hud.mapOffsetY);side=bounds.width();
   float partial=mc.getTimer().getGameTimeDeltaPartialTick(true);var position=mc.player==null?net.minecraft.world.phys.Vec3.ZERO:mc.player.getPosition(partial);
   double cx=position.x,cz=position.z;float yaw=mc.player==null?0:mc.player.getViewYRot(partial);long now=net.minecraft.Util.getMillis();
   double speed=mc.player==null||preview?0:Math.hypot(mc.player.getX()-mc.player.xo,mc.player.getZ()-mc.player.zo);
   double zoom=motion.update(s.zoom*(mc.level!=null&&MapCaves.layer(mc.level.dimension().location().toString()).cave()?MapCaves.options().zoom():1),speed,now,AccessibilityScreen.animations());projection=new MinimapProjection(cx,cz,zoom,yaw,s.rotate);
   imageSide=side;String dimension=mc.level==null?"minecraft:overworld":mc.level.dimension().location().toString();
-  int span=(int)Math.ceil(side/zoom*1.42)+64;int step=1<<MapDetail.level(zoom,mc.getWindow().getGuiScale());while(step*2048<span)step*=2;int pixels=64;while(pixels<2048&&pixels*step<span)pixels*=2;
+  int span=(int)Math.ceil(side/zoom*1.42)+64;int step=1<<MapDetail.level(zoom,HudViewport.scale());while(step*2048<span)step*=2;int pixels=64;while(pixels<2048&&pixels*step<span)pixels*=2;
   boolean resized=textureSide!=pixels||pixelStep!=step;
   textureSide=pixels;pixelStep=step;
   double margin=side/zoom*.71;

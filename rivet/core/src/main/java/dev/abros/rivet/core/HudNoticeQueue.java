@@ -5,7 +5,8 @@ import java.util.*;
 /** Deterministic delivery queue. Expiration is presentation only and never marks notices read. */
 public final class HudNoticeQueue {
  public enum Priority { ORDINARY, IMPORTANT, URGENT }
- public record Notice(String id,String section,String target,String event,String title,String body,Priority priority,String group) {
+ public record Notice(String id,String section,String target,String event,String title,String body,Priority priority,String group,long deadline) {
+  public Notice(String id,String section,String target,String event,String title,String body,Priority priority,String group){this(id,section,target,event,title,body,priority,group,0);}
   public Notice(String id,String section,String target,String event,String title,String body,Priority priority){this(id,section,target,event,title,body,priority,"");}
   public String mergeKey(){return section+"|"+target+"|"+event+"|"+group;}
  }
@@ -21,15 +22,18 @@ public final class HudNoticeQueue {
  private final List<Deferred> deferred=new ArrayList<>();private int overflow;private long pausedAt=-1;
  public void clear(){visible.clear();waiting.clear();deferred.clear();seen.clear();overflow=0;pausedAt=-1;}
  public boolean add(Notice notice,long now,int limit){
+  if(notice.deadline()>0&&now>=notice.deadline())return false;
   limit=Math.clamp(limit,1,5);
   if(!notice.id().isEmpty()&&!seen.add(notice.id()))return false;while(seen.size()>512)seen.remove(seen.iterator().next());
   for(var entry:all())if(!notice.target().isEmpty()&&entry.notice.mergeKey().equals(notice.mergeKey())&&entry.ids.size()<128){entry.notice=notice;entry.count++;if(!notice.id().isEmpty())entry.ids.add(notice.id());if(notice.priority()==Priority.URGENT&&waiting.remove(entry)){if(visible.size()>=limit){var displaced=visible.remove(visible.size()-1);displaced.start=-1;requeue(displaced);}entry.start=now;visible.add(0,entry);}return true;}
   var entry=new Entry(notice);if(notice.priority()==Priority.URGENT){if(visible.size()>=limit){var displaced=visible.remove(visible.size()-1);displaced.start=-1;requeue(displaced);}entry.start=now;visible.add(0,entry);}else if(waiting.size()<32)waiting.addLast(entry);else overflow++;
   advance(now,limit,pausedAt<0);return true;
  }
+ private static boolean expired(Entry entry,long now){return entry.notice.deadline()>0&&now>=entry.notice.deadline();}
  private void requeue(Entry entry){if(waiting.size()>=32){waiting.removeLast();overflow++;}waiting.addFirst(entry);}
  private List<Entry> all(){var all=new ArrayList<>(visible);all.addAll(waiting);for(var d:deferred)all.add(d.entry());return all;}
- public List<Entry> advance(long now,int limit,boolean showing){for(var it=deferred.iterator();it.hasNext();){var d=it.next();if(d.due()<=now&&waiting.size()<32){d.entry().start=-1;waiting.addLast(d.entry());it.remove();}}limit=Math.max(1,Math.min(5,limit));if(!showing){if(pausedAt<0)pausedAt=now;return List.copyOf(visible);}if(pausedAt>=0){for(var e:visible)if(e.start>=0)e.start+=now-Math.max(pausedAt,e.start);pausedAt=-1;}visible.removeIf(e->e.start>=0&&now-e.start>=e.duration());while(visible.size()>limit){var e=visible.remove(visible.size()-1);e.start=-1;requeue(e);}if(showing)while(visible.size()<limit&&!waiting.isEmpty()){var e=waiting.removeFirst();e.start=now;visible.add(e);}if(showing&&visible.size()<limit&&waiting.isEmpty()&&overflow>0){var e=new Entry(new Notice("","notifications","","summary",dev.abros.rivet.core.Messages.text("rivet.ui.more_279163c9")+overflow+dev.abros.rivet.core.Messages.text("rivet.core.notifications_41349902"),dev.abros.rivet.core.Messages.text("rivet.core.open_notification_center_90769428"),Priority.ORDINARY));overflow=0;e.start=now;visible.add(e);}return List.copyOf(visible);}
+ public List<Entry> advance(long now,int limit,boolean showing){
+  visible.removeIf(e->expired(e,now));waiting.removeIf(e->expired(e,now));deferred.removeIf(d->expired(d.entry(),now));for(var it=deferred.iterator();it.hasNext();){var d=it.next();if(d.due()<=now&&waiting.size()<32){d.entry().start=-1;waiting.addLast(d.entry());it.remove();}}limit=Math.max(1,Math.min(5,limit));if(!showing){if(pausedAt<0)pausedAt=now;return List.copyOf(visible);}if(pausedAt>=0){for(var e:visible)if(e.start>=0)e.start+=now-Math.max(pausedAt,e.start);pausedAt=-1;}visible.removeIf(e->e.start>=0&&now-e.start>=e.duration());while(visible.size()>limit){var e=visible.remove(visible.size()-1);e.start=-1;requeue(e);}if(showing)while(visible.size()<limit&&!waiting.isEmpty()){var e=waiting.removeFirst();e.start=now;visible.add(e);}if(showing&&visible.size()<limit&&waiting.isEmpty()&&overflow>0){var e=new Entry(new Notice("","notifications","","summary",dev.abros.rivet.core.Messages.text("rivet.ui.more_279163c9")+overflow+dev.abros.rivet.core.Messages.text("rivet.core.notifications_41349902"),dev.abros.rivet.core.Messages.text("rivet.core.open_notification_center_90769428"),Priority.ORDINARY));overflow=0;e.start=now;visible.add(e);}return List.copyOf(visible);}
  public boolean defer(Entry entry,long now,long delay){if(delay<60000||delay>86400000||deferred.size()>=32||entry.notice.priority()==Priority.URGENT)return false;if(!visible.remove(entry)&&!waiting.remove(entry))return false;entry.start=-1;deferred.add(new Deferred(entry,now+delay));return true;}
  public List<String> dismiss(Entry entry){visible.remove(entry);waiting.remove(entry);return entry.ids();}
 }

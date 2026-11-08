@@ -25,6 +25,14 @@ public final class LocalizedText {
     }
     public static String render(JsonObject source,String field){
         String fallback=Json.opt(source,field,"");
+        var variants = source.get(field+"I18n");
+        if (variants != null && variants.isJsonObject()) {
+            String language = Messages.language();
+            if (language == null || variants.getAsJsonObject().size() > 8) return fallback;
+            var translated = variants.getAsJsonObject().get(language.toLowerCase(java.util.Locale.ROOT).replace('-', '_'));
+            return translated != null && translated.isJsonPrimitive() && translated.getAsJsonPrimitive().isString()
+                && translated.getAsString().length() <= 1000 ? translated.getAsString() : fallback;
+        }
         if(!source.has(field+"I18n")||!source.get(field+"I18n").isJsonArray())return fallback;
         var array=source.getAsJsonArray(field+"I18n");if(array.size()>32)return fallback;
         var result=new StringBuilder();
@@ -60,6 +68,9 @@ public final class LocalizedText {
                 if(source.has(field)&&source.get(field).isJsonPrimitive()&&source.get(field).getAsJsonPrimitive().isString()){
                     String translated=render(source,field);
                     if(!translated.equals(source.get(field).getAsString())){if(result==null)result=copy(source);result.addProperty(field,translated);}
+                    // Locale variants are server-side data. Send only the selected literal;
+                    // otherwise a page multiplies its payload by every supported language.
+                    if(entry.getValue().isJsonObject() && Messages.language()!=null){if(result==null)result=copy(source);result.remove(key);}
                 }
             }else{
                 var next=localize(entry.getValue(),depth+1);

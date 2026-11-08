@@ -27,6 +27,7 @@ final class MapIntegrationLayers {
   try{state.receive(packet,System.currentTimeMillis());}catch(RuntimeException invalid){state.clear();}return true;
  }
  private static List<MapIntegrationState.ObjectView> objects(){return WorldMapClient.allowed()?state.objects(System.currentTimeMillis()):List.of();}
+ static List<MapIntegrationState.ObjectView> searchObjects(){return objects().stream().filter(object->shown(object.layer())).toList();}
  private static void index(){var current=objects();if(current==indexed)return;indexed=current;markers.clear();var areas=new ArrayList<MapTerritory>();for(var object:current)if(shown(object.layer())){if(object.territory()!=null)areas.add(object.territory());else if(object.marker()!=null)markers.computeIfAbsent(object.marker().dimension(),k->new ArrayList<>()).add(object.marker());}territories=new MapTerritoryIndex(areas);}
  static void worldAreas(GuiGraphics g,String dimension,MapViewport view,int width,int height){
   index();for(var t:territories.visible(dimension,view.worldX(0,width/2d),view.worldZ(0,height/2d),view.worldX(width,width/2d),view.worldZ(height,height/2d)))MapTerritories.draw(g,t.points(),t.color(),t.name(),p->new double[]{view.screenX(p.x(),width/2d),view.screenZ(p.z(),height/2d)},0,0,width,height,false,true);

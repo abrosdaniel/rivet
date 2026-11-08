@@ -13,7 +13,9 @@ final class MapPublicationsScreen extends ScrollScreen implements CommunityScree
  private final Screen parent;private final UUID target;private final String type;private final JsonObject draft;
  private final RequestSession session=new RequestSession();private final List<JsonObject> rows=new ArrayList<>();
  private boolean mine;
+ static MapPublicationsScreen own(Screen parent,UUID id,String type){var screen=new MapPublicationsScreen(parent,id,type,null);screen.mine=true;return screen;}
  static MapPublicationsScreen mine(Screen parent){var screen=new MapPublicationsScreen(parent);screen.mine=true;return screen;}
+ static MapPublicationsScreen review(Screen parent,UUID id){return new MapPublicationsScreen(parent,id,"",null);}
  static MapPublicationsScreen moderation(Screen parent){var screen=new MapPublicationsScreen(parent);screen.filter=1;return screen;}
  private UiDialog dialog;private boolean busy,admin,loaded,loadFailed;private String notice="";
  MapPublicationsScreen(Screen parent){this(parent,null,"",null);}
@@ -44,7 +46,7 @@ final class MapPublicationsScreen extends ScrollScreen implements CommunityScree
   }else{
    var old=selected.isEmpty()?null:selected.getFirst();var body=draft!=null?draft:old==null?null:payload(old);
    var content=new ArrayList<java.util.function.Consumer<NativeLayout.Box>>();
-   if(body!=null){line(content,Component.literal(Json.str(body,"name")).withStyle(net.minecraft.ChatFormatting.BOLD),UiKit.text());line(content,Component.literal(location(body,type)),UiKit.muted());}
+   if(body!=null){line(content,Component.literal(Json.str(body,"name")).withStyle(net.minecraft.ChatFormatting.BOLD),UiKit.text());line(content,Component.literal(location(body,old==null?type:Json.str(old,"type"))),UiKit.muted());}
    line(content,Client.tr(!loaded?"map.loading":loadFailed?"map.filesError":status(old)),UiKit.accent());
    if(loaded&&!loadFailed)line(content,Client.tr(hint(old)),UiKit.muted());
    if(draft!=null){boolean unchanged=old!=null&&draft.equals(payload(old));String key=old!=null&&old.has("published")?"map.submitChanges":"map.submitPublication";

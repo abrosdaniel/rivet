@@ -5,9 +5,31 @@ import net.neoforged.neoforge.client.event.ScreenEvent;
 import java.util.*;
 /** Supplies group names to Minecraft's native completion list. */
 public final class SocialChatControls {
- static void install(){NeoForge.EVENT_BUS.addListener(SocialChatControls::render);NeoForge.EVENT_BUS.addListener(SocialChatControls::click);}
+ static void install(){NeoForge.EVENT_BUS.addListener(SocialChatControls::render);NeoForge.EVENT_BUS.addListener(SocialChatControls::click);NeoForge.EVENT_BUS.addListener(SocialChatControls::key);}
  private static void render(ScreenEvent.Render.Post e){if(e.getScreen() instanceof ChatScreen)DirectionCue.tooltip(e.getGuiGraphics(),e.getMouseX(),e.getMouseY());if(e.getScreen() instanceof ChatScreen chat&&SocialClient.available()&&SocialSettings.chatEnabled()){String text=((dev.abros.rivet.mixin.ChatInputAccessor)chat).rivet$input().getValue();ChatHints.draw(e.getGuiGraphics(),text,false);ChatChannelIndicator.draw(e.getGuiGraphics(),chat,text);}}
- private static void click(ScreenEvent.MouseButtonPressed.Pre e){if(e.getScreen() instanceof ChatScreen&&e.getButton()==0&&DirectionCue.click(e.getMouseX(),e.getMouseY()))e.setCanceled(true);}
+ private static void click(ScreenEvent.MouseButtonPressed.Pre e){if(e.getScreen() instanceof ChatScreen chat&&e.getButton()==0&&ChatChannelIndicator.hit(chat,e.getMouseX(),e.getMouseY())&&chooseChannel(chat)){e.setCanceled(true);return;}if(e.getScreen() instanceof ChatScreen&&e.getButton()==0&&DirectionCue.click(e.getMouseX(),e.getMouseY()))e.setCanceled(true);}
+ private static void key(ScreenEvent.KeyPressed.Pre e){if(e.getScreen() instanceof ChatScreen chat&&e.getKeyCode()==258&&(e.getModifiers()&2)!=0&&chooseChannel(chat))e.setCanceled(true);}
+ static boolean chooseChannel(ChatScreen chat){
+  if(!SocialClient.available()||!SocialSettings.chatEnabled())return false;
+  var input=((dev.abros.rivet.mixin.ChatInputAccessor)chat).rivet$input();String draft=input.getValue();if(draft.startsWith("/"))return false;
+  // Vanilla chat packets and the fresh return screen both accept at most 256 characters.
+  int limit=256;if(draft.length()>limit)return false;boolean local=ChatHints.enabled("chatLocalEnabled");
+  var values=new ArrayList<String>();var labels=new ArrayList<String>();
+  java.util.function.BiConsumer<dev.abros.rivet.core.ChatChannels.Channel,String> add=(channel,group)->dev.abros.rivet.core.ChatChannels.draft(draft,local,channel,group,limit).ifPresent(value->{values.add(value);labels.add(ChatChannelIndicator.label(value));});
+  if(ChatHints.enabled("chatGlobalEnabled"))add.accept(dev.abros.rivet.core.ChatChannels.Channel.GLOBAL,"");
+  if(local)add.accept(dev.abros.rivet.core.ChatChannels.Channel.LOCAL,"");
+  if(ChatHints.enabled("chatGroupEnabled"))for(String group:SocialClient.chatGroups)add.accept(dev.abros.rivet.core.ChatChannels.Channel.GROUP,group);
+  if(values.isEmpty())return false;
+  var mc=net.minecraft.client.Minecraft.getInstance();var returnTo=new ChatScreen(draft);
+  mc.setScreen(new ChoicePopup(returnTo,Client.text("chat.chooseChannel"),labels,n->{
+   String value=values.get(n);var parsed=dev.abros.rivet.core.ChatChannels.parse(value,local);
+   if(parsed.channel()==dev.abros.rivet.core.ChatChannels.Channel.GROUP&&(!ChatHints.enabled("chatGroupEnabled")||!SocialClient.chatGroups.contains(parsed.group())))return;
+   if(parsed.channel()==dev.abros.rivet.core.ChatChannels.Channel.GLOBAL&&!ChatHints.enabled("chatGlobalEnabled"))return;
+   if(parsed.channel()==dev.abros.rivet.core.ChatChannels.Channel.LOCAL&&!ChatHints.enabled("chatLocalEnabled"))return;
+   if(!SocialClient.available()||!SocialSettings.chatEnabled())return;
+   ((dev.abros.rivet.mixin.ChatInputAccessor)returnTo).rivet$input().setValue(value);
+  }));return true;
+ }
  public static com.mojang.brigadier.suggestion.Suggestions groupSuggestions(String text,int cursor){
   int colon=text.indexOf(':');if(!SocialClient.available()||!SocialSettings.chatEnabled()||!ChatHints.enabled("chatGroupEnabled")||!text.startsWith("#")||cursor<1||colon>=0&&cursor>colon)return null;
   String query=text.substring(1,cursor).toLowerCase(Locale.ROOT);int end=colon>=0?colon:text.length();var range=com.mojang.brigadier.context.StringRange.between(1,end);

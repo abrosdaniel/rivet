@@ -10,7 +10,7 @@ IDENTIFIER = re.compile(r'[A-Za-z_][A-Za-z0-9_]{0,62}')
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument('operation', choices=['backup', 'restore-test'])
+    parser.add_argument('operation', choices=['backup', 'restore-test', 'export-features'])
     parser.add_argument('--database', required=True)
     parser.add_argument('--user', required=True)
     parser.add_argument('--host', default='127.0.0.1')
@@ -29,7 +29,11 @@ def main():
         return subprocess.run([*prefix, tool, *connection, *options], check=True, **kwargs)
     path = args.file.absolute()
     if path.is_symlink():parser.error('Backup must not be a symbolic link')
-    if args.operation == 'backup':
+    if args.operation == 'export-features':
+        from feature_archive import export
+        counts = export(path, run, args.database)
+        print('Feature archive saved; source data unchanged. Rows: ' + str(sum(counts.values())))
+    elif args.operation == 'backup':
         # Exclusive creation never overwrites a previous backup. Partial files are not marked verified.
         fd = os.open(path, os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o600)
         with os.fdopen(fd, 'wb') as output:

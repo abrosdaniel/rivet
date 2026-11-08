@@ -7,7 +7,7 @@ import java.util.*;
 public final class MenuCommands {
     public enum Effect { READ, WRITE, SIGNAL }
     public record Definition(String action, String operation, Effect effect, String administrativePermission) {}
-    private static final Set<String> COMMUNITY_READS = Set.of("mapObjects","hud", "list", "detail", "workList", "workGet", "workMembers", "workArchivePreview",
+    private static final Set<String> COMMUNITY_READS = Set.of("noticeNavigate","mapObjects","hud", "list", "detail", "workList", "workGet", "workMembers", "workArchivePreview",
         "globalSearch", "toolsPrivacy", "toolsPlaces", "toolsFollowing", "toolsMapSettings", "toolsMapPeers","mapActivities","groupMap","mapPositionSettings","mapPositionPeers",
         "plusProfile", "plusIgnores", "plusItemRead");
     private static final Set<String> READS = Set.of("players", "reports", "myReports", "myReport", "history", "menuData",
@@ -21,13 +21,14 @@ public final class MenuCommands {
     private static final Set<String> ACTIONS = Set.of("state", "report", "reports", "diagnostics", "announce", "scheduledAnnouncements", "maintenance",
         "restart", "menuData", "myReports", "reply", "players", "moderate", "history", "reloadMenu", "community", "myReport",
         "subscribe", "pinAnnouncement", "exportCommunity", "playerAdministration", "moderationVote", "adminDashboard", "reportManage", "serverConfig", "rolePreview", "rolePermission");
+    public static boolean communityRead(String operation) { return COMMUNITY_READS.contains(operation); }
     public static boolean known(String action) { return ACTIONS.contains(action); }
     public static String administrativePermission(String action) { return PERMISSIONS.getOrDefault(action, "rivet.admin"); }
     public static Definition describe(JsonObject packet) {
         String action = Json.opt(packet, "action", ""), op = Json.opt(packet, "op", "");
         if (op.isEmpty()) op = Json.opt(packet, "operation", "");
         Effect effect;
-        if (action.equals("community")) effect = COMMUNITY_READS.contains(op) ? Effect.READ : Effect.WRITE;
+        if (action.equals("community")) effect = communityRead(op) ? Effect.READ : Effect.WRITE;
         else if (action.equals("moderationVote")) effect = op.equals("view") ? Effect.READ : Effect.WRITE;
         else if (action.equals("scheduledAnnouncements")) effect = Set.of("list","preview").contains(op)?Effect.READ:Effect.WRITE;
         else if (action.equals("serverConfig")) effect = op.equals("apply") ? Effect.WRITE : Effect.READ;

@@ -9,7 +9,7 @@ import java.util.UUID;
 
 /** Chat presentation owns its handlers and repeat history, independently of TAB. */
 public final class ClientChat {
- static void install(){NeoForge.EVENT_BUS.addListener(ClientChat::chat);NeoForge.EVENT_BUS.addListener(ClientChat::system);SocialChatControls.install();NeoForge.EVENT_BUS.addListener((net.neoforged.neoforge.client.event.ClientTickEvent.Post event)->flushHistory());}
+ static void install(){NeoForge.EVENT_BUS.addListener(ClientChat::chat);NeoForge.EVENT_BUS.addListener(net.neoforged.bus.api.EventPriority.LOWEST,ClientChat::system);NeoForge.EVENT_BUS.addListener(net.neoforged.bus.api.EventPriority.LOWEST,ClientChat::mention);SocialChatControls.install();NeoForge.EVENT_BUS.addListener((net.neoforged.neoforge.client.event.ClientTickEvent.Post event)->flushHistory());}
  private static final java.util.Set<Component> formattedLines=java.util.Collections.newSetFromMap(new java.util.WeakHashMap<>());
  public static boolean formatted(Component line){return formattedLines.contains(line);}
  private static boolean historyDirty;
@@ -23,20 +23,29 @@ public final class ClientChat {
   if(!Json.opt(packet,"kind","").equals("chatHistory"))return false;
   if(!SocialSettings.chatEnabled()||replayed.size()>=1000||!replayed.add(packet.get("id").getAsLong()))return true;
   var mc=Minecraft.getInstance();if(mc.level==null)return true;
-  var text=Component.Serializer.fromJson(packet.get("message"),mc.level.registryAccess());if(text==null)return true;
+  var text=Component.Serializer.fromJson(packet.get("message"),mc.level.registryAccess());if(text==null||hiddenHistory(text))return true;
   var accessor=(dev.abros.rivet.mixin.ChatHistoryAccessor)mc.gui.getChat();var rows=accessor.rivet$messages();
   if(rows.size()<historyLimit()){rows.add(new net.minecraft.client.GuiMessage(mc.gui.getGuiTicks()-201,dev.abros.rivet.network.ChatPresentation.heads(text,SocialSettings.INSTANCE.heads),null,net.minecraft.client.GuiMessageTag.system()));historyDirty=true;}
   return true;
  }
  /** Rewrap the received batch once per tick, rather than once per historical message. */
  static void flushHistory(){if(!historyDirty)return;historyDirty=false;if(Minecraft.getInstance().level!=null)((dev.abros.rivet.mixin.ChatHistoryAccessor)Minecraft.getInstance().gui.getChat()).rivet$refresh();}
- static void reset(){formattedLines.clear();historyDirty=false;replayed.clear();lastSystem=null;lastRenderedSystem=null;lastAt=0;repeat=0;}
+ static void reset(){ChatMentionNotice.reset();formattedLines.clear();historyDirty=false;replayed.clear();lastSystem=null;lastRenderedSystem=null;lastAt=0;repeat=0;}
  private static HoverEvent.EntityTooltipInfo sender(Component message){var hover=message.getStyle().getHoverEvent();if(hover==null)return null;var value=hover.getValue(HoverEvent.Action.SHOW_ENTITY);return value!=null&&value.type==net.minecraft.world.entity.EntityType.PLAYER?value:null;}
+ /** Only an authenticated Rivet sender marker is treated as player chat; alerts stay visible. */
+ static boolean hiddenChat(Component message){var author=sender(message);return author!=null&&author.name.isPresent()&&dev.abros.rivet.network.ChatPresentation.structured(author.name.get())&&Minecraft.getInstance().getPlayerSocialManager().shouldHideMessageFrom(author.id);}
+ private static boolean hiddenHistory(Component message){
+  if(hiddenChat(message))return true;
+  // Older saved messages carry only the template's empty head slot.
+  var author=sender(message);if(author!=null&&author.name.isEmpty()&&message.plainCopy().getString().isEmpty()&&Minecraft.getInstance().getPlayerSocialManager().shouldHideMessageFrom(author.id))return true;
+  for(var child:message.getSiblings())if(hiddenHistory(child))return true;return false;
+ }
  private static Component withHead(Component message,UUID id){if(!SocialSettings.INSTANCE.heads)return message;return Component.empty().append(Component.literal("   ").withStyle(style->style.withHoverEvent(new HoverEvent(HoverEvent.Action.SHOW_ENTITY,new HoverEvent.EntityTooltipInfo(net.minecraft.world.entity.EntityType.PLAYER,id,java.util.Optional.empty()))))).append(message); }
  public static UUID chatHead(net.minecraft.util.FormattedCharSequence sequence){var id=new UUID[1];sequence.accept((i,style,code)->{if(code==' '&&style.getHoverEvent()!=null){var entity=style.getHoverEvent().getValue(HoverEvent.Action.SHOW_ENTITY);if(entity!=null&&entity.type==net.minecraft.world.entity.EntityType.PLAYER&&entity.name.isEmpty()){id[0]=entity.id;return false;}}return true;});return SocialClient.available()&&SocialSettings.INSTANCE.heads&&SocialSettings.INSTANCE.chat()?id[0]:null;}
  public static void drawChatHead(net.minecraft.client.gui.GuiGraphics g,net.minecraft.client.gui.Font font,net.minecraft.util.FormattedCharSequence sequence,int x,int y){var id=chatHead(sequence);if(id==null)return;var preceding=Component.empty();sequence.accept((i,style,code)->{if(code==' '&&style.getHoverEvent()!=null){var entity=style.getHoverEvent().getValue(HoverEvent.Action.SHOW_ENTITY);if(entity!=null&&entity.type==net.minecraft.world.entity.EntityType.PLAYER&&entity.name.isEmpty())return false;}preceding.append(Component.literal(new String(Character.toChars(code))).withStyle(style));return true;});drawHead(g,id,x+font.width(preceding),y);}
  private static Component decorateSender(Component message,UUID id){var identity=sender(message);if(identity!=null&&identity.id.equals(id)&&identity.name.isPresent())return withHead(message,id);var out=message.plainCopy().withStyle(message.getStyle());for(var child:message.getSiblings())out.append(decorateSender(child,id));return out;}
  public static void drawHead(net.minecraft.client.gui.GuiGraphics g,UUID id,int x,int y){net.minecraft.client.gui.components.PlayerFaceRenderer.draw(g,SkinClient.skin(id),x,y,8);}
+ private static void mention(net.neoforged.neoforge.client.event.ClientChatReceivedEvent.Player e){if(SocialClient.available()&&SocialSettings.chatEnabled()&&!e.isCanceled())ChatMentionNotice.received(e.getSender(),e.getPlayerChatMessage().decoratedContent().getString());}
  static void chat(net.neoforged.neoforge.client.event.ClientChatReceivedEvent.Player e){
   if(!SocialClient.available()||!SocialSettings.INSTANCE.chat()||e.isCanceled())return;
   var bound=e.getBoundChatType();
@@ -58,7 +67,11 @@ public final class ClientChat {
  private static Component lastSystem,lastRenderedSystem;private static long lastAt;private static int repeat;
  static void system(net.neoforged.neoforge.client.event.ClientChatReceivedEvent.System e){
   if(!SocialClient.available()||!SocialSettings.chatEnabled()||e.isCanceled()||e.isOverlay())return;
+  if(hiddenChat(e.getMessage())){e.setCanceled(true);return;}
   var mc=Minecraft.getInstance();var author=sender(e.getMessage());
+  if(author!=null&&author.name.isPresent()&&dev.abros.rivet.network.ChatPresentation.structured(author.name.get())){ChatMentionNotice.structured(author.id,e.getMessage());}
+  if(author!=null&&author.name.isPresent()&&dev.abros.rivet.network.ChatPresentation.structured(author.name.get()))
+   e.setMessage(dev.abros.rivet.compat.BrewinChannelEffects.apply(e.getMessage()));
   // Only Rivet's structured identity owns the root sender marker.
   if(author!=null&&author.name.isPresent()&&dev.abros.rivet.network.ChatPresentation.structured(author.name.get())&&SocialSettings.INSTANCE.chat())
    e.setMessage(ServerMenuClient.state.has("chatFormat")?dev.abros.rivet.network.ChatPresentation.heads(e.getMessage().copy().withStyle(style->style.withHoverEvent(null)),SocialSettings.INSTANCE.heads):decorateSender(e.getMessage().copy().withStyle(style->style.withHoverEvent(null)),author.id));

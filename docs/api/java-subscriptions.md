@@ -4,9 +4,9 @@
 
 `DomainApi.watch(DomainWatch<T>)` возвращает закрываемый `DomainSubscription<T>`.
 Возможность поддерживается, если в статусе есть `domains.watch`; конкретные домены
-также сообщают `tasks.watch`, `notifications.watch` и другие capabilities.
+также сообщают `groups.watch`, `notifications.watch` и другие capabilities.
 
-Селекторы `DomainWatch`: `CommunityList`, `CommunityDocument`, `Tasks`, `Task`,
+Селекторы `DomainWatch`: `CommunityList` и `CommunityDocument` для объединений,
 `Profile`, `Notifications`, `Chat`, `Channels`, `Publications`, `Publication`,
 `Territories`. Они используют тот же контекст и проверки прав, что обычные чтения.
 Нельзя подписать публичный контекст на личные уведомления или собственные черновики.

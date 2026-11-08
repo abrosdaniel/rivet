@@ -15,6 +15,34 @@ class DomainRestTest {
  @TempDir Path root;
  PgDatabase db;ApiKeys keys;AuthStore auth;CommunityStore store;PlayerSessions sessions;RestApi rest;
  String token;ApiKeys.Grant grant;final String player=UUID.randomUUID().toString();
+ @Test void notificationTranslationsSurviveStorageAndReachMenuRestAndJava()throws Exception {
+  String session=linked();
+  var translations=new HashMap<String,dev.abros.rivet.api.NotificationsApi.Translation>();
+  translations.put("ru_ru",new dev.abros.rivet.api.NotificationsApi.Translation("Посылка","Заберите на почте"));
+  var message=new dev.abros.rivet.api.NotificationsApi.Message("Parcel","Collect at the post office",translations);
+  translations.clear(); // The queued message owns an immutable snapshot.
+  try(var publisher=new NotificationPublisher(db)) {
+   var type=publisher.owner("example").register("mail");
+   var receipt=type.put(UUID.fromString(player),"parcel",message,0).join();
+   assertEquals(receipt,type.put(UUID.fromString(player),"parcel",message,0).join());
+   var changed=new dev.abros.rivet.api.NotificationsApi.Message("Parcel","Collect at the post office",Map.of("ru_ru",new dev.abros.rivet.api.NotificationsApi.Translation("Доставка","Заберите на почте")));
+   assertThrows(java.util.concurrent.CompletionException.class,()->type.put(UUID.fromString(player),"parcel",changed,0).join());
+  }
+  var reopened=new CommunityStore(db,CommunityStore.defaults());
+  var actor=new CommunityStore.Actor(player,"Alice",false,false);
+  var page=reopened.request(actor,Json.parse("{\"section\":\"notifications\",\"op\":\"list\"}"));
+  try(var locale=Messages.locale("ru_ru")){assertEquals("Посылка",LocalizedText.localize(page).getAsJsonObject().getAsJsonArray("entries").get(0).getAsJsonObject().get("title").getAsString());}
+  assertEquals("Посылка",json(get("me/notifications?locale=ru_ru",session)).getAsJsonArray("items").get(0).getAsJsonObject().get("title").getAsString());
+  assertEquals("Parcel",json(get("me/notifications",session)).getAsJsonArray("items").get(0).getAsJsonObject().get("title").getAsString());
+  assertEquals(400,get("me/notifications?locale=invalid",session).status());
+  assertEquals(401,get("me/notifications?locale=ru_ru",null).status());
+  try(var java=new JavaDomains(db,reopened,ServerSettings.parse(ServerSettings.template()))) {
+   var view=java.connect("example",UUID.fromString(player));
+   assertEquals("Заберите на почте",view.notifications("","ru_ru").get().items().get(0).body());
+   assertEquals("Parcel",view.notifications("","fr_fr").get().items().get(0).title());
+   assertEquals("Parcel",view.notifications("").get().items().get(0).title());
+  }
+ }
  @BeforeEach void setup()throws Exception{
   db=TestDatabase.database(root);keys=new ApiKeys(db,new ApiKeys.Limits(100,8,1000,30,30,1000),Clock.systemUTC());auth=new AuthStore(db);
   store=new CommunityStore(db,CommunityStore.defaults());
@@ -26,6 +54,20 @@ class DomainRestTest {
  RestApi.Response get(String path,String session){var h=new HashMap<String,List<String>>();h.put("Authorization",List.of("Bearer "+token));if(session!=null)h.put("X-Rivet-Session",List.of(session));return rest.handle(new RestApi.Request("GET","/api/v1/"+path,h));}
  RestApi.Response post(String path,String body){return rest.handle(new RestApi.Request("POST","/api/v1/sessions/"+path,Map.of("Authorization",List.of("Bearer "+token)),body));}
  JsonObject json(RestApi.Response response){assertEquals(200,response.status(),response.body());return JsonParser.parseString(response.body()).getAsJsonObject();}
+ @Test void playerCanInspectAndRevokeOnlyOwnApplicationSessions()throws Exception{
+  String token=linked();var page=sessions.playerSessions(player,"");assertEquals(1,page.items().size());var item=page.items().getFirst();assertEquals("website",item.application());assertEquals("",page.next());assertNotEquals(token,item.id().toString());
+  String other=UUID.randomUUID().toString();assertTrue(sessions.playerSessions(other,"").items().isEmpty());sessions.revokePlayerSession(other,item.id());assertEquals(player,sessions.validate(grant,token).uuid());
+  sessions.revokePlayerSession(player,item.id());assertThrows(ApiException.class,()->sessions.validate(grant,token));assertTrue(sessions.playerSessions(player,"").items().isEmpty());
+  String replacement=linked();keys.state(grant.keyId(),"revoke");assertTrue(sessions.playerSessions(player,"").items().isEmpty());assertThrows(ApiException.class,()->sessions.validate(grant,replacement));
+ }
+ @Test void applicationSessionPagesAreBoundedAndHaveNoDuplicates()throws Exception{
+  for(int app=0;app<6;app++){
+   var issued=keys.create(root,"testapp"+app,Set.of("sessions.link"),1,1000);var authorized=keys.authorize(Files.readString(issued.deliveryFile()).trim(),"sessions.link");
+   for(int n=0;n<10;n++){var challenge=sessions.challenge(authorized);sessions.confirm(challenge.code(),authorized.application(),player,"Alice");assertNotNull(sessions.exchange(authorized,challenge.code(),challenge.pollToken()));}
+  }
+  var first=sessions.playerSessions(player,"");assertEquals(50,first.items().size());assertFalse(first.next().isEmpty());var next=sessions.playerSessions(player,first.next());assertEquals(10,next.items().size());assertEquals("",next.next());
+  var ids=new HashSet<UUID>();first.items().forEach(v->assertTrue(ids.add(v.id())));next.items().forEach(v->assertTrue(ids.add(v.id())));sessions.revokePlayer(player);assertTrue(sessions.playerSessions(player,"").items().isEmpty());
+ }
  @Test void revocationDuringStorageAuthorizationCannotReturnAValidSession()throws Exception{
   class InterleavingClock extends Clock {
    Runnable duringRead;public ZoneId getZone(){return ZoneOffset.UTC;}public Clock withZone(ZoneId zone){return this;}
@@ -70,12 +112,13 @@ class DomainRestTest {
   db.transaction(()->{try(var q=db.connection().prepareStatement("INSERT INTO documents(id,section,body) VALUES(?,'events',?::jsonb)")){q.setString(1,id);q.setString(2,body.toString());q.executeUpdate();}return null;});return id;
  }
  @Test void domainsDoNotImpersonatePlayersOrExposeHiddenFields()throws Exception{
-  String privateId=event("invited"),publicId=event("public");
-  assertEquals(404,get("events/"+privateId,null).status());assertEquals(1,json(get("events",null)).getAsJsonArray("items").size());
-  var publicItem=json(get("events/"+publicId,null)).getAsJsonObject("item");assertFalse(publicItem.has("owner"));assertFalse(publicItem.has("eventInvites"));
-  var c=sessions.challenge(grant);sessions.confirm(c.code(),"website",player,"Alice");var s=sessions.exchange(grant,c.code(),c.pollToken());assertEquals(200,get("events/"+privateId,s.token()).status());
-  assertEquals(400,get("events?uuid="+player,null).status());
-  keys.state(grant.keyId(),"revoke");assertEquals(401,get("events/"+privateId,s.token()).status());
+  String session=linked(),publicId=group();String privateId=json(write("POST","groups",session,null,command("{\"title\":\"Hidden\",\"description\":\"Own moderated group\",\"type\":\"Команда\"}"))).get("id").getAsString();
+  db.transaction(()->{try(var q=db.connection().prepareStatement("UPDATE documents SET body=body||'{\"status\":\"hidden\",\"moderationReason\":\"Private reason\"}'::jsonb WHERE id=?")){q.setString(1,privateId);q.executeUpdate();}return null;});
+  assertEquals(404,get("groups/"+privateId,null).status());assertEquals(1,json(get("groups",null)).getAsJsonArray("items").size());
+  var publicItem=json(get("groups/"+publicId,null)).getAsJsonObject("item");assertFalse(publicItem.has("owner"));assertFalse(publicItem.has("applications"));
+  // Public API projections exclude moderated documents even for their owner.
+  var own=get("groups/"+privateId,session);assertEquals(404,own.status());assertFalse(own.body().contains("Private reason"));
+  assertEquals(400,get("groups?uuid="+player,null).status());keys.state(grant.keyId(),"revoke");assertEquals(401,get("groups/"+privateId,session).status());
  }
  @Test void insufficientScopeMalformedJsonAndDisabledModuleFailClosed()throws Exception{
   var key=keys.create(root,"limited",Set.of("server.status.read"),1,100);String prior=token;token=Files.readString(key.deliveryFile()).trim();assertEquals(403,get("groups",null).status());assertEquals(403,post("password","{}").status());token=prior;
@@ -85,13 +128,10 @@ class DomainRestTest {
   rest=new RestApi(RestApiTest.feed(),RestApi.authorization(keys),RestApiTest.settings(Set.of()),new DomainRest(keys,sessions,disabled));assertEquals(503,get("events",null).status());
  }
  @Test void groupMembershipIsCheckedAgainOnEveryRead()throws Exception{
-  String group=UUID.randomUUID().toString(),event=event("group");String owner=UUID.randomUUID().toString();
-  db.transaction(()->{try(var q=db.connection().prepareStatement("INSERT INTO documents(id,section,body) VALUES(?,'groups',jsonb_build_object('id',?::text,'section','groups','status','open'))")){q.setString(1,group);q.setString(2,group);q.executeUpdate();}
-   try(var q=db.connection().prepareStatement("UPDATE documents SET body=body||jsonb_build_object('group',?::text,'owner',?::text) WHERE id=?")){q.setString(1,group);q.setString(2,owner);q.setString(3,event);q.executeUpdate();}
-   try(var q=db.connection().prepareStatement("INSERT INTO community_relations VALUES(?,'members',?,'\"member\"'::jsonb)")){q.setString(1,group);q.setString(2,player);q.executeUpdate();}return null;});
-  var c=sessions.challenge(grant);sessions.confirm(c.code(),"website",player,"Alice");var issued=sessions.exchange(grant,c.code(),c.pollToken());assertEquals(200,get("events/"+event,issued.token()).status());
+  String group=group();db.transaction(()->{try(var q=db.connection().prepareStatement("INSERT INTO community_relations VALUES(?,'members',?,'\"member\"'::jsonb)")){q.setString(1,group);q.setString(2,player);q.executeUpdate();}return null;});
+  String session=linked();assertEquals(200,get("groups/"+group+"/markers",session).status());
   db.transaction(()->{try(var q=db.connection().prepareStatement("DELETE FROM community_relations WHERE document=? AND actor=?")){q.setString(1,group);q.setString(2,player);q.executeUpdate();}return null;});
-  assertEquals(404,get("events/"+event,issued.token()).status());
+  assertEquals(403,get("groups/"+group+"/markers",session).status());
  }
  @Test void expiredChallengesSessionsAndRestartHandlesAreRejected()throws Exception{
   var clock=new ApiKeysTest.Time();clock.now=System.currentTimeMillis();sessions.close();sessions=new PlayerSessions(keys,auth,false,clock,1,100);
@@ -100,11 +140,19 @@ class DomainRestTest {
   sessions.close();assertThrows(ApiException.class,()->sessions.challenge(grant));
  }
 
+ String group()throws Exception{
+  var owner=new CommunityStore.Actor(UUID.randomUUID().toString(),"Organizer",true,true);store.seen(owner);
+  return Json.str(store.request(owner,Json.parse("{\"section\":\"groups\",\"op\":\"create\",\"title\":\"Team\",\"description\":\"Public group\",\"type\":\"Команда\"}")).getAsJsonObject("detail"),"id");
+ }
  String linked()throws Exception{store.seen(new CommunityStore.Actor(player,"Alice",false,false));var c=sessions.challenge(grant);sessions.confirm(c.code(),"website",player,"Alice");return sessions.exchange(grant,c.code(),c.pollToken()).token();}
- @Test void personalTasksNeverAllowAnotherOwnerOrBareKey()throws Exception{
+ @Test void archivedPersonalTasksCannotBeReadEvenByTheirOwner()throws Exception{
   String own=UUID.randomUUID().toString(),other=UUID.randomUUID().toString();
   db.transaction(()->{for(String id:List.of(own,other))try(var q=db.connection().prepareStatement("INSERT INTO community_group_items(id,group_id,kind,body,revision,owner) VALUES(?,NULL,'task','{\"title\":\"Work\",\"status\":\"open\",\"description\":\"Details\",\"comments\":[\"secret\"]}'::jsonb,1,?)")){q.setString(1,id);q.setString(2,id.equals(own)?player:UUID.randomUUID().toString());q.executeUpdate();}return null;});
-  String session=linked();assertEquals(401,get("tasks",null).status());var list=json(get("tasks",session));assertEquals(1,list.getAsJsonArray("items").size());assertFalse(list.toString().contains("secret"));assertEquals(200,get("tasks/"+own,session).status());assertEquals(404,get("tasks/"+other,session).status());assertEquals(400,get("tasks?owner="+player,session).status());
+  String session=linked();assertEquals(401,get("tasks",null).status());
+  for(String path:List.of("tasks","tasks/"+own,"tasks/"+other,"tasks?owner="+player)){
+   var response=get(path,session);assertEquals(503,response.status());assertTrue(response.body().contains("UNAVAILABLE"));assertFalse(response.body().contains("secret"));
+  }
+  db.transaction(()->{try(var q=db.connection().createStatement();var r=q.executeQuery("SELECT count(*) FROM community_group_items WHERE body->>'title'='Work' AND body->'comments'='[\"secret\"]'::jsonb")){r.next();assertEquals(2,r.getInt(1));}return null;});
   db.transaction(()->{try(var q=db.connection().createStatement();var r=q.executeQuery("SELECT count(*) FROM community_task_codes")){r.next();assertEquals(0,r.getInt(1));}return null;});
  }
  @Test void privateProfilesAndNotificationsUseTheSessionOwner()throws Exception{
@@ -137,32 +185,34 @@ class DomainRestTest {
   var limited=keys.create(root,"limited",Set.of("server.status.read"),1,100);token=Files.readString(limited.deliveryFile()).trim();for(String route:List.of("tasks","profiles/"+player,"me/notifications","chat/history","map/objects"))assertEquals(403,get(route,session).status(),route);
  }
 
- @Test void groupTaskReadRevokesWhenMembershipIsRemoved()throws Exception{
+ @Test void archivedGroupTasksStayUnavailableAcrossMembershipChanges()throws Exception{
   String group=UUID.randomUUID().toString(),task=UUID.randomUUID().toString();db.transaction(()->{
    try(var q=db.connection().prepareStatement("INSERT INTO documents(id,section,body) VALUES(?,'groups','{\"status\":\"open\"}')")){q.setString(1,group);q.executeUpdate();}
    try(var q=db.connection().prepareStatement("INSERT INTO community_relations VALUES(?,'members',?,'\"member\"')")){q.setString(1,group);q.setString(2,player);q.executeUpdate();}
    try(var q=db.connection().prepareStatement("INSERT INTO community_group_items(id,group_id,kind,body,revision,owner) VALUES(?,?,'task','{\"title\":\"Group work\",\"status\":\"open\"}',1,?)")){q.setString(1,task);q.setString(2,group);q.setString(3,UUID.randomUUID().toString());q.executeUpdate();}return null;});
-  String session=linked();assertEquals(1,json(get("tasks?group="+group,session)).getAsJsonArray("items").size());assertEquals(200,get("tasks/"+task,session).status());
-  db.transaction(()->{try(var q=db.connection().prepareStatement("DELETE FROM community_relations WHERE document=?")){q.setString(1,group);q.executeUpdate();}return null;});assertEquals(404,get("tasks?group="+group,session).status());assertEquals(404,get("tasks/"+task,session).status());
+  String session=linked();assertEquals(503,get("tasks?group="+group,session).status());assertEquals(503,get("tasks/"+task,session).status());
+  db.transaction(()->{try(var q=db.connection().prepareStatement("DELETE FROM community_relations WHERE document=?")){q.setString(1,group);q.executeUpdate();}return null;});assertEquals(503,get("tasks?group="+group,session).status());assertEquals(503,get("tasks/"+task,session).status());
+  db.transaction(()->{try(var q=db.connection().prepareStatement("SELECT revision,body->>'title' FROM community_group_items WHERE id=?")){q.setString(1,task);try(var rows=q.executeQuery()){assertTrue(rows.next());assertEquals(1,rows.getLong(1));assertEquals("Group work",rows.getString(2));}}return null;});
  }
 
 
  JsonObject command(String data){var out=new JsonObject();out.addProperty("operationId",UUID.randomUUID().toString());out.addProperty("issuedAt",System.currentTimeMillis());out.add("data",JsonParser.parseString(data));return out;}
  RestApi.Response write(String method,String path,String session,String revision,JsonObject body){var headers=new HashMap<String,List<String>>();headers.put("Authorization",List.of("Bearer "+token));if(session!=null)headers.put("X-Rivet-Session",List.of(session));if(revision!=null)headers.put("If-Match",List.of("\""+revision+"\""));return rest.handle(new RestApi.Request(method,"/api/v1/"+path,headers,body.toString()));}
  @Test void commandsAreAtomicIdempotentAndRequireCurrentRevision()throws Exception{
-  String session=linked();var body=command("{\"title\":\"First\",\"description\":\"Details\",\"group\":\"\"}");
-  assertEquals(401,write("POST","tasks",null,null,body).status());var created=json(write("POST","tasks",session,null,body));String id=created.get("id").getAsString(),revision=created.get("revision").getAsString();
-  var replay=json(write("POST","tasks",session,null,body));assertTrue(replay.get("replayed").getAsBoolean());assertEquals(id,replay.get("id").getAsString());assertEquals(1,json(get("tasks",session)).getAsJsonArray("items").size());
-  body.getAsJsonObject("data").addProperty("title","Changed retry");assertEquals(400,write("POST","tasks",session,null,body).status());
-  var edit=command("{\"title\":\"Edited\",\"description\":\"Updated\"}");assertEquals(400,write("PUT","tasks/"+id,session,null,edit).status());json(write("PUT","tasks/"+id,session,revision,edit));
-  assertEquals(409,write("PUT","tasks/"+id,session,revision,command("{\"title\":\"Lost update\",\"description\":\"\"}")).status());
-  assertEquals("Edited",json(get("tasks/"+id,session)).getAsJsonObject("item").get("title").getAsString());
+  String session=linked();var body=command("{\"title\":\"First\",\"description\":\"Details\",\"type\":\"Команда\"}");
+  assertEquals(401,write("POST","groups",null,null,body).status());var created=json(write("POST","groups",session,null,body));String id=created.get("id").getAsString(),revision=created.get("revision").getAsString();
+  var replay=json(write("POST","groups",session,null,body));assertTrue(replay.get("replayed").getAsBoolean());assertEquals(id,replay.get("id").getAsString());assertEquals(1,json(get("groups",session)).getAsJsonArray("items").size());
+  body.getAsJsonObject("data").addProperty("title","Changed retry");assertEquals(400,write("POST","groups",session,null,body).status());
+  String path="groups/"+id+"/actions/edit";var edit=command("{\"title\":\"Edited\",\"description\":\"Updated\",\"type\":\"Команда\"}");
+  assertEquals(400,write("POST",path,session,null,edit).status());json(write("POST",path,session,revision,edit));
+  var stale=command("{\"title\":\"Lost update\",\"description\":\"Must not win\",\"type\":\"Команда\"}");assertEquals(409,write("POST",path,session,revision,stale).status());
+  assertEquals("Edited",json(get("groups/"+id,session)).getAsJsonObject("item").get("title").getAsString());
  }
- @Test void commandsCannotInjectPermissionsOrWriteOtherPlayersTasks()throws Exception{
-  String session=linked();var create=command("{\"title\":\"First\",\"description\":\"\",\"group\":\"\"}");create.getAsJsonObject("data").addProperty("admin",true);assertEquals(400,write("POST","tasks",session,null,create).status());
-  create.getAsJsonObject("data").remove("admin");var task=json(write("POST","tasks",session,null,create));String other=UUID.randomUUID().toString();var c=sessions.challenge(grant);sessions.confirm(c.code(),"website",other,"Other");String otherSession=sessions.exchange(grant,c.code(),c.pollToken()).token();
-  assertEquals(403,write("POST","tasks/"+task.get("id").getAsString()+"/delete",otherSession,task.get("revision").getAsString(),command("{}")).status());
-  var limited=keys.create(root,"read-only",Set.of("sessions.link","tasks.read"),1,100);token=Files.readString(limited.deliveryFile()).trim();assertEquals(403,write("POST","tasks",session,null,command("{} ")).status());
+ @Test void commandsCannotInjectPermissionsOrWriteOtherPlayersGroups()throws Exception{
+  String session=linked();var create=command("{\"title\":\"First\",\"description\":\"Owned group\",\"type\":\"Команда\"}");create.getAsJsonObject("data").addProperty("admin",true);assertEquals(400,write("POST","groups",session,null,create).status());
+  create.getAsJsonObject("data").remove("admin");var group=json(write("POST","groups",session,null,create));String other=UUID.randomUUID().toString();var c=sessions.challenge(grant);sessions.confirm(c.code(),"website",other,"Other");String otherSession=sessions.exchange(grant,c.code(),c.pollToken()).token();
+  assertEquals(403,write("POST","groups/"+group.get("id").getAsString()+"/actions/delete",otherSession,group.get("revision").getAsString(),command("{}")).status());
+  var limited=keys.create(root,"read-only",Set.of("sessions.link","groups.read"),1,100);token=Files.readString(limited.deliveryFile()).trim();assertEquals(403,write("POST","groups",session,null,command("{} ")).status());
  }
  @Test void profileCompareAndSetAndNoticeOwnership()throws Exception{
   store.seen(new CommunityStore.Actor(player,"Alice",false,false));String session=linked();String revision=json(get("profiles/"+player,session)).getAsJsonObject("item").get("revision").getAsString();
@@ -185,31 +235,32 @@ class DomainRestTest {
    feed.publish(new dev.abros.rivet.api.ServerStatus(2,100,false,0,Set.of("server.status")));assertEquals("event",listener.next().get("type").getAsString());
    ws.abort();listener=new WsClient();ws=java.net.http.HttpClient.newHttpClient().newWebSocketBuilder().header("Authorization","Bearer "+token).buildAsync(java.net.URI.create("ws://127.0.0.1:"+port+"/api/v1/ws"),listener).get(5,java.util.concurrent.TimeUnit.SECONDS);
    var resume=new JsonObject();resume.addProperty("type","subscribe");resume.addProperty("topic","server.status");resume.add("cursor",snapshot.getAsJsonObject("data").get("cursor"));ws.sendText(resume.toString(),true).join();assertEquals("event",listener.next().get("type").getAsString());
-   String session=linked();var body=command("{\"title\":\"From WS\",\"description\":\"\",\"group\":\"\"}");var request=new JsonObject();request.addProperty("type","request");request.addProperty("id","create1");request.addProperty("method","POST");request.addProperty("path","/api/v1/tasks");request.addProperty("session",session);request.add("ifMatch",JsonNull.INSTANCE);request.add("body",body);ws.sendText(request.toString(),true).join();var response=listener.next().getAsJsonObject("data");assertEquals(200,response.get("status").getAsInt(),response.toString());
-   assertTrue(json(write("POST","tasks",session,null,body)).get("replayed").getAsBoolean());keys.state(grant.keyId(),"revoke");assertTrue(listener.closed.await(5,java.util.concurrent.TimeUnit.SECONDS));ws.abort();
+   String session=linked();var body=command("{\"title\":\"From WS\",\"description\":\"Group created through WebSocket\",\"type\":\"Команда\"}");var request=new JsonObject();request.addProperty("type","request");request.addProperty("id","create1");request.addProperty("method","POST");request.addProperty("path","/api/v1/groups");request.addProperty("session",session);request.add("ifMatch",JsonNull.INSTANCE);request.add("body",body);ws.sendText(request.toString(),true).join();var response=listener.next().getAsJsonObject("data");assertEquals(200,response.get("status").getAsInt(),response.toString());
+   assertTrue(json(write("POST","groups",session,null,body)).get("replayed").getAsBoolean());keys.state(grant.keyId(),"revoke");assertTrue(listener.closed.await(5,java.util.concurrent.TimeUnit.SECONDS));ws.abort();
   }
  }
- @Test void simultaneousRetriesCommitOneTask()throws Exception{
-  String session=linked();var body=command("{\"title\":\"Concurrent\",\"description\":\"\",\"group\":\"\"}");
+ @Test void simultaneousRetriesCommitOneGroup()throws Exception{
+  String session=linked();var body=command("{\"title\":\"Concurrent\",\"description\":\"Concurrent group creation\",\"type\":\"Команда\"}");
   try(var pool=java.util.concurrent.Executors.newFixedThreadPool(2)){
-   var a=pool.submit(()->write("POST","tasks",session,null,body));var b=pool.submit(()->write("POST","tasks",session,null,body));
-   assertEquals(json(a.get()).get("id"),json(b.get()).get("id"));assertEquals(1,json(get("tasks",session)).getAsJsonArray("items").size());
+   var a=pool.submit(()->write("POST","groups",session,null,body));var b=pool.submit(()->write("POST","groups",session,null,body));
+   assertEquals(json(a.get()).get("id"),json(b.get()).get("id"));assertEquals(1,json(get("groups",session)).getAsJsonArray("items").size());
   }
  }
  @Test void communityActionsReuseGamePoliciesAndRejectStaleRevisions()throws Exception{
   String session=linked();var owner=new CommunityStore.Actor(UUID.randomUUID().toString(),"Organizer",true,true);store.seen(owner);
-  for(String section:List.of("board","groups","events","polls","ideas")){
-   var create=new JsonObject();create.addProperty("section",section);create.addProperty("op","create");create.addProperty("title","Example");create.addProperty("description","Details");create.addProperty("days",14);create.addProperty("type","Команда");create.addProperty("startsAt",Instant.now().plusSeconds(600).toString());create.addProperty("endsAt",Instant.now().plusSeconds(600).toString());create.addProperty("capacity",10);create.add("options",JsonParser.parseString("[\"One\",\"Two\"]"));
-   var item=store.request(owner,create).getAsJsonObject("detail");String id=item.get("id").getAsString(),revision=item.get("revision").getAsString();
-   String action=switch(section){case "board"->"respond";case "groups"->"apply";case "events"->"join";case "polls"->"vote";default->"support";};
-   var body=command(switch(section){case "board","groups"->"{\"text\":\"Interested\"}";case "polls"->"{\"choices\":[0]}";default->"{}";});
-   String path=section+"/"+id+"/actions/"+action;json(write("POST",path,session,revision,body));assertTrue(json(write("POST",path,session,revision,body)).get("replayed").getAsBoolean());
-   var newer=body.deepCopy();newer.addProperty("operationId",UUID.randomUUID().toString());assertEquals(409,write("POST",path,session,revision,newer).status());
+  var create=Json.parse("{\"section\":\"groups\",\"op\":\"create\",\"title\":\"Example\",\"description\":\"Details\",\"type\":\"Команда\"}");
+  var item=store.request(owner,create).getAsJsonObject("detail");String id=item.get("id").getAsString(),revision=item.get("revision").getAsString();
+  String path="groups/"+id+"/actions/apply";var body=command("{\"text\":\"Interested\"}");json(write("POST",path,session,revision,body));assertTrue(json(write("POST",path,session,revision,body)).get("replayed").getAsBoolean());
+  var newer=body.deepCopy();newer.addProperty("operationId",UUID.randomUUID().toString());assertEquals(409,write("POST",path,session,revision,newer).status());
+  for(String retired:List.of("board","events","polls","ideas")){
+   var refused=write("POST",retired+"/"+id+"/actions/apply",session,revision,command("{}"));assertEquals(503,refused.status());assertTrue(refused.body().contains("UNAVAILABLE"));
   }
  }
  @Test void malformedAndExpiredCommandsHaveNoSideEffects()throws Exception{
-  String session=linked();var body=command("{\"title\":\"Expired\",\"description\":\"\",\"group\":\"\"}");body.addProperty("issuedAt",System.currentTimeMillis()-86400001);assertEquals(400,write("POST","tasks",session,null,body).status());
-  body.addProperty("issuedAt",System.currentTimeMillis());body.add("data",JsonNull.INSTANCE);assertEquals(400,write("POST","tasks",session,null,body).status());assertTrue(json(get("tasks",session)).getAsJsonArray("items").isEmpty());
+  String session=linked();var body=command("{\"title\":\"Expired\",\"description\":\"Valid group\",\"type\":\"Команда\"}");
+  body.addProperty("issuedAt",System.currentTimeMillis()-86400001);assertEquals(400,write("POST","groups",session,null,body).status());
+  body.addProperty("issuedAt",System.currentTimeMillis());body.add("data",JsonNull.INSTANCE);assertEquals(400,write("POST","groups",session,null,body).status());
+  assertTrue(json(get("groups",session)).getAsJsonArray("items").isEmpty());
  }
 
  DomainSubscriptions subscriptions()throws Exception{return new DomainSubscriptions(new DomainRest(keys,sessions,store,new CommunityApiResources(db,store,ServerSettings.parse(ServerSettings.template()))),db::communityRevision);}
@@ -232,23 +283,24 @@ class DomainRestTest {
   sessions.revokePlayer(player);assertEquals(ApiException.Code.UNAUTHENTICATED,assertThrows(ApiException.class,()->subscriptions.snapshot(grant,target,changed.getAsJsonObject("cursor"))).code());
  }
  @Test void subscriptionCursorsBindResourceAndIdentityAndRequireResyncAfterRestart()throws Exception{
-  String session=linked();var subscriptions=subscriptions();var target=new DomainSubscriptions.Target("tasks",Map.of(),session);var first=subscriptions.snapshot(grant,target,null);
+  String session=linked();var subscriptions=subscriptions();var target=new DomainSubscriptions.Target("groups",Map.of(),session);var first=subscriptions.snapshot(grant,target,null);
   var other=new DomainSubscriptions.Target("me/notifications",Map.of(),session);
   assertEquals(ApiException.Code.RESYNC_REQUIRED,assertThrows(ApiException.class,()->subscriptions.snapshot(grant,other,first.getAsJsonObject("cursor"))).code());
   var future=first.getAsJsonObject("cursor").deepCopy();future.addProperty("sequence",9999);
   assertEquals(ApiException.Code.RESYNC_REQUIRED,assertThrows(ApiException.class,()->subscriptions.snapshot(grant,target,future)).code());
   subscriptions.clear();assertEquals(ApiException.Code.RESYNC_REQUIRED,assertThrows(ApiException.class,()->subscriptions.snapshot(grant,target,first.getAsJsonObject("cursor"))).code());
-  assertThrows(ApiException.class,()->new DomainSubscriptions.Target("tasks",Map.of("cursor","anything"),session));
+  assertThrows(ApiException.class,()->new DomainSubscriptions.Target("groups",Map.of("cursor","anything"),session));
   assertThrows(ApiException.class,()->subscriptions.snapshot(grant,new DomainSubscriptions.Target("sessions/link",Map.of(),session),null));
  }
  @Test void subscriptionsCoverAllReadDomainsAndRespectScopeAndUnpublishing()throws Exception{
   String session=linked();var subscriptions=subscriptions();
-  for(String path:List.of("tasks","profiles/"+player,"me/notifications","chat/history","chat/channels","map/objects","me/map/objects","map/territories","groups","events","board","polls","ideas"))assertNotNull(subscriptions.snapshot(grant,new DomainSubscriptions.Target(path,Map.of(),session),null),path);
-  String id=event("public");var target=new DomainSubscriptions.Target("events/"+id,Map.of(),null);var first=subscriptions.snapshot(grant,target,null);
-  db.transaction(()->{try(var q=db.connection().prepareStatement("UPDATE documents SET body=body||'{\"visibility\":\"invited\"}'::jsonb WHERE id=?")){q.setString(1,id);q.executeUpdate();}return null;});
+  for(String path:List.of("profiles/"+player,"me/notifications","chat/history","chat/channels","map/objects","me/map/objects","map/territories","groups"))assertNotNull(subscriptions.snapshot(grant,new DomainSubscriptions.Target(path,Map.of(),session),null),path);
+  for(String retired:List.of("tasks","events","board","polls","ideas"))assertEquals(ApiException.Code.UNAVAILABLE,assertThrows(ApiException.class,()->subscriptions.snapshot(grant,new DomainSubscriptions.Target(retired,Map.of(),session),null)).code());
+  String id=group();var target=new DomainSubscriptions.Target("groups/"+id,Map.of(),null);var first=subscriptions.snapshot(grant,target,null);
+  db.transaction(()->{try(var q=db.connection().prepareStatement("UPDATE documents SET body=body||'{\"status\":\"hidden\"}'::jsonb WHERE id=?")){q.setString(1,id);q.executeUpdate();}return null;});
   assertEquals(ApiException.Code.NOT_FOUND,assertThrows(ApiException.class,()->subscriptions.snapshot(grant,target,first.getAsJsonObject("cursor"))).code());
   var limited=keys.create(root,"limited",Set.of("websocket.connect"),1,100);var g=keys.authorize(Files.readString(limited.deliveryFile()).trim(),"websocket.connect");
-  assertEquals(ApiException.Code.FORBIDDEN,assertThrows(ApiException.class,()->subscriptions.snapshot(g,new DomainSubscriptions.Target("events",Map.of(),null),null)).code());
+  assertEquals(ApiException.Code.FORBIDDEN,assertThrows(ApiException.class,()->subscriptions.snapshot(g,new DomainSubscriptions.Target("groups",Map.of(),null),null)).code());
  }
  @Test void websocketPushReconnectUnwatchAndSessionRevocation()throws Exception{
   String session=linked();int port;try(var socket=new java.net.ServerSocket(0)){port=socket.getLocalPort();}
@@ -271,27 +323,30 @@ class DomainRestTest {
   linked();var cfg=ServerSettings.parse(ServerSettings.template());
   try(var java=new JavaDomains(db,store,cfg)){
    var publicView=java.connect("example_mod",null);var own=java.connect("example_mod",UUID.fromString(player));
-   for(var d:dev.abros.rivet.api.DomainData.Community.values())assertNotNull(publicView.community(d,"").get());
-   var eventId=UUID.fromString(event("public"));assertEquals("Event",publicView.document(dev.abros.rivet.api.DomainData.Community.EVENTS,eventId).get().title());
-   assertTrue(own.capabilities().get().contains("tasks.write"));assertFalse(publicView.capabilities().get().contains("tasks.write"));
+   for(var d:dev.abros.rivet.api.DomainData.Community.values()){
+    if(d==dev.abros.rivet.api.DomainData.Community.GROUPS)assertNotNull(publicView.community(d,"").get());
+    else assertEquals(ApiException.Code.MODULE_DISABLED,((ApiException)assertThrows(java.util.concurrent.ExecutionException.class,()->publicView.community(d,"").get()).getCause()).code());
+   }
+   var groupId=UUID.fromString(group());assertEquals("Team",publicView.document(dev.abros.rivet.api.DomainData.Community.GROUPS,groupId).get().title());
+   assertTrue(own.capabilities().get().contains("groups.write"));assertFalse(publicView.capabilities().get().contains("groups.write"));
    store.externalNotice(player,"Mine");store.externalNotice(UUID.randomUUID().toString(),"Private other");
    var notices=own.notifications("").get();assertEquals(1,notices.items().size());assertThrows(UnsupportedOperationException.class,()->notices.items().clear());
    assertEquals(ApiException.Code.UNAUTHENTICATED,((ApiException)assertThrows(java.util.concurrent.ExecutionException.class,()->publicView.notifications("").get()).getCause()).code());
    assertEquals(player,own.profile(UUID.fromString(player)).get().uuid().toString());
    assertNotNull(own.chat("").get());assertNotNull(own.channels("").get());assertNotNull(publicView.publications(false,"",OptionalLong.empty()).get());assertNotNull(publicView.territories("").get());
-   java.close();assertEquals(ApiException.Code.UNAVAILABLE,((ApiException)assertThrows(java.util.concurrent.ExecutionException.class,()->own.tasks(Optional.empty(),"").get()).getCause()).code());
+   java.close();assertEquals(ApiException.Code.UNAVAILABLE,((ApiException)assertThrows(java.util.concurrent.ExecutionException.class,()->own.community(dev.abros.rivet.api.DomainData.Community.GROUPS,"").get()).getCause()).code());
   }
  }
  @Test void javaCommandsReuseOwnershipRevisionAndModScopedReceipts()throws Exception{
   linked();var cfg=ServerSettings.parse(ServerSettings.template());
   try(var service=new JavaDomains(db,store,cfg)){
-   var own=service.connect("example_mod",UUID.fromString(player));var id=UUID.randomUUID();long at=System.currentTimeMillis();var create=new dev.abros.rivet.api.DomainCommand.CreateTask("Java task","Details",Optional.empty());
+   var own=service.connect("example_mod",UUID.fromString(player));var id=UUID.randomUUID();long at=System.currentTimeMillis();var create=new dev.abros.rivet.api.DomainCommand.CreateGroup("Java group","Details","Команда");
    var first=own.execute(id,at,create).get();assertTrue(own.execute(id,at,create).get().replayed());
-   var task=own.task(UUID.fromString(first.id())).get();assertEquals("Java task",task.title());
-   var update=new dev.abros.rivet.api.DomainCommand.UpdateTask(task.id(),task.revision(),"Changed","New");own.execute(UUID.randomUUID(),at,update).get();
+   var task=own.document(dev.abros.rivet.api.DomainData.Community.GROUPS,UUID.fromString(first.id())).get();assertEquals("Java group",task.title());
+   var update=new dev.abros.rivet.api.DomainCommand.EditDocument(dev.abros.rivet.api.DomainData.Community.GROUPS,task.id(),task.revision(),"Changed","New","Команда");own.execute(UUID.randomUUID(),at,update).get();
    assertEquals(ApiException.Code.CONFLICT,((ApiException)assertThrows(java.util.concurrent.ExecutionException.class,()->own.execute(UUID.randomUUID(),at,update).get()).getCause()).code());
    var other=UUID.randomUUID();store.seen(new CommunityStore.Actor(other.toString(),"Bob",false,false));
-   assertEquals(ApiException.Code.NOT_FOUND,((ApiException)assertThrows(java.util.concurrent.ExecutionException.class,()->service.connect("example_mod",other).task(task.id()).get()).getCause()).code());
+   assertEquals(ApiException.Code.FORBIDDEN,((ApiException)assertThrows(java.util.concurrent.ExecutionException.class,()->service.connect("example_mod",other).execute(UUID.randomUUID(),at,new dev.abros.rivet.api.DomainCommand.EditDocument(dev.abros.rivet.api.DomainData.Community.GROUPS,task.id(),task.revision()+1,"Foreign","Forbidden","Команда")).get()).getCause()).code());
    var p=own.profile(UUID.fromString(player)).get();own.execute(UUID.randomUUID(),at,new dev.abros.rivet.api.DomainCommand.SaveProfile(p.revision(),"About","Interests")).get();assertEquals("About",own.profile(p.uuid()).get().about());
    store.externalNotice(player,"Read me");var notice=own.notifications("").get().items().getFirst();own.execute(UUID.randomUUID(),at,new dev.abros.rivet.api.DomainCommand.ReadNotice(notice.id())).get();assertTrue(own.notifications("").get().items().getFirst().read());
    var marker=new dev.abros.rivet.api.DomainData.Marker("minecraft:overworld","API marker",1,64,2,0xabcdef,"pin");var mapId=UUID.randomUUID();own.execute(UUID.randomUUID(),at,new dev.abros.rivet.api.DomainCommand.SubmitPublication(mapId,0,marker)).get();
@@ -306,10 +361,10 @@ class DomainRestTest {
   pool.execute(()->{started.countDown();try{gate.await();}catch(InterruptedException e){Thread.currentThread().interrupt();}});assertTrue(started.await(2,java.util.concurrent.TimeUnit.SECONDS));
   try(var service=new JavaDomains(db,store,ServerSettings.parse(ServerSettings.template()),pool)){
    var view=service.connect("example_mod",UUID.fromString(player));
-   var queued=view.execute(UUID.randomUUID(),System.currentTimeMillis(),new dev.abros.rivet.api.DomainCommand.CreateTask("Cancelled","",Optional.empty()));
-   assertEquals(ApiException.Code.BUSY,((ApiException)assertThrows(java.util.concurrent.ExecutionException.class,()->view.tasks(Optional.empty(),"").get()).getCause()).code());
+   var queued=view.execute(UUID.randomUUID(),System.currentTimeMillis(),new dev.abros.rivet.api.DomainCommand.CreateGroup("Cancelled","Must not be committed","Команда"));
+   assertEquals(ApiException.Code.BUSY,((ApiException)assertThrows(java.util.concurrent.ExecutionException.class,()->view.community(dev.abros.rivet.api.DomainData.Community.GROUPS,"").get()).getCause()).code());
    assertTrue(queued.cancel(false));gate.countDown();pool.shutdown();assertTrue(pool.awaitTermination(3,java.util.concurrent.TimeUnit.SECONDS));
-   assertTrue(json(get("tasks",linked())).getAsJsonArray("items").isEmpty());
+   assertTrue(json(get("groups",linked())).getAsJsonArray("items").isEmpty());
   }finally{gate.countDown();pool.shutdownNow();}
  }
  @Test void javaDomainModuleSwitchesAndInvalidInputsFailClosed()throws Exception{
@@ -325,6 +380,46 @@ class DomainRestTest {
  static <T> dev.abros.rivet.api.DomainSubscription.Event<T> javaEvent(dev.abros.rivet.api.DomainSubscription<T> watch)throws Exception{
   long until=System.nanoTime()+java.util.concurrent.TimeUnit.SECONDS.toNanos(8);
   while(System.nanoTime()<until){var next=watch.poll();if(next.isPresent())return next.get();Thread.sleep(10);}throw new AssertionError("Missing Java subscription event");
+ }
+ @Test void apiChatEnvelopeKeepsBodySeparateFromIdentityAndLegacyDeliveriesReadable()throws Exception {
+  String session=linked();json(write("POST","chat/messages",session,null,command("{\"channel\":\"global\",\"text\":\"Body only\"}")));
+  var chat=new ApiChat(db,store,ServerSettings.parse(ServerSettings.template()),who->List.of());var messages=new ArrayList<ApiChat.Envelope>();
+  chat.drainEnvelopes(messages::add);assertEquals(1,messages.size());var value=messages.getFirst();
+  assertEquals("Body only",value.body());assertEquals("Alice",value.author());assertEquals(player,value.sender());assertEquals("website",value.application());assertTrue(value.recipients().isEmpty());
+  var pending=Json.parse("{\"channel\":\"global\",\"text\":\"Legacy queued line\",\"recipients\":[]}");pending.addProperty("sender",player);pending.addProperty("at",System.currentTimeMillis());store.record("api-chat",UUID.randomUUID().toString(),pending);
+  messages.clear();chat.drainEnvelopes(messages::add);assertEquals("",messages.getFirst().body());assertEquals("Legacy queued line",messages.getFirst().text());
+ }
+ @Test void notificationWatchesLocalizeUpdateRevokeAndReopenIndependently()throws Exception {
+  String session=linked();
+  try(var publisher=new NotificationPublisher(db);var service=new JavaDomains(db,store,ServerSettings.parse(ServerSettings.template()))) {
+   var type=publisher.owner("example").register("mail");var view=service.connect("example",UUID.fromString(player));
+   var message=new dev.abros.rivet.api.NotificationsApi.Message("Parcel","Collect",Map.of("ru_ru",new dev.abros.rivet.api.NotificationsApi.Translation("Посылка","Заберите")));
+   var receipt=type.put(UUID.fromString(player),"parcel",message,0).join();
+   try(var ru=view.watch(new dev.abros.rivet.api.DomainWatch.Notifications("ru_ru"));var fallback=view.watch(new dev.abros.rivet.api.DomainWatch.Notifications());var prefs=view.watch(new dev.abros.rivet.api.DomainWatch.NotificationPreferences())) {
+    var first=noticeSnapshot(ru);assertEquals("Посылка",first.value().items().getFirst().title());
+    assertEquals("Parcel",noticeSnapshot(fallback).value().items().getFirst().title());
+    var preferences=(dev.abros.rivet.api.DomainSubscription.Snapshot<dev.abros.rivet.api.DomainData.NotificationPreferences>)javaEvent(prefs);
+    json(write("PUT","me/notification-preferences",session,preferences.value().revision(),command("{\"muted\":[\"groups\"],\"snoozeUntil\":0}")));
+    assertEquals(List.of("groups"),((dev.abros.rivet.api.DomainSubscription.Snapshot<dev.abros.rivet.api.DomainData.NotificationPreferences>)javaEvent(prefs)).value().muted());
+    var updated=type.put(UUID.fromString(player),"parcel",new dev.abros.rivet.api.NotificationsApi.Message("Delivered","Done",Map.of("ru_ru",new dev.abros.rivet.api.NotificationsApi.Translation("Доставлено","Готово"))),receipt.revision()).join();
+    assertEquals("Доставлено",noticeSnapshot(ru).value().items().getFirst().title());
+    assertEquals("Delivered",noticeSnapshot(fallback).value().items().getFirst().title());
+    type.revoke(UUID.fromString(player),"parcel",updated.revision()).join();
+    assertTrue(noticeSnapshot(ru).value().items().isEmpty());assertTrue(noticeSnapshot(fallback).value().items().isEmpty());
+    ru.close();
+    try(var reopened=view.watch(new dev.abros.rivet.api.DomainWatch.Notifications("ru_ru"))) {
+     var fresh=noticeSnapshot(reopened);assertTrue(fresh.value().items().isEmpty());assertNotEquals(first.cursor().stream(),fresh.cursor().stream());
+    }
+   }
+   // Locale is also part of WebSocket subscription identity: cursors cannot cross languages.
+   var push=subscriptions();var ruTarget=new DomainSubscriptions.Target("me/notifications",Map.of("locale","ru_ru"),session);
+   var enTarget=new DomainSubscriptions.Target("me/notifications",Map.of("locale","en_us"),session);
+   var initial=push.snapshot(grant,ruTarget,null);
+   assertEquals(ApiException.Code.RESYNC_REQUIRED,assertThrows(ApiException.class,()->push.snapshot(grant,enTarget,initial.getAsJsonObject("cursor"))).code());
+  }
+ }
+ static dev.abros.rivet.api.DomainSubscription.Snapshot<dev.abros.rivet.api.DomainData.Page<dev.abros.rivet.api.DomainData.Notice>> noticeSnapshot(dev.abros.rivet.api.DomainSubscription<dev.abros.rivet.api.DomainData.Page<dev.abros.rivet.api.DomainData.Notice>> watch)throws Exception {
+  return (dev.abros.rivet.api.DomainSubscription.Snapshot<dev.abros.rivet.api.DomainData.Page<dev.abros.rivet.api.DomainData.Notice>>)javaEvent(watch);
  }
  @Test void javaSubscriptionsReceiveGameChangesAndCloseWithRuntime()throws Exception{
   linked();var cfg=ServerSettings.parse(ServerSettings.template());
@@ -343,16 +438,16 @@ class DomainRestTest {
   }
  }
  @Test void javaSubscriptionsRecheckPrivacyAndDisabledModules()throws Exception{
-  String id=event("public");var cfg=ServerSettings.parse(ServerSettings.template());
+  String id=group();var cfg=ServerSettings.parse(ServerSettings.template());
   try(var service=new JavaDomains(db,store,cfg)){
    var view=service.connect("example_mod",null);
-   try(var detail=view.watch(new dev.abros.rivet.api.DomainWatch.CommunityDocument(dev.abros.rivet.api.DomainData.Community.EVENTS,UUID.fromString(id)))){
+   try(var detail=view.watch(new dev.abros.rivet.api.DomainWatch.CommunityDocument(dev.abros.rivet.api.DomainData.Community.GROUPS,UUID.fromString(id)))){
     assertInstanceOf(dev.abros.rivet.api.DomainSubscription.Snapshot.class,javaEvent(detail));
-    db.transaction(()->{try(var q=db.connection().prepareStatement("UPDATE documents SET body=body||'{\"visibility\":\"invited\"}'::jsonb WHERE id=?")){q.setString(1,id);q.executeUpdate();}db.communityChanged();return null;});
+    db.transaction(()->{try(var q=db.connection().prepareStatement("UPDATE documents SET body=body||'{\"status\":\"hidden\"}'::jsonb WHERE id=?")){q.setString(1,id);q.executeUpdate();}db.communityChanged();return null;});
     assertEquals(Optional.of(ApiException.Code.NOT_FOUND),((dev.abros.rivet.api.DomainSubscription.Closed<?>)javaEvent(detail)).error());assertTrue(detail.poll().isEmpty());
    }
-   try(var list=view.watch(new dev.abros.rivet.api.DomainWatch.CommunityList(dev.abros.rivet.api.DomainData.Community.EVENTS))){
-    javaEvent(list);var config=store.configuration();config.getAsJsonArray("sections").remove(new JsonPrimitive("events"));store.configure(config);
+   try(var list=view.watch(new dev.abros.rivet.api.DomainWatch.CommunityList(dev.abros.rivet.api.DomainData.Community.GROUPS))){
+    javaEvent(list);var config=store.configuration();config.getAsJsonArray("sections").remove(new JsonPrimitive("groups"));store.configure(config);
     assertEquals(Optional.of(ApiException.Code.MODULE_DISABLED),((dev.abros.rivet.api.DomainSubscription.Closed<?>)javaEvent(list)).error());
    }
    try(var rejected=view.watch(new dev.abros.rivet.api.DomainWatch.Notifications())){assertEquals(Optional.of(ApiException.Code.UNAUTHENTICATED),((dev.abros.rivet.api.DomainSubscription.Closed<?>)javaEvent(rejected)).error());}
@@ -376,13 +471,21 @@ class DomainRestTest {
  @Test void maintenanceAnnouncementsAndTypedControlUseSameState()throws Exception{
   linked();var cfg=ServerSettings.parse(ServerSettings.template());try(var java=new JavaDomains(db,store,cfg).access((who,right)->true)){var api=java.connect("control_test",UUID.fromString(player));var before=api.serverControl().get();var saved=api.execute(UUID.randomUUID(),System.currentTimeMillis(),new dev.abros.rivet.api.DomainCommand.SetMaintenance(before.revision(),true,5,"Maintenance")).get();assertTrue(api.serverControl().get().maintenance());api.execute(UUID.randomUUID(),System.currentTimeMillis(),new dev.abros.rivet.api.DomainCommand.PinAnnouncement(saved.revision(),"News",30)).get();assertEquals("News",api.serverControl().get().announcement());}
  }
- @Test void taskSubtasksResourcesAndPaginationUseOwnershipAndRevision()throws Exception{
-  String session=linked();var saved=json(write("POST","tasks",session,null,command("{\"title\":\"Task\",\"description\":\"\",\"group\":\"\"}")));String id=saved.get("id").getAsString();
-  saved=json(write("POST","tasks/"+id+"/subtask-add",session,saved.get("revision").getAsString(),command("{\"title\":\"Step\",\"assignee\":\"\"}")));var details=json(get("tasks/"+id+"/details?subtaskOffset=0&commentOffset=0",session)).getAsJsonObject("item");assertEquals(1,details.get("subtaskCount").getAsInt());assertEquals("Step",details.getAsJsonArray("subtasks").get(0).getAsJsonObject().get("title").getAsString());
-  saved=json(write("POST","tasks/"+id+"/subtask-toggle",session,saved.get("revision").getAsString(),command("{\"index\":0}")));assertEquals(409,get("tasks/"+id+"/details?revision=1",session).status());
-  json(write("POST","tasks/"+id+"/resources",session,saved.get("revision").getAsString(),command("{\"resources\":[{\"item\":\"minecraft:stone\",\"amount\":10,\"alternatives\":[]}]}")));assertEquals(1,json(get("tasks/"+id+"/details",session)).getAsJsonObject("item").getAsJsonArray("resources").size());assertEquals(400,get("tasks/"+id+"/details?subtaskOffset=-1",session).status());
+ String archivedTask(JsonObject body)throws Exception{
+  String id=UUID.randomUUID().toString();db.transaction(()->{try(var q=db.connection().prepareStatement("INSERT INTO community_group_items(id,group_id,kind,body,revision,owner) VALUES(?,NULL,'task',?::jsonb,1,?)")){q.setString(1,id);q.setString(2,body.toString());q.setString(3,player);q.executeUpdate();}return null;});return id;
  }
- @Test void groupTerritoryAndEventRemindersReuseDomainRules()throws Exception{
+ void assertArchivedTaskUnchanged(String id,JsonObject expected)throws Exception{
+  db.transaction(()->{try(var q=db.connection().prepareStatement("SELECT body,revision FROM community_group_items WHERE id=?")){q.setString(1,id);try(var rows=q.executeQuery()){assertTrue(rows.next());assertEquals(expected,Json.parse(rows.getString(1)));assertEquals(1,rows.getLong(2));}}return null;});
+ }
+ @Test void archivedTaskSubtasksAndResourcesCannotBeReadOrMutated()throws Exception{
+  String session=linked();var body=Json.parse("{\"title\":\"Task\",\"subtasks\":[{\"title\":\"Step\",\"done\":false}],\"resources\":[{\"item\":\"minecraft:stone\",\"amount\":10,\"alternatives\":[]}]}");String id=archivedTask(body);
+  for(String suffix:List.of("/details","/details?subtaskOffset=0&commentOffset=0","/details?revision=1"))assertEquals(503,get("tasks/"+id+suffix,session).status());
+  for(String op:List.of("subtask-add","subtask-edit","subtask-toggle","subtask-remove","resources")){
+   var response=write("POST","tasks/"+id+"/"+op,session,"1",command("{}"));assertEquals(503,response.status());assertTrue(response.body().contains("UNAVAILABLE"));
+  }
+  assertArchivedTaskUnchanged(id,body);
+ }
+ @Test void groupTerritoryRemainsEditableWhileArchivedEventsCannotChange()throws Exception{
   String session=linked();
   var group=json(write("POST","groups",session,null,command("{\"title\":\"Team\",\"description\":\"Details\",\"type\":\"Город\"}")));
   String id=group.get("id").getAsString();
@@ -391,11 +494,10 @@ class DomainRestTest {
   json(write("POST","groups/"+id+"/actions/territory",session,saved.get("revision").getAsString(),command("{\"territory\":null}")));
   assertEquals(0,json(get("map/territories",session)).getAsJsonArray("items").size());
   String event=event("public");
-  json(write("POST","events/"+event+"/actions/reminder",session,"1",command("{\"minutes\":15}")));
-  assertEquals(400,write("POST","events/"+event+"/actions/reminder",session,"1",command("{\"minutes\":3}")).status());
-  db.transaction(()->{try(var q=db.connection().prepareStatement("UPDATE documents SET body=body||jsonb_build_object('series',?::text) WHERE id=?")){q.setString(1,event);q.setString(2,event);q.executeUpdate();}return null;});
-  json(write("POST","events/"+event+"/actions/cancelSeries",session,"1",command("{}")));assertEquals("cancelled",json(get("events/"+event,session)).getAsJsonObject("item").get("status").getAsString());
+  for(String action:List.of("reminder","cancelSeries"))assertEquals(503,write("POST","events/"+event+"/actions/"+action,session,"1",command(action.equals("reminder")?"{\"minutes\":15}":"{}")).status());
+  db.transaction(()->{try(var q=db.connection().prepareStatement("SELECT body->>'status',body->>'revision' FROM documents WHERE id=?")){q.setString(1,event);try(var rows=q.executeQuery()){assertTrue(rows.next());assertEquals("open",rows.getString(1));assertEquals("1",rows.getString(2));}}return null;});
  }
+
  @Test void ownReportsAreIdempotentAndNeverExposeStaffNotes()throws Exception{
   String session=linked();var body=command("{\"message\":\"Help\",\"category\":\"technical\"}");var created=json(write("POST","reports",session,null,body));String id=created.get("id").getAsString();json(write("POST","reports",session,null,body));assertEquals(1,json(get("reports",session)).getAsJsonArray("items").size());
   var report=store.record("reports",id);report.addProperty("priority","high");report.addProperty("audit","private diagnostics");report.add("internalNotes",JsonParser.parseString("[{\"text\":\"staff only\"}]"));store.record("reports",id,report);
@@ -426,7 +528,7 @@ class DomainRestTest {
   assertTrue(json(get("chat/history",session)).toString().contains("[API website] Alice: Hello"));assertEquals(400,write("POST","chat/messages",session,null,command("{\"channel\":\"global\",\"text\":\"x\",\"sender\":\"Admin\"}")).status());
  }
  @Test void createAndManageCommunityReuseOwnershipAndRevision()throws Exception{
-  String session=linked();var created=json(write("POST","ideas",session,null,command("{\"title\":\"Idea\",\"description\":\"Details\"}")));String id=created.get("id").getAsString();String revision=json(get("ideas/"+id,session)).getAsJsonObject("item").get("revision").getAsString();json(write("POST","ideas/"+id+"/actions/edit",session,revision,command("{\"title\":\"Updated\",\"description\":\"Details\"}")));assertEquals("Updated",json(get("ideas/"+id,session)).getAsJsonObject("item").get("title").getAsString());assertEquals(409,write("POST","ideas/"+id+"/actions/edit",session,revision,command("{\"title\":\"Stale\",\"description\":\"Details\"}")).status());
+  String session=linked();var created=json(write("POST","groups",session,null,command("{\"title\":\"Idea\",\"description\":\"Details\",\"type\":\"Команда\"}")));String id=created.get("id").getAsString();String revision=json(get("groups/"+id,session)).getAsJsonObject("item").get("revision").getAsString();json(write("POST","groups/"+id+"/actions/edit",session,revision,command("{\"title\":\"Updated\",\"description\":\"Details\",\"type\":\"Команда\"}")));assertEquals("Updated",json(get("groups/"+id,session)).getAsJsonObject("item").get("title").getAsString());assertEquals(409,write("POST","groups/"+id+"/actions/edit",session,revision,command("{\"title\":\"Stale\",\"description\":\"Details\",\"type\":\"Команда\"}")).status());
  }
 
  @Test void typedJavaReportsWatchesAndPackProjection()throws Exception{
@@ -435,8 +537,12 @@ class DomainRestTest {
  @Test void notificationPreferencesUseContentRevision()throws Exception{
   String session=linked();String revision=json(get("me/notification-preferences",session)).getAsJsonObject("item").get("revision").getAsString();var body=command("{\"muted\":[\"events\"],\"snoozeUntil\":0}");json(write("PUT","me/notification-preferences",session,revision,body));assertTrue(json(get("me/notification-preferences",session)).toString().contains("events"));assertEquals(409,write("PUT","me/notification-preferences",session,revision,command("{\"muted\":[],\"snoozeUntil\":0}")).status());
  }
- @Test void taskAssignmentAndDueDateUseTaskRules()throws Exception{
-  String session=linked();String id=json(write("POST","tasks",session,null,command("{\"title\":\"Task\",\"description\":\"\",\"group\":\"\"}"))).get("id").getAsString();String revision=json(get("tasks/"+id,session)).getAsJsonObject("item").get("revision").getAsString();assertEquals(403,write("POST","tasks/"+id+"/assign",session,revision,command("{\"assignee\":\""+UUID.randomUUID()+"\"}")).status());json(write("POST","tasks/"+id+"/due",session,revision,command("{\"dueAt\":0}")));assertEquals(409,write("POST","tasks/"+id+"/comment",session,revision,command("{\"text\":\"stale\"}")).status());
+ @Test void archivedTaskAssignmentDueDateAndCommentsRemainUnchanged()throws Exception{
+  String session=linked();var body=Json.parse("{\"title\":\"Archived\",\"assignee\":\"Owner\",\"dueAt\":123,\"comments\":[\"Private comment\"]}");String id=archivedTask(body);
+  for(String op:List.of("assign","due","comment","status","delete","restore","dependencies","repeat","reserve","location")){
+   var response=write("POST","tasks/"+id+"/"+op,session,"1",command("{}"));assertEquals(503,response.status());assertTrue(response.body().contains("UNAVAILABLE"));
+  }
+  assertArchivedTaskUnchanged(id,body);
  }
  @Test void staffSubscriptionStopsAfterPermissionWithdrawal()throws Exception{
   String session=linked();var allowed=new java.util.concurrent.atomic.AtomicBoolean(true);var cfg=ServerSettings.parse(ServerSettings.template());var domains=new DomainRest(keys,sessions,store,new CommunityApiResources(db,store,cfg).access((id,right)->allowed.get()));var subscriptions=new DomainSubscriptions(domains);var target=new DomainSubscriptions.Target("admin/reports",Map.of(),session);var first=subscriptions.snapshot(grant,target,null);allowed.set(false);assertThrows(ApiException.class,()->subscriptions.snapshot(grant,target,first.getAsJsonObject("cursor")));
@@ -448,7 +554,9 @@ class DomainRestTest {
   String stranger=UUID.randomUUID().toString();store.seen(new CommunityStore.Actor(stranger,"Bob",false,false));var c=sessions.challenge(grant);sessions.confirm(c.code(),"website",stranger,"Bob");String other=sessions.exchange(grant,c.code(),c.pollToken()).token();assertEquals(403,get("groups/"+id+"/markers",other).status());
   data.addProperty("itemId",saved.get("id").getAsString());data.addProperty("itemRevision",0);assertEquals(409,write("POST","groups/"+id+"/actions/markerSave",session,list.get("revision").getAsString(),command(data.toString())).status());
   var deletion=new JsonObject();deletion.add("itemId",saved.get("id"));deletion.addProperty("itemRevision",1);json(write("POST","groups/"+id+"/actions/markerDelete",session,list.get("revision").getAsString(),command(deletion.toString())));assertEquals(0,json(get("groups/"+id+"/markers",session)).getAsJsonArray("items").size());
-  String task=json(write("POST","tasks",session,null,command("{\"title\":\"Task\",\"description\":\"\",\"group\":\""+id+"\"}"))).get("id").getAsString();deletion.addProperty("itemId",task);String current=json(get("groups/"+id,session)).getAsJsonObject("item").get("revision").getAsString();assertEquals(404,write("POST","groups/"+id+"/actions/markerDelete",session,current,command(deletion.toString())).status());
+  String task=UUID.randomUUID().toString();db.transaction(()->{try(var q=db.connection().prepareStatement("INSERT INTO community_group_items(id,group_id,kind,body,revision,owner) VALUES(?,?,'task','{\"title\":\"Archived task\",\"status\":\"open\"}'::jsonb,1,?)")){q.setString(1,task);q.setString(2,id);q.setString(3,player);q.executeUpdate();}return null;});
+  deletion.addProperty("itemId",task);String current=json(get("groups/"+id,session)).getAsJsonObject("item").get("revision").getAsString();assertEquals(404,write("POST","groups/"+id+"/actions/markerDelete",session,current,command(deletion.toString())).status());
+  db.transaction(()->{try(var q=db.connection().prepareStatement("SELECT kind,revision,body->>'title' FROM community_group_items WHERE id=?")){q.setString(1,task);try(var rows=q.executeQuery()){assertTrue(rows.next());assertEquals("task",rows.getString(1));assertEquals(1,rows.getLong(2));assertEquals("Archived task",rows.getString(3));}}return null;});
  }
  @Test void groupPeoplePagesPreservePrivateApplicationsAndRejectStaleCursors()throws Exception{
   String session=linked();String id=json(write("POST","groups",session,null,command("{\"title\":\"Team\",\"description\":\"Details\",\"type\":\"Город\"}"))).get("id").getAsString();
@@ -457,12 +565,11 @@ class DomainRestTest {
   String stranger=UUID.randomUUID().toString();store.seen(new CommunityStore.Actor(stranger,"Bob",false,false));var c=sessions.challenge(grant);sessions.confirm(c.code(),"website",stranger,"Bob");String other=sessions.exchange(grant,c.code(),c.pollToken()).token();assertEquals(0,json(get("groups/"+id+"/applications",other)).getAsJsonArray("items").size());assertEquals(1,json(get("groups/"+id+"/members",other)).getAsJsonArray("items").size());
   json(write("POST","groups/"+id+"/actions/recruiting",session,first.get("revision").getAsString(),command("{}")));assertEquals(409,get("groups/"+id+"/applications?cursor="+cursor,session).status());
  }
- @Test void privateRecurringEventsAreAtomicAndKeepLocalTimeAcrossDst()throws Exception{
-  String session=linked();access((who,right)->right.equals("rivet.events"));
-  var start=java.time.ZonedDateTime.of(2028,3,19,18,0,0,0,java.time.ZoneId.of("Europe/Warsaw"));
-  var data=Json.parse("{\"title\":\"Private\",\"description\":\"Details\",\"capacity\":10,\"visibility\":\"invited\",\"group\":\"\",\"invitees\":\"\",\"durationMinutes\":90,\"repeat\":\"weekly\",\"occurrences\":3,\"timezone\":\"Europe/Warsaw\"}");data.addProperty("startsAt",start.toInstant().toString());var request=command(data.toString());var receipt=json(write("POST","events",session,null,request));json(write("POST","events",session,null,request));String id=receipt.get("id").getAsString();var schedule=json(get("events/"+id+"/schedule",session)).getAsJsonObject("item");assertEquals(3,schedule.getAsJsonArray("occurrences").size());int i=0;for(var row:schedule.getAsJsonArray("occurrences"))assertEquals(start.plusWeeks(i++).toInstant().toEpochMilli(),row.getAsJsonObject().get("startsAt").getAsLong());assertEquals(0,json(get("events",null)).getAsJsonArray("items").size());
-  data.addProperty("timezone","Not/AZone");assertEquals(400,write("POST","events",session,null,command(data.toString())).status());data.addProperty("timezone","Europe/Warsaw");
-  data.addProperty("visibility","group");data.addProperty("group",UUID.randomUUID().toString());assertNotEquals(200,write("POST","events",session,null,command(data.toString())).status());assertEquals(3,json(get("events",session)).getAsJsonArray("items").size());
+ @Test void retiredRecurringEventsCannotCreateOccurrencesEvenWithAdministrativeRights()throws Exception{
+  String session=linked();access((who,right)->true);
+  var request=command("{\"title\":\"Private\",\"description\":\"Details\",\"startsAt\":\"2028-03-19T17:00:00Z\",\"capacity\":10,\"visibility\":\"invited\",\"group\":\"\",\"invitees\":\"\",\"durationMinutes\":90,\"repeat\":\"weekly\",\"occurrences\":3,\"timezone\":\"Europe/Warsaw\"}");
+  for(int retry=0;retry<2;retry++){var response=write("POST","events",session,null,request);assertEquals(503,response.status());assertTrue(response.body().contains("UNAVAILABLE"));}
+  db.transaction(()->{try(var q=db.connection().createStatement();var rows=q.executeQuery("SELECT count(*) FROM documents WHERE section='events'")){rows.next();assertEquals(0,rows.getInt(1));}return null;});
  }
  @Test void scheduledAnnouncementsReuseDeliveryRightsAndReceipts()throws Exception{
   String session=linked();var allowed=new java.util.concurrent.atomic.AtomicBoolean(false);access((who,right)->allowed.get()&&right.equals("rivet.announce"));var request=command("{\"text\":\"News\",\"startsAt\":\""+Instant.now().plusSeconds(60)+"\"}");assertEquals(403,write("POST","admin/server/announcements",session,null,request).status());allowed.set(true);long before=db.communityRevision();var receipt=json(write("POST","admin/server/announcements",session,null,request));assertTrue(db.communityRevision()>before);json(write("POST","admin/server/announcements",session,null,request));assertEquals(1,json(get("admin/server/announcements",session)).getAsJsonArray("items").size());

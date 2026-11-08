@@ -32,29 +32,34 @@ public final class ModuleLifecycleHarness {
    check(!runtime.active().contains("chat")&&!runtime.active().contains("auth"),"Disabled module was started");
    check(field("ServerSkins","store")==null&&field("ServerSkins","WORK")==null,"Disabled skins allocated resources");
    check(!runtime.active().contains("reports")&&!runtime.active().contains("storage")&&!runtime.active().contains("server"),"Disabled functional module started");
-   check(field("ServerReportsModule","reports")==null&&field("ServerTaskStocks","tasks")==null&&!((Boolean)field("ServerManagement","active")),"Disabled functional resources allocated");
+   check(field("ServerReportsModule","reports")==null&&!((Boolean)field("ServerManagement","active")),"Disabled functional resources allocated");
    check(field("AuthServer","WORK")==null,"Disabled auth allocated workers");
   }else{
-   check(runtime.active().containsAll(java.util.Set.of("reports","storage","server")),"Functional module did not start");
-   check(field("ServerReportsModule","reports")!=null&&field("ServerTaskStocks","tasks")!=null&&((Boolean)field("ServerManagement","active")),"Functional resource missing");
+   check(runtime.active().containsAll(java.util.Set.of("reports","server")),"Functional module did not start");
+   check(field("ServerReportsModule","reports")!=null&&((Boolean)field("ServerManagement","active")),"Functional resource missing");
    check(runtime.active().contains("chat"),"Chat did not start");
    check(runtime.active().contains("map")&&field("ServerMap","world")!=null,"Map did not start");
    check(field("ServerChatHistory","store")!=null&&field("ServerChatHistory","worker")!=null,"Chat history did not start");
    check(field("ServerSkins","store")!=null,"Skin store missing");
   }
+  check(!runtime.active().contains("storage"),"Retired storage module started");
   if("base".equals(System.getenv("RIVET_MODULE_SMOKE")))check(runtime.active().contains("auth")&&field("AuthServer","WORK")!=null,"Base auth did not allocate its workers");
-  for(String[] row:new String[][]{{"ServerChatHistory","worker"},{"ServerFeatures","STORAGE"},{"ServerFeatures","CONTROL"},{"ServerFeatures","READS"},{"ServerSkins","WORK"},{"ServerSkins","FALLBACK"},{"AuthServer","WORK"},{"AuthServer","OFFICIAL"},{"AuthServer","DEADLINES"},{"AuthServer","VALIDATION"},{"ServerPlayerStatistics","writer"}}){var worker=field(row[0],row[1]);if(worker instanceof ExecutorService service)workers.add(service);}
+  for(String[] row:new String[][]{{"ServerChatHistory","worker"},{"ServerSkins","WORK"},{"ServerSkins","FALLBACK"},{"AuthServer","WORK"},{"AuthServer","OFFICIAL"},{"AuthServer","DEADLINES"},{"AuthServer","VALIDATION"},{"ServerPlayerStatistics","writer"}}){var worker=field(row[0],row[1]);if(worker instanceof ExecutorService service)workers.add(service);}
+  var queues=field("ServerDataRuntime","queues");check(queues!=null&&field("ServerDataRuntime","community")!=null,"Shared data owner missing");
+  var pools=queues.getClass().getDeclaredField("pools");pools.setAccessible(true);
+  for(var pool:((java.util.Map<?,?>)pools.get(queues)).values())workers.add((ExecutorService)pool);
   System.out.println("RIVET_MODULE_START_OK "+runtime.active());
  }
  @SubscribeEvent public static void tick(ServerTickEvent.Post event){if(enabled()&&++ticks==20)event.getServer().halt(false);}
  @SubscribeEvent(priority=EventPriority.LOWEST) public static void stopped(ServerStoppedEvent event)throws Exception{
   if(!enabled())return;
   check(((ModuleRuntime<?>)field("ServerModules","runtime")).active().isEmpty(),"Module survives server shutdown");
-  for(String[] row:new String[][]{{"ServerChatHistory","worker"},{"ServerFeatures","STORAGE"},{"ServerFeatures","CONTROL"},{"ServerFeatures","READS"},{"ServerSkins","WORK"},{"ServerSkins","FALLBACK"},{"AuthServer","WORK"},{"AuthServer","OFFICIAL"},{"AuthServer","DEADLINES"},{"AuthServer","VALIDATION"},{"ServerPlayerStatistics","writer"}})
+  for(String[] row:new String[][]{{"ServerChatHistory","worker"},{"ServerSkins","WORK"},{"ServerSkins","FALLBACK"},{"AuthServer","WORK"},{"AuthServer","OFFICIAL"},{"AuthServer","DEADLINES"},{"AuthServer","VALIDATION"},{"ServerPlayerStatistics","writer"}})
    check(field(row[0],row[1])==null,"Worker retained: "+row[0]+"."+row[1]);
   check(field("ServerFeatures","community")==null&&field("ServerPlayerStatistics","store")==null&&field("ServerSkins","store")==null,"Database-backed feature retained");
-  check(field("ServerReportsModule","reports")==null&&field("ServerTaskStocks","tasks")==null&&!((Boolean)field("ServerManagement","active")),"Functional resource retained after shutdown");
+  check(field("ServerReportsModule","reports")==null&&!((Boolean)field("ServerManagement","active")),"Functional resource retained after shutdown");
   check(field("ServerMap","world")==null&&field("ServerChatHistory","store")==null,"Map or chat history retained after shutdown");
+  check(field("ServerDataRuntime","queues")==null&&field("ServerDataRuntime","community")==null,"Shared data owner retained after shutdown");
   check(workers.stream().allMatch(ExecutorService::isTerminated),"Worker threads survived shutdown");workers.clear();
   System.out.println("RIVET_MODULE_STOP_OK");
  }

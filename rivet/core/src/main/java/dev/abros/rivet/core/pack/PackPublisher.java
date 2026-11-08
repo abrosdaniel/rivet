@@ -67,8 +67,18 @@ public final class PackPublisher {
   if(path.startsWith("mods/")&&path.endsWith(".jar"))inputs.add(new PackModAudit.Input(path,object,component));
  }
  public Path object(String hash)throws IOException{Hashes.check(hash);Path p=data.resolve("objects").resolve(hash);safe(p);return p;}
- public synchronized void activate(PackManifest manifest,boolean onRestart)throws IOException{checkCancelled();load(manifest.hash());checkCancelled();Json.write(data.resolve(onRestart?"pending.json":"current.json"),Map.of("hash",manifest.hash()));if(!onRestart)Files.deleteIfExists(data.resolve("pending.json"));}
- public synchronized void startup()throws IOException{Path pending=data.resolve("pending.json");safe(pending);if(Files.exists(pending)){String hash=Json.str(Json.read(pending),"hash");load(hash);Json.write(data.resolve("current.json"),Map.of("hash",hash));Files.delete(pending);}}
+ public synchronized void activate(PackManifest manifest,boolean onRestart)throws IOException{
+  checkCancelled();var stored=load(manifest.hash());verify(stored);checkCancelled();
+  if(onRestart){Json.write(data.resolve("pending.json"),Map.of("hash",stored.hash()));return;}
+  Path file=data.resolve("current.json");safe(file);var state=Files.exists(file)?Json.read(file):new com.google.gson.JsonObject();String old=Json.opt(state,"hash","");
+  if(!old.isEmpty()&&!old.equals(stored.hash()))state.addProperty("previous",old);
+  state.addProperty("hash",stored.hash());Json.write(file,state);Files.deleteIfExists(data.resolve("pending.json"));
+ }
+ private void verify(PackManifest manifest)throws IOException{for(var entry:manifest.files()){checkCancelled();Path file=object(entry.hash());if(!Files.isRegularFile(file,LinkOption.NOFOLLOW_LINKS)||Files.size(file)!=entry.size()||!Hashes.sha256(file).equals(entry.hash()))throw new IOException(dev.abros.rivet.core.Messages.text("rivet.core.corrupt_published_file_66dbdeea")+entry.path());}}
+ public synchronized String previous()throws IOException{Path file=data.resolve("current.json");safe(file);if(!Files.exists(file))return "";String hash=Json.opt(Json.read(file),"previous","");if(!hash.isEmpty())Hashes.check(hash);return hash;}
+ /** Rollback changes the client publication only; never silently rewinds a live server or world. */
+ public synchronized PackManifest rollback(String hash)throws IOException{if(hash.isEmpty())hash=previous();if(hash.isEmpty())throw new IOException(Messages.text("rivet.pack.rollback.missing"));var manifest=load(hash);activate(manifest,true);return manifest;}
+ public synchronized void startup()throws IOException{Path pending=data.resolve("pending.json");safe(pending);if(Files.exists(pending)){String hash=Json.str(Json.read(pending),"hash");activate(load(hash),false);}}
  public PackManifest load(String hash)throws IOException{Hashes.check(hash);Path file=data.resolve("publications").resolve(hash+".json");safe(file);if(Files.size(file)>8*1024*1024)throw new IOException(dev.abros.rivet.core.Messages.text("rivet.core.description_is_too_large_28b2d586"));byte[] bytes=Files.readAllBytes(file);var manifest=PackManifest.parse(bytes);if(!manifest.hash().equals(hash))throw new IOException(dev.abros.rivet.core.Messages.text("rivet.core.snapshot_is_corrupt_582404a6"));return manifest;}
  public PackManifest current()throws IOException{Path file=data.resolve("current.json");safe(file);return Files.exists(file)?load(Json.str(Json.read(file),"hash")):null;}
 }

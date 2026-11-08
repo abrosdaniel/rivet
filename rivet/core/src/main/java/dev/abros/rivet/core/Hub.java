@@ -47,11 +47,13 @@ public final class Hub {
     /** Called only after the player accepts this particular update. */
     public String prepareCoreUpdate(Path loadedJar,CoreUpdater.Update update)throws Exception{return prepareCoreUpdate(loadedJar,update,event->{});}
     public String prepareCoreUpdate(Path loadedJar,CoreUpdater.Update update,java.util.function.Consumer<InstallProgress> progress)throws Exception{return prepareCoreUpdate(loadedJar,update,progress,new java.util.concurrent.atomic.AtomicBoolean());}
-    public String prepareCoreUpdate(Path loadedJar,CoreUpdater.Update update,java.util.function.Consumer<InstallProgress> progress,java.util.concurrent.atomic.AtomicBoolean cancel)throws Exception{ synchronized(coreInstallLock){
+    public String prepareCoreUpdate(Path loadedJar,CoreUpdater.Update update,java.util.function.Consumer<InstallProgress> progress,java.util.concurrent.atomic.AtomicBoolean cancel)throws Exception{return prepareCoreUpdate(loadedJar,update,progress,cancel,()->!cancel.get());}
+    /** The caller atomically closes its cancellation gate before the helper takes ownership. */
+    public String prepareCoreUpdate(Path loadedJar,CoreUpdater.Update update,java.util.function.Consumer<InstallProgress> progress,java.util.concurrent.atomic.AtomicBoolean cancel,java.util.function.BooleanSupplier beginCommit)throws Exception{ synchronized(coreInstallLock){
         state();
         if(Files.exists(game.resolve("rivet/pending.json"))||(helperProcess!=null&&helperProcess.isAlive()))throw new IllegalStateException(dev.abros.rivet.core.Messages.text("rivet.core.complete_the_prepared_update_first_3fda3bb7"));
         String id=coreUpdater.stage(game,loadedJar,update,cache,state(),progress,cancel);
-        try { if(cancel.get()){new Transactions(game).abortReady(id);throw new IOException("Cancelled");}startHelper(id); }
+        try { if(cancel.get()||!beginCommit.getAsBoolean())throw new IOException("Cancelled");startHelper(id); }
         catch(Exception failure){if(helperProcess==null||!helperProcess.isAlive())new Transactions(game).abortReady(id);throw failure;}
         return id;}
     }

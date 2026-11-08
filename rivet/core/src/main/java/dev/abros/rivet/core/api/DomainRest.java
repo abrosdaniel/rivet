@@ -69,7 +69,7 @@ public final class DomainRest implements RestApi.Extension {
             String scope=switch(relative){case "sessions/password"->"sessions.password";case "sessions/link","sessions/exchange"->"sessions.link";default->throw new ApiException(NOT_FOUND,"Unknown session route");};
             var grant=keys.authorize(header.substring(7),scope);var body=body(request.body());var result=new JsonObject();
             switch(relative){
-                case "sessions/password"->{fields(body,"login","password");issued(result,sessions.login(grant,body.get("login"),body.get("password").toCharArray()));}
+                case "sessions/password"->{if(body.containsKey("code"))fields(body,"login","password","code");else fields(body,"login","password");issued(result,sessions.login(grant,body.get("login"),body.get("password").toCharArray(),body.getOrDefault("code","")));}
                 case "sessions/link"->{fields(body);var c=sessions.challenge(grant);result.addProperty("code",c.code());result.addProperty("pollToken",c.pollToken());result.addProperty("expiresAtEpochMillis",c.expires());result.addProperty("application",c.application());}
                 case "sessions/exchange"->{fields(body,"code","pollToken");var value=sessions.exchange(grant,body.get("code"),body.get("pollToken"));result.addProperty("pending",value==null);if(value!=null)issued(result,value);}
             }
@@ -77,6 +77,7 @@ public final class DomainRest implements RestApi.Extension {
         }
         String domain=parts[0];if(!request.method().equals("GET")||!request.body().isEmpty()||parts.length>2)throw new ApiException(INVALID_ARGUMENT,"Read-only domain");
         if(!Set.of("cursor").containsAll(query.keySet())||parts.length==2&&!query.isEmpty())throw new ApiException(INVALID_ARGUMENT,"Invalid filters");
+        if(dev.abros.rivet.core.RetiredFeatures.contains(domain))throw new ApiException(UNAVAILABLE,"Domain retired; saved data can be exported by the server owner");
         if(!store.modules().enabled(domain)||!store.configuration().getAsJsonArray("sections").contains(new JsonPrimitive(domain)))throw new ApiException(MODULE_DISABLED,"Domain disabled");
         var grant=authorize(header.substring(7),domain+".read",subscription);String token=request.header("x-rivet-session");
         if(token!=null&&(token.length()!=43))throw new ApiException(UNAUTHENTICATED,"Invalid session");

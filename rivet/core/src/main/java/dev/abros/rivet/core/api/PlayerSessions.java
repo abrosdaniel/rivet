@@ -12,7 +12,9 @@ public final class PlayerSessions implements AutoCloseable {
     public record Player(String uuid,String name,long generation) {}
     public record Issued(String token,long expires,Player player) { @Override public String toString(){return "Issued[redacted]";} }
     public record Challenge(String code,String pollToken,long expires,String application) { @Override public String toString(){return "Challenge[redacted]";} }
-    private record Session(UUID key,String scope,Player player,long expires) {}
+    private record Session(UUID id,UUID key,String application,String scope,Player player,long created,long expires) {}
+    public record SessionInfo(UUID id,String application,long created,long expires) {}
+    public record SessionPage(List<SessionInfo> items,String next){public SessionPage{items=List.copyOf(items);}}
     private record Pending(UUID key,String app,String pollHash,long expires,Player player) {}
     private final Map<String,Session> sessions=new HashMap<>();
     private final Map<String,Pending> pending=new HashMap<>();
@@ -25,19 +27,20 @@ public final class PlayerSessions implements AutoCloseable {
     }
     private void clean(){if(closed)throw new ApiException(UNAVAILABLE,"Sessions stopped");long now=clock.millis();sessions.values().removeIf(s->s.expires<=now);pending.values().removeIf(s->s.expires<=now);}
     private static ApiException denied(){return new ApiException(UNAUTHENTICATED,"Invalid session or credentials");}
-    public Issued login(ApiKeys.Grant grant,String name,char[] password)throws Exception{
+    public Issued login(ApiKeys.Grant grant,String name,char[] password)throws Exception{return login(grant,name,password,"");}
+    public Issued login(ApiKeys.Grant grant,String name,char[] password,String code)throws Exception{
         try{
             if(!enabled)throw new ApiException(FORBIDDEN,"Password authentication disabled");keys.revalidate(grant,"sessions.password");
             if(!passwords.tryAcquire())throw new ApiException(BUSY,"Login busy");
             AuthStore.Account account;
-            try{account=auth.apiLogin(name,password,clock.millis());}catch(IllegalArgumentException invalid){throw denied();}finally{passwords.release();}
+            try{account=auth.apiLogin(name,password,code,clock.millis());}catch(IllegalArgumentException invalid){throw denied();}finally{passwords.release();}
             keys.revalidate(grant,"sessions.password");
             return issue(grant,"sessions.password",new Player(account.uuid(),account.name(),account.generation()));
         }finally{Arrays.fill(password,'\0');}
     }
     private synchronized Issued issue(ApiKeys.Grant grant,String scope,Player player){
         clean();if(sessions.size()>=limit||sessions.values().stream().filter(s->s.key.equals(grant.keyId())&&s.player.uuid.equals(player.uuid)).count()>=10)throw new ApiException(BUSY,"Session capacity");
-        String token=AuthSecrets.token();long expires=clock.millis()+lifetime;sessions.put(AuthSecrets.digest(token),new Session(grant.keyId(),scope,player,expires));return new Issued(token,expires,player);
+        String token=AuthSecrets.token();long expires=clock.millis()+lifetime;sessions.put(AuthSecrets.digest(token),new Session(UUID.randomUUID(),grant.keyId(),grant.application(),scope,player,clock.millis(),expires));return new Issued(token,expires,player);
     }
     public Challenge challenge(ApiKeys.Grant grant)throws Exception{
         if(enabled)throw new ApiException(FORBIDDEN,"Use password login");keys.revalidate(grant,"sessions.link");
@@ -62,11 +65,23 @@ public final class PlayerSessions implements AutoCloseable {
         if(token==null||!token.matches("[A-Za-z0-9_-]{43}"))throw denied();
         String hash=AuthSecrets.digest(token);Session s;synchronized(this){clean();s=sessions.get(hash);}
         if(s==null||!s.key.equals(grant.keyId()))throw denied();keys.revalidate(grant,s.scope);
-        if(enabled){var a=auth.account(s.player.name);if(a==null||a.blocked()||a.generation()!=s.player.generation||!a.uuid().equals(s.player.uuid))throw denied();}
+        if(enabled){var a=auth.account(s.player.name);if(a==null||a.blocked()||a.generation()!=s.player.generation||!a.uuid().equals(s.player.uuid)||!auth.factorPolicySatisfied(a.name()))throw denied();}
         // Authorization may block on storage while the session is revoked or expires.
         synchronized(this){clean();if(sessions.get(hash)!=s)throw denied();return s.player;}
     }
     public synchronized void revoke(ApiKeys.Grant grant,String token){clean();var s=sessions.get(AuthSecrets.digest(token));if(s==null||!s.key.equals(grant.keyId()))throw denied();sessions.remove(AuthSecrets.digest(token));}
+    /** Actual player identity is supplied by the game adapter, never a public request field. */
+    public SessionPage playerSessions(String uuid,String after)throws Exception{
+        if(after==null||!after.isEmpty()&&!after.matches("[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}"))throw new ApiException(INVALID_ARGUMENT,"Invalid session cursor");
+        List<Session> owned;synchronized(this){clean();owned=sessions.values().stream().filter(s->s.player.uuid.equals(uuid)).toList();}
+        if(owned.isEmpty())return new SessionPage(List.of(),"");
+        var activeKeys=new HashSet<UUID>();long now=clock.millis();for(var key:keys.list())if(key.revoked()==0&&!key.disabled()&&key.expires()>now)activeKeys.add(key.id());
+        long generation=-1;if(enabled&&!owned.isEmpty()){var account=auth.account(owned.getFirst().player.name);if(account!=null&&!account.blocked()&&account.uuid().equals(uuid)&&auth.factorPolicySatisfied(account.name()))generation=account.generation();}
+        final long currentGeneration=generation;
+        synchronized(this){clean();var present=new HashSet<>(sessions.values());var rows=owned.stream().filter(present::contains).filter(s->activeKeys.contains(s.key)&&(!enabled||s.player.generation==currentGeneration)).filter(s->s.id.toString().compareTo(after)>0).sorted(Comparator.comparing(s->s.id.toString())).limit(51).toList();
+            return new SessionPage(rows.stream().limit(50).map(s->new SessionInfo(s.id,s.application,s.created,s.expires)).toList(),rows.size()>50?rows.get(49).id.toString():"");}
+    }
+    public synchronized void revokePlayerSession(String uuid,UUID id){clean();sessions.values().removeIf(s->s.player.uuid.equals(uuid)&&s.id.equals(id));}
     public synchronized void revokePlayer(String uuid){clean();sessions.values().removeIf(s->s.player.uuid.equals(uuid));pending.values().removeIf(p->p.player!=null&&p.player.uuid.equals(uuid));}
     @Override public synchronized void close(){closed=true;sessions.clear();pending.clear();}
 }

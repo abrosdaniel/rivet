@@ -11,6 +11,8 @@ public final class MapRegionIndex {
  public static final int SIDE=64;
  private static final Map<Path,java.lang.ref.WeakReference<MapRegionIndex>> OPEN=new WeakHashMap<>();
  public static synchronized MapRegionIndex open(Path source){Path key=source.toAbsolutePath().normalize();var ref=OPEN.get(key);var index=ref==null?null:ref.get();if(index==null){index=new MapRegionIndex(key);OPEN.put(key,new java.lang.ref.WeakReference<>(index));}return index;}
+ /** Drop inactive index handles after explicit local terrain cleanup. */
+ public static synchronized void forgetTree(Path directory){Path root=directory.toAbsolutePath().normalize();OPEN.keySet().removeIf(path->path.startsWith(root));}
  private final Set<Path> activeMarkers=new HashSet<>();
  private static final int MAGIC=0x52495831,WORDS=64;
  private record Region(int x,int z){}

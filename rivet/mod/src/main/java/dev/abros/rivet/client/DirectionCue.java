@@ -14,13 +14,14 @@ final class DirectionCue {
  static void clear(){target=null;deathTarget=null;bounds=new dev.abros.rivet.core.NativeLayout.Box(0,0,0,0);}
  static CommunityLocation target(){return active();}
  static void start(dev.abros.rivet.core.map.MapMarker marker){start(new CommunityLocation(marker.name(),marker.dimension(),marker.x(),marker.y(),marker.z(),false));if(target!=null&&marker.death())deathTarget=marker.id();}
- static void start(CommunityLocation place){deathTarget=null;if(ServerMenuClient.state.has("map")&&!ServerMenuClient.state.getAsJsonObject("map").get("enabled").getAsBoolean()){clear();return;}target=place;}
+ static void start(CommunityLocation place){deathTarget=null;if(!WorldMapClient.allowed()){clear();return;}target=place;}
  static void receive(JsonObject j){
   var mc=Minecraft.getInstance();
   start(new CommunityLocation(Json.opt(j,"name",Client.text("ui.location_8e2fe025")),Json.str(j,"dimension"),j.get("x").getAsInt(),j.has("y")?j.get("y").getAsInt():mc.player==null?0:mc.player.getBlockY(),j.get("z").getAsInt(),false));
  }
  private static CommunityLocation active(){
   var mc=Minecraft.getInstance();
+  if(target!=null&&!WorldMapClient.allowed())clear();
   if(deathTarget!=null&&WorldMapClient.markersReady()&&WorldMapClient.markers().stream().noneMatch(m->m.id().equals(deathTarget)))clear();
   if(target!=null&&mc.player!=null&&mc.level!=null&&mc.level.dimension().location().toString().equals(target.dimension())&&Math.hypot(mc.player.getX()-(target.x()+.5),mc.player.getZ()-(target.z()+.5))<=3&&Math.abs(mc.player.getY()-target.y())<=4)clear();
   return target;
@@ -43,9 +44,9 @@ final class DirectionCue {
    String arrow=Math.abs(angle)<22?"↑":angle>=22&&angle<67?"↗":angle>=67&&angle<112?"→":angle>=112&&angle<157?"↘":angle>=157||angle<=-157?"↓":angle<=-112?"↙":angle<=-67?"←":"↖";
    text=arrow+"  "+Math.round(Math.hypot(dx,dz))+Client.text("ui.m_248f3fa6")+(settings.directionCoordinates?" · "+point.x()+", "+point.z():"");
   }
-  float scale=Math.min(settings.directionScale,Math.min((g.guiWidth()-8f)/64,(g.guiHeight()-8f)/32));int maxWidth=Math.max(24,(int)((g.guiWidth()-16)/scale));
+  float scale=Math.min(settings.directionScale,Math.min((HudViewport.width(g)-8f)/64,(HudViewport.height(g)-8f)/32));int maxWidth=Math.max(24,(int)((HudViewport.width(g)-16)/scale));
   String name=UiKit.fit(mc.font,point.name(),maxWidth-32);text=UiKit.fit(mc.font,text,maxWidth-32);
-  int w=Math.min(maxWidth,Math.max(mc.font.width(text),mc.font.width(name))+32),h=32;bounds=HudPlacement.fit(g.guiWidth(),g.guiHeight(),(int)Math.ceil(w*scale),(int)Math.ceil(h*scale),settings.directionAnchorX,settings.directionAnchorY,settings.directionOffsetX,settings.directionOffsetY);g.pose().pushPose();g.pose().translate(bounds.x(),bounds.y(),0);g.pose().scale(scale,scale,1);int px=0,py=0;
+  int w=Math.min(maxWidth,Math.max(mc.font.width(text),mc.font.width(name))+32),h=32;bounds=HudPlacement.fit(HudViewport.width(g),HudViewport.height(g),(int)Math.ceil(w*scale),(int)Math.ceil(h*scale),settings.directionAnchorX,settings.directionAnchorY,settings.directionOffsetX,settings.directionOffsetY);g.pose().pushPose();g.pose().translate(bounds.x(),bounds.y(),0);g.pose().scale(scale,scale,1);int px=0,py=0;
   // Background opacity is independent of text contrast and does not add a hidden opaque shadow.
   UiHudSurface.panel(g,w,h,settings.directionOpacity);
   Ui.text(g,mc.font,name,px+8,py+6,UiKit.accent(),false);

@@ -135,12 +135,17 @@ public final class ServerSettings {
         Map<String,Object> values,defaults;
         try{values=flatten(new TomlParser().parse(text));defaults=flatten(new TomlParser().parse(template()));}
         catch(Exception failure){throw invalid("ошибка TOML: проверьте кавычки, типы и повторяющиеся параметры (значения скрыты)");}
+        // Accept published configuration without reintroducing retired switches in new files.
+        // The feature policy rejects these domains regardless of their preserved values.
+        for(String id:RetiredFeatures.IDS)defaults.put(id+".enabled",false);
+        defaults.put("tasks.maxPerOwner",200);defaults.put("tasks.maxSubtasks",30);defaults.put("tasks.maxComments",100);
         // Preserve old boolean semantics while the file is upgraded to explicit modes.
         if(values.get("display.nameplates") instanceof Boolean old)values.put("display.nameplates",old?"rivet":"base");
         // Obsolete punishment defaults are ignored, so existing production configs still load.
         values.remove("map.sharing");values.remove("map.shareTiles");values.remove("project.repository");values.remove("project.requirePack");
         values.remove("chat.allowItems");values.remove("integrations.luckperms");values.remove("display.chatMode");values.remove("votes.actions.banMinutes");values.remove("votes.actions.muteMinutes");
         for(var e:defaults.entrySet())if(!values.containsKey(e.getKey())&&List.of("api.","statistics.","skins.","votes.","community.","menu.","updates.","retention.","chat.","display.","tasks.","spark.","groups.","storage.","board.","events.","polls.","ideas.","reports.","server.","pack.","map.").stream().anyMatch(e.getKey()::startsWith))values.put(e.getKey(),e.getValue());
+        values.putIfAbsent("auth.totp",defaults.get("auth.totp"));
         var missing=new TreeSet<>(defaults.keySet());missing.removeAll(values.keySet());
         if(!missing.isEmpty())throw invalid("отсутствуют обязательные параметры: "+String.join(", ",missing)+"; сверяйтесь с https://abrosdaniel.github.io/rivet/server/configuration/");
         var unknown=new TreeSet<>(values.keySet());unknown.removeAll(defaults.keySet());
@@ -184,6 +189,7 @@ public final class ServerSettings {
         range("tasks.maxPerOwner",0,Integer.MAX_VALUE);range("tasks.maxSubtasks",0,Integer.MAX_VALUE);range("tasks.maxComments",0,Integer.MAX_VALUE);
         range("spark.minTps",1,20);range("spark.maxMspt",1,1000);range("spark.durationSeconds",1,3600);range("spark.cooldownSeconds",1,86400);
         range("database.port",1,65535);range("database.pool",2,32);
+        if(!Set.of("optional","staff","all").contains(text("auth.totp")))throw invalid("auth.totp: optional, staff или all");
         if(!Set.of("false","base","hybrid").contains(text("auth.mode")))throw invalid("auth.mode: ожидается строка false, base или hybrid");
         if(text("menu.help").length()>2000)throw invalid("menu.help: максимум 2000 символов");
         String env=text("database.passwordEnv");if(!env.isEmpty()&&!env.matches("[A-Za-z_][A-Za-z0-9_]*"))throw invalid("database.passwordEnv: неверное имя переменной");
@@ -204,7 +210,7 @@ public final class ServerSettings {
         if(password==null||password.isBlank())throw invalid("заполните database.password или заданную переменную database.passwordEnv");
         return new DatabaseSettings(text("database.host"),number("database.port"),text("database.database"),text("database.username"),password,text("database.sslMode"),text("database.sslCert"),number("database.pool"));
     }
-    public dev.abros.rivet.core.skins.SkinSettings skins(){return new dev.abros.rivet.core.skins.SkinSettings(flag("skins.enabled"),number("skins.maxSizeMiB"),number("skins.maxPerPlayer"),text("skins.fallback"));}
+    public dev.abros.rivet.core.skins.SkinSettings skins(){return new dev.abros.rivet.core.skins.SkinSettings(flag("skins.enabled"),number("skins.maxSizeMiB"),number("skins.maxPerPlayer"),text("skins.fallback"),flag("skins.capes"),number("skins.maxCapesPerPlayer"),number("skins.maxCapeSizeKiB"),number("skins.maxOutfitsPerPlayer"));}
     public TaskLimits taskLimits(){return new TaskLimits(number("tasks.maxPerOwner"),number("tasks.maxSubtasks"),number("tasks.maxComments"));}
     public SparkTimeline.AlertSettings sparkAlerts(){return new SparkTimeline.AlertSettings(number("spark.minTps"),number("spark.maxMspt"),number("spark.durationSeconds"),number("spark.cooldownSeconds"));}
     public PlayerStatistics.Settings statistics(){return new PlayerStatistics.Settings(flag("statistics.firstJoin"),flag("statistics.lastActivity"),flag("statistics.playTime"),flag("statistics.session"),flag("statistics.deaths"));}

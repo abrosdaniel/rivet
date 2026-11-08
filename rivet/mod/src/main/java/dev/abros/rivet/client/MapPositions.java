@@ -16,7 +16,7 @@ final class MapPositions {
  static void navigate(MapLayerClient.Point point){route=point;DirectionCue.start(point.location());}
  private static void updateRoute(){if(route==null)return;if(!Objects.equals(DirectionCue.target(),route.location())){route=null;return;}var updated=points().stream().filter(p->p.id().equals(route.id())).findFirst();if(updated.isEmpty()){DirectionCue.clear();route=null;}else{route=updated.get();DirectionCue.start(route.location());}}
  static boolean supported(){return ServerMenuClient.supports("map-positions");}
- static boolean available(){return WorldMapClient.allowed()&&ServerMenuClient.available()&&supported()&&ServerMenuClient.state.has("map")&&ServerMenuClient.state.getAsJsonObject("map").has("positions")&&ServerMenuClient.state.getAsJsonObject("map").get("positions").getAsBoolean();}
+ static boolean available(){return WorldMapClient.allowed()&&ServerMenuClient.available()&&supported()&&ClientMapPolicy.current().positions();}
  static List<MapLayerClient.Point> points(){return available()&&System.currentTimeMillis()<expires?points:List.of();}
  static void reset(){clearSnapshot();poll.reset();}
  private static void clearSnapshot(){if(route!=null&&Objects.equals(DirectionCue.target(),route.location()))DirectionCue.clear();route=null;session.cancel();batch=null;batchRequest="";points=List.of();pending.clear();cursors.clear();next=expires=started=0;revision=-1;cursor="";}

@@ -16,15 +16,15 @@ class PostgresConcurrencyTest {
     PgDatabase pool;CommunityStore store;
     @BeforeEach void setup()throws Exception{pool=TestDatabase.database(identity);store=new CommunityStore(pool,CommunityStore.defaults());}
     private static JsonObject request(String section,String op,String id){var j=new JsonObject();j.addProperty("section",section);j.addProperty("op",op);j.addProperty("id",id);return j;}
-    @Test void threeHundredConcurrentVotesAreNotLost()throws Exception{
-        var admin=new CommunityStore.Actor(UUID.randomUUID().toString(),"Admin",true,true);var create=request("polls","create","");create.addProperty("title","Concurrent vote");create.addProperty("description","Pool and row-lock stress test");create.addProperty("endsAt",Instant.now().plusSeconds(600).toString());create.addProperty("liveResults",true);var options=new JsonArray();options.add("Yes");options.add("No");create.add("options",options);
-        String id=store.request(admin,create).getAsJsonObject("detail").get("id").getAsString();long started=System.nanoTime();
+    @Test void threeHundredConcurrentApplicationsAreNotLost()throws Exception{
+        var admin=new CommunityStore.Actor(UUID.randomUUID().toString(),"Admin",true,true);var create=request("groups","create","");create.addProperty("title","Concurrent group");create.addProperty("description","Pool and row-lock stress test");create.addProperty("type","Команда");
+        String id=Json.str(store.request(admin,create).getAsJsonObject("detail"),"id");long started=System.nanoTime();
         try(var workers=Executors.newFixedThreadPool(16)){
-            var jobs=new ArrayList<Callable<Void>>();for(int i=0;i<300;i++){int n=i;jobs.add(()->{var vote=request("polls","vote",id);var choices=new JsonArray();choices.add(n%2);vote.add("choices",choices);store.request(new CommunityStore.Actor(UUID.randomUUID().toString(),"Player"+n,false,false),vote);return null;});}
-            for(var job:workers.invokeAll(jobs))job.get(60,TimeUnit.SECONDS);
+            var jobs=new ArrayList<Callable<Void>>();for(int i=0;i<300;i++){int n=i;jobs.add(()->{var apply=request("groups","apply",id);apply.addProperty("text","Join "+n);apply.addProperty("operationId",UUID.randomUUID().toString());apply.addProperty("issuedAt",System.currentTimeMillis());var player=new CommunityStore.Actor(UUID.randomUUID().toString(),"Player"+n,false,false);var result=store.request(player,apply).getAsJsonObject("detail");var retry=store.request(player,apply);assertTrue(retry.get("replayed").getAsBoolean());var current=retry.getAsJsonObject("detail");assertEquals(result.getAsJsonObject("applications"),current.getAsJsonObject("applications"));assertTrue(current.get("hasApplication").getAsBoolean());assertTrue(current.get("revision").getAsLong()>=result.get("revision").getAsLong());return null;});}
+            for(var job:workers.invokeAll(jobs,90,TimeUnit.SECONDS)){assertFalse(job.isCancelled());job.get();}
         }
-        var result=store.request(admin,request("polls","detail",id)).getAsJsonObject("detail").getAsJsonArray("counts");assertEquals(150,result.get(0).getAsInt());assertEquals(150,result.get(1).getAsInt());assertEquals(0,pool.activeConnections());
-        System.out.printf("300 concurrent vote requests: %.0f ms total%n",(System.nanoTime()-started)/1e6);
+        pool.transaction(()->{try(var q=pool.connection().prepareStatement("SELECT count(*) FROM community_relations WHERE document=? AND kind='applications'")){q.setString(1,id);try(var rows=q.executeQuery()){rows.next();assertEquals(300,rows.getInt(1));}}return null;});assertEquals(0,pool.activeConnections());
+        System.out.printf("300 concurrent application requests and retries: %.0f ms total%n",(System.nanoTime()-started)/1e6);
     }
     @Test void notificationSummaryRespectsMuteAndRecipientForThreeHundredPlayers()throws Exception{
         var players=new ArrayList<UUID>();for(int i=0;i<300;i++){UUID id=UUID.randomUUID();players.add(id);store.externalNotice(id.toString(),"Personal");}

@@ -48,7 +48,7 @@ public final class ServerApi implements RivetApiProvider {
 
     private static ServerStatus status(MinecraftServer server) {
         boolean management = ServerDatabase.settings().modules().enabled("server");
-        var capabilities=new java.util.HashSet<>(Set.of("server.status","server.status.events","domains","domains.watch"));if(ServerTerrain.available())capabilities.add("map.terrain");if(layers!=null&&layers.available())capabilities.add("map.layers");
+        var capabilities=new java.util.HashSet<>(Set.of("server.status","server.status.events","domains","domains.watch"));if(ServerNotifications.available())capabilities.add("notifications.publish");if(ServerTerrain.available())capabilities.add("map.terrain");if(layers!=null&&layers.available())capabilities.add("map.layers");
         return new ServerStatus(server.getPlayerCount(), server.getMaxPlayers(),
             management && ServerManagement.maintenance,
             management ? Math.max(0, ServerManagement.restartAt) : 0,
@@ -58,13 +58,14 @@ public final class ServerApi implements RivetApiProvider {
     @Override public Optional<RivetApi> connect(String modId) {
         if (modId == null || !modId.matches("[a-z][a-z0-9_]{1,63}") || !ModList.get().isLoaded(modId))
             throw new ApiException(ApiException.Code.INVALID_ARGUMENT, "Consumer mod is not installed");
-        var current=feed;var services=domains;var mapLayers=layers;
+        var current=feed;var services=domains;var mapLayers=layers;var notices=ServerNotifications.available()?ServerNotifications.publisher():null;
         if(current==null||services==null)return Optional.empty();
         return Optional.of(new RivetApi(){
             public StatusSnapshot serverStatus(){return current.serverStatus();}
             public StatusEvents serverStatusEvents(ApiCursor after,int limit){return current.serverStatusEvents(after,limit);}
             public IntegrationApi integrations(){current.serverStatus();return ServerProviders.owner(modId);}
             public MapLayersApi mapLayers(){current.serverStatus();return mapLayers.owner(modId);}
+            public NotificationsApi notifications(){current.serverStatus();if(notices==null)throw new ApiException(ApiException.Code.UNAVAILABLE,"Notifications stopped");return notices.owner(modId);}
             public TerrainApi terrain(){current.serverStatus();return ServerTerrain.api();}
             public DomainApi domains(java.util.UUID player){return services.connect(modId,player);}
         });

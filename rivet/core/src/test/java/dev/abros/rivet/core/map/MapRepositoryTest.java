@@ -74,4 +74,20 @@ class MapRepositoryTest {
         var json=dev.abros.rivet.core.Json.read(file);for(var row:json.getAsJsonArray("markers"))row.getAsJsonObject().remove("deathAt");dev.abros.rivet.core.Json.write(file,json);
         assertEquals(id,repo.markers().getFirst().id());assertFalse(repo.markers().getLast().death());
     }
+    @Test void malformedTileIsPreservedAndOnlyThatChunkNeedsResampling()throws Exception{
+        var repo=new MapRepository(root,UUID.randomUUID(),UUID.randomUUID());var layer=MapLayer.surface("minecraft:overworld");var tile=new MapTile();tile.set(0,0,0xff123456,64);repo.write(layer,1,2,tile);repo.write(layer,3,4,tile);
+        Path file;try(var files=Files.walk(repo.storageDirectory())){file=files.filter(p->p.getFileName().toString().equals("1_2.tile")).findFirst().orElseThrow();}
+        byte[] damaged={1,2,3};Files.write(file,damaged);assertTrue(repo.readRecovering(layer,1,2).isEmpty());assertFalse(Files.exists(file));
+        try(var files=Files.list(file.getParent())){var backups=files.filter(p->p.getFileName().toString().startsWith("1_2.tile.corrupt-")).toList();assertEquals(1,backups.size());assertArrayEquals(damaged,Files.readAllBytes(backups.getFirst()));}
+        assertEquals(0xff123456,repo.readRecovering(layer,3,4).orElseThrow().color(0,0));repo.write(layer,1,2,tile);assertEquals(0xff123456,repo.readRecovering(layer,1,2).orElseThrow().color(0,0));
+    }
+    @Test void futureTileAndFilesystemErrorsAreNotQuarantined()throws Exception{
+        var repo=new MapRepository(root,UUID.randomUUID(),UUID.randomUUID());var layer=MapLayer.surface("minecraft:overworld");repo.write(layer,1,2,new MapTile());Path file;try(var files=Files.walk(repo.storageDirectory())){file=files.filter(p->p.getFileName().toString().equals("1_2.tile")).findFirst().orElseThrow();}
+        byte[] future=java.nio.ByteBuffer.allocate(8).putInt(0x524d4150).putInt(999).array();Files.write(file,future);assertThrows(java.io.IOException.class,()->repo.readRecovering(layer,1,2));assertArrayEquals(future,Files.readAllBytes(file));
+        Files.delete(file);Files.createDirectory(file);Files.writeString(file.resolve("keep"),"important");assertThrows(java.io.IOException.class,()->repo.readRecovering(layer,1,2));assertEquals("important",Files.readString(file.resolve("keep")));
+    }
+    @Test void truncatedPayloadWithValidHeaderIsRecoverable()throws Exception{
+        var repo=new MapRepository(root,UUID.randomUUID(),UUID.randomUUID());var layer=MapLayer.surface("minecraft:overworld");repo.write(layer,1,2,new MapTile());Path file;try(var files=Files.walk(repo.storageDirectory())){file=files.filter(p->p.getFileName().toString().equals("1_2.tile")).findFirst().orElseThrow();}
+        Files.write(file,java.nio.ByteBuffer.allocate(8).putInt(0x524d4150).putInt(5).array());assertTrue(repo.readRecovering(layer,1,2).isEmpty());
+    }
 }

@@ -9,6 +9,15 @@ public final class ChatChannels {
     }
     public enum Channel { GLOBAL, LOCAL, GROUP }
     public record Message(Channel channel,String text,String group) {}
+    /** Builds a draft only when its syntax routes to the selected audience without truncation. */
+    public static java.util.Optional<String> draft(String input,boolean localEnabled,Channel target,String group,int limit){
+        if(input.stripLeading().startsWith("/"))return java.util.Optional.empty();
+        String body=parse(input,localEnabled).text();
+        if(target==Channel.LOCAL&&(!localEnabled||body.stripLeading().startsWith("!")||body.stripLeading().startsWith("#")||body.stripLeading().startsWith("/")))return java.util.Optional.empty();
+        if(target==Channel.GROUP&&(group==null||group.isBlank()||group.contains(":")||group.codePoints().anyMatch(Character::isISOControl)))return java.util.Optional.empty();
+        String value=switch(target){case GLOBAL->"! "+body;case LOCAL->body;case GROUP->"#"+group.strip()+": "+body;};
+        return value.length()>limit?java.util.Optional.empty():java.util.Optional.of(value);
+    }
     public static Message parse(String input,boolean localEnabled) {
         if(input.startsWith("!"))return new Message(Channel.GLOBAL,input.substring(1).strip(),"");
         if(input.startsWith("#")) {

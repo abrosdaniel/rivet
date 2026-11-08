@@ -12,7 +12,7 @@ backend-соединения без Origin: заголовок `Authorization: B
 ## Доменные подписки
 
 ```json
-{"type":"watch","id":"events","path":"events","query":{},"session":null,"cursor":null}
+{"type":"watch","id":"groups","path":"groups","query":{},"session":null,"cursor":null}
 ```
 
 Path — маршрут чтения относительно `/api/v1/`. Backend может передать сессию
@@ -24,7 +24,7 @@ Path — маршрут чтения относительно `/api/v1/`. Backen
 
 Подписки повторно проверяют доступ и получают текущий снимок. Они не являются
 архивом всех промежуточных изменений. При RESYNC_REQUIRED начните с cursor=null.
-`{"type":"unwatch","id":"events"}` прекращает одну доменную подписку.
+`{"type":"unwatch","id":"groups"}` прекращает одну доменную подписку.
 
 ## Статус и тайлы
 

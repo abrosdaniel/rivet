@@ -93,6 +93,18 @@ class CoreUpdaterTest {
         assertThrows(Remote.Unavailable.class,()->new CoreUpdater(new Source()).check("1.0.0","1.21.1","21.1.250"));
         assertFalse(Files.exists(game.resolve("rivet/pending.json")));
     }
+    @Test void cancellationAtHelperHandoffAbortsReadyUpdateAndKeepsDownload()throws Exception{
+        var update=new CoreUpdater(source()).check("1.0.0","1.21.1","21.1.250").orElseThrow();
+        Path jar=game.resolve("mods/rivet.jar");Files.createDirectories(jar.getParent());Files.writeString(jar,"old");
+        var hub=new Hub(game,"1.0.0","21.1.250");Path cached=hub.cache.path(update.artifact().sha256());Files.createDirectories(cached.getParent());Files.writeString(cached,"new");
+        var reached=new AtomicBoolean();
+        var failure=assertThrows(IOException.class,()->hub.prepareCoreUpdate(jar,update,event->{},new AtomicBoolean(),()->{
+            assertTrue(Files.exists(game.resolve("rivet/pending.json")));reached.set(true);return false;
+        }));
+        assertEquals("Cancelled",failure.getMessage());assertTrue(reached.get());
+        assertFalse(Files.exists(game.resolve("rivet/pending.json")));assertFalse(Files.exists(game.resolve("rivet/runtime/helper.jar")));
+        assertEquals("old",Files.readString(jar));assertEquals("new",Files.readString(cached));assertFalse(Files.exists(game.resolve(update.artifact().path())));
+    }
     @Test void breakingReleaseIsMarkedForExplicitReview()throws Exception{
         var remote=source();var descriptor=descriptor("1.1.0","21.1.250");
         descriptor.getAsJsonObject("protocols").addProperty("auth",WireProtocols.version("auth")+1);

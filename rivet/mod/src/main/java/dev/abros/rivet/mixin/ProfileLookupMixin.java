@@ -8,7 +8,8 @@ import org.spongepowered.asm.mixin.injection.*;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 /** Administrative name lookups use the same identity as incoming players. */
 @Mixin(GameProfileCache.class)
-abstract class ProfileLookupMixin {
+abstract class ProfileLookupMixin implements dev.abros.rivet.server.CachedProfiles {
+ @Override public Optional<GameProfile> rivet$cachedProfile(String name){Object cached=profilesByName.get(name.toLowerCase(java.util.Locale.ROOT));return cached instanceof CachedProfileAccessor entry?Optional.of(entry.rivet$profile()):Optional.empty();}
  @org.spongepowered.asm.mixin.Shadow @org.spongepowered.asm.mixin.Final private java.util.Map<String,?> profilesByName;
  @org.spongepowered.asm.mixin.Shadow @org.spongepowered.asm.mixin.Final private java.util.Map<java.util.UUID,?> profilesByUUID;
  @Inject(method="add",at=@At("HEAD"))

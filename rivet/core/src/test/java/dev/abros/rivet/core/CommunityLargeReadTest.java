@@ -20,12 +20,14 @@ class CommunityLargeReadTest {
    s.execute("ANALYZE documents");s.execute("ANALYZE community_relations");
   }return null;});
   var actor=new CommunityStore.Actor("reader","Reader",false,false);var out=new JsonArray();
-  for(String section:List.of("groups","events","board","home"))for(String search:List.of("","Needle")){
+  for(String section:List.of("groups"))for(String search:List.of("","Needle")){
    var q=new JsonObject();q.addProperty("op","list");q.addProperty("section",section);q.addProperty("query",search);
    var baseline=db.transaction(()->new CommunityQueries(db).list(actor,q,section,now,CommunityStore.defaults()));assertFalse(baseline.isEmpty());
    var times=new long[5];for(int i=0;i<times.length;i++){long start=System.nanoTime();var rows=db.transaction(()->new CommunityQueries(db).list(actor,q,section,now,CommunityStore.defaults()));times[i]=System.nanoTime()-start;assertEquals(baseline,rows);}
    Arrays.sort(times);var row=new JsonObject();row.addProperty("section",section);row.addProperty("search",search);row.addProperty("medianMs",times[2]/1e6);row.addProperty("maxMs",times[4]/1e6);row.addProperty("digest",Hashes.sha256(baseline.toString().getBytes(java.nio.charset.StandardCharsets.UTF_8)));out.add(row);
   }
-  Files.writeString(Path.of(System.getenv("RIVET_LARGE_READ_OUTPUT")),Json.GSON.toJson(out));System.out.println("RIVET_LARGE_READ_OK documents=6000 relations=96000 scenarios=8");
+  for(String section:List.of("events","board")){var q=new JsonObject();q.addProperty("section",section);assertThrows(CommunityFailure.class,()->db.transaction(()->new CommunityQueries(db).list(actor,q,section,now,CommunityStore.defaults())));}
+  assertTrue(db.transaction(()->new CommunityQueries(db).list(actor,new JsonObject(),"home",now,CommunityStore.defaults())).isEmpty());
+  Files.writeString(Path.of(System.getenv("RIVET_LARGE_READ_OUTPUT")),Json.GSON.toJson(out));System.out.println("RIVET_LARGE_READ_OK documents=6000 relations=96000 scenarios=2");
  }
 }

@@ -63,17 +63,23 @@ final class AuthClient {
     private static void message(String text,Connection current){var j=JsonParser.parseString(text).getAsJsonObject();var mc=Minecraft.getInstance();mc.execute(()->{if(connection!=current||current==null||!current.isConnected())return;try{
         String kind=Json.str(j,"kind");
         switch(kind){
-            case "offer" -> {offer=j;mc.setScreen(new AuthScreen());String token=Json.opt(saved,"token","");if(!token.isEmpty()&&Json.opt(j,"type","").equals("local")){var request=new JsonObject();request.addProperty("action","device");request.addProperty("token",token);send(request);}else if(Json.str(j,"mode").equals("hybrid")&&mc.getUser().getType()==net.minecraft.client.User.Type.MSA&&j.has("linked")&&j.get("linked").getAsBoolean())official();}
+            case "offer" -> {offer=j;mc.setScreen(new AuthScreen());String token=Json.opt(saved,"token","");if(!factorRequired()&&!token.isEmpty()&&Json.opt(j,"type","").equals("local")){var request=new JsonObject();request.addProperty("action","device");request.addProperty("token",token);send(request);}else if(!factorRequired()&&Json.str(j,"mode").equals("hybrid")&&mc.getUser().getType()==net.minecraft.client.User.Type.MSA&&j.has("linked")&&j.get("linked").getAsBoolean())official();}
             case "authenticated" -> {if(j.has("token")){saved.addProperty("token",Json.str(j,"token"));save();}authenticated=true;var request=new JsonObject();request.addProperty("action","accept");send(request);mc.setScreen(new GenericMessageScreen(Client.tr("ui.joining_server_a3c424fb")));}
             case "invitation" -> mc.setScreen(AuthAccountScreen.invitation(mc.screen,j));
+            case "applications" -> {if(mc.screen instanceof AuthApplicationsScreen screen)screen.receive(j);}
+            case "factorSetup","factorUpdated" -> {if(mc.screen instanceof AuthFactorScreen screen)screen.receive(j);}
             case "devices","updated","changed" -> {if(mc.screen instanceof AuthAccountScreen screen)screen.receive(j);}
-            default -> {if(mc.screen instanceof AuthScreen screen)screen.receive(j);else if(mc.screen instanceof AuthAccountScreen screen)screen.receive(j);else ServerMenuClient.result=Json.opt(j,"text","");}
+            default -> {if(mc.screen instanceof AuthScreen screen)screen.receive(j);else if(mc.screen instanceof AuthAccountScreen screen)screen.receive(j);else if(mc.screen instanceof AuthFactorScreen screen)screen.receive(j);else if(mc.screen instanceof AuthApplicationsScreen screen)screen.receive(j);else ServerMenuClient.result=Json.opt(j,"text","");}
         }
     }catch(Exception ex){current.disconnect(Client.tr("ui.auth_error_deb64113"));}});}
     static boolean officialLauncher(){return Minecraft.getInstance().getUser().getType()==net.minecraft.client.User.Type.MSA;}
-    static void official(){officialRequest("official",null);}
-    static void link(String password){officialRequest("link",password);}
-    private static void officialRequest(String action,String password){
+    static boolean connected(){return connection!=null&&connection.isConnected();}
+    static boolean factorRequired(){return offer.has("secondFactor")&&offer.get("secondFactor").getAsBoolean();}
+    static void official(){official("");}
+    static void official(String code){officialRequest("official",null,code);}
+    static void link(String password){link(password,"");}
+    static void link(String password,String code){officialRequest("link",password,code);}
+    private static void officialRequest(String action,String password,String code){
         var mc=Minecraft.getInstance();if(!officialLauncher())return;
         String purpose=action.equals("link")?"link":"login";
         String challenge=AuthSecrets.digest("rivet-auth-"+dev.abros.rivet.core.WireProtocols.version("auth")+"\n"+purpose+"\n"+Json.str(saved,"fingerprint")+"\n"+Json.str(offer,"challenge")).substring(0,40);
@@ -81,7 +87,7 @@ final class AuthClient {
         execute(()->{try{
             if(connection!=current||current==null||!current.isConnected())return;
             mc.getMinecraftSessionService().joinServer(mc.getUser().getProfileId(),mc.getUser().getAccessToken(),challenge);
-            mc.execute(()->{if(connection!=current||!current.isConnected()||mc.screen!=screen)return;var request=new JsonObject();request.addProperty("action",action);request.addProperty("officialName",mc.getUser().getName());if(password!=null)request.addProperty("password",password);send(request);});
+            mc.execute(()->{if(connection!=current||!current.isConnected()||mc.screen!=screen)return;var request=new JsonObject();request.addProperty("action",action);request.addProperty("code",code);request.addProperty("officialName",mc.getUser().getName());if(password!=null)request.addProperty("password",password);send(request);});
         }catch(Exception ex){mc.execute(()->{if(connection==current&&mc.screen==screen){var error=new JsonObject();error.addProperty("kind","error");error.addProperty("text",Client.text("ui.could_not_verify_your_minecraft_account_d631c0dc"));if(screen instanceof AuthScreen auth)auth.receive(error);else if(screen instanceof AuthAccountScreen auth)auth.receive(error);}});}});
     }
     static void send(JsonObject j){j.addProperty("language",Minecraft.getInstance().getLanguageManager().getSelected());String encoded=Json.GSON.toJson(j);Connection current=connection;var currentTunnel=tunnel;j.remove("password");j.remove("oldPassword");execute(()->{try{if(current!=connection||currentTunnel!=tunnel||current==null||!current.isConnected())return;if(currentTunnel==null)throw new IllegalStateException();currentTunnel.send(encoded);}catch(Exception ex){var c=connection;if(c!=null)c.disconnect(Client.tr("ui.secure_auth_request_failed_ccb6de6b"));}});}

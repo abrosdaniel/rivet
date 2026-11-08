@@ -8,7 +8,7 @@ import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.network.chat.Component;
 
 final class AuthScreen extends Screen {
-    private EditBox password,repeat,invitation;
+    private EditBox password,repeat,invitation,factor;
     private int panelTop,panelBottom,statusTop;
     private PasswordBox secret(int x,int y,int w,Component label){return UiFields.password(font,x,y,w,label,this::addRenderableWidget);}
     private boolean resetting,remember=true,error;
@@ -23,19 +23,21 @@ final class AuthScreen extends Screen {
     @Override protected void init(){
         int w=Math.min(320,width-32),x=(width-w)/2;panelTop=Math.max(6,(height-254)/2);int y=panelTop+46;
         String first=password==null?"":password.getValue(),second=repeat==null?"":repeat.getValue(),code=invitation==null?"":invitation.getValue();
-        repeat=null;invitation=null;
+        repeat=null;invitation=null;factor=null;
         password=secret(x,y,w,Component.literal(resetting||registering()?Client.text("ui.new_password_4934551e")+AuthClient.minimumPasswordLength()+Client.text("ui.128_characters_6bc827fb"):Client.text("ui.your_password_c6c4a6ab")));
         password.setHint(Component.literal(resetting||registering()?Client.text("ui.choose_a_password_at_least_505f6984")+AuthClient.minimumPasswordLength()+Client.text("ui.characters_62f5c625"):Client.text("ui.enter_password_9728edf3")));password.setValue(first);y+=22;
         if(resetting||registering()){repeat=secret(x,y,w,Client.tr("ui.repeat_password_c39e27d0"));repeat.setHint(Client.tr("ui.repeat_new_password_e32d8bb9"));repeat.setValue(second);y+=22;}
         if(resetting){invitation=secret(x,y,w,Client.tr("ui.code_from_administrator_c79fe328"));invitation.setHint(Client.tr("ui.invitation_code_from_administrator_da6f8e34"));invitation.setValue(code);y+=22;}
         else{addRenderableWidget(new UiChoiceRow(x,y,w,Client.text("ui.remember_me_30_days_368f0b42"),remember,-1,UiKit.ACCENT,()->{remember=!remember;rebuildWidgets();}));y+=22;}
+        if(!resetting&&!registering()&&AuthClient.factorRequired()){factor=secret(x,y,w,Client.tr("auth.factor.code"));factor.setHint(Client.tr("auth.factor.code"));factor.setMaxLength(22);y+=22;}
+        if(!resetting&&!registering()&&AuthClient.offer.has("secondFactor")&&!AuthClient.factorRequired()) {button(Client.text("auth.factor.setup"),x,y,w,()->minecraft.setScreen(new AuthFactorScreen(this,false)));y+=22;}
         submit=button(action(),x,y,w,this::submit);y+=22;
         if(!registering()){button(resetting?Client.text("ui.return_to_sign_in_3663ccab"):Client.text("ui.forgot_password_74372940"),x,y,w,()->{resetting=!resetting;clearSecrets();error=false;status=resetting?Client.text("ui.ask_an_administrator_for_a_recovery_6151ebb8"):"";rebuildWidgets();});y+=22;}
-        if(!resetting&&AuthClient.officialLauncher()&&Json.opt(AuthClient.offer,"mode","").equals("hybrid")&&AuthClient.offer.has("linked")&&AuthClient.offer.get("linked").getAsBoolean()){button(Client.text("ui.sign_in_with_minecraft_account_5a2a4dad"),x,y,w,()->{waiting(Client.text("ui.verifying_minecraft_account_c1ae2522"));AuthClient.official();});y+=22;}
+        if(!resetting&&AuthClient.officialLauncher()&&Json.opt(AuthClient.offer,"mode","").equals("hybrid")&&AuthClient.offer.has("linked")&&AuthClient.offer.get("linked").getAsBoolean()){button(Client.text("ui.sign_in_with_minecraft_account_5a2a4dad"),x,y,w,()->{waiting(Client.text("ui.verifying_minecraft_account_c1ae2522"));AuthClient.official(factor==null?"":factor.getValue());});y+=22;}
         statusTop=y+4;panelBottom=y+68;button(Client.text("ui.disconnect_12b95765"),x,panelBottom-26,w,this::onClose);
         setInitialFocus(password);setBusy(sent>0);
     }
-    private void clearSecrets(){if(password!=null)password.setValue("");if(repeat!=null)repeat.setValue("");if(invitation!=null)invitation.setValue("");}
+    private void clearSecrets(){if(password!=null)password.setValue("");if(repeat!=null)repeat.setValue("");if(invitation!=null)invitation.setValue("");if(factor!=null)factor.setValue("");}
     private void setBusy(boolean value){for(var child:children())if(child instanceof AbstractWidget widget)widget.active=!value;for(var child:children())if(child instanceof Button b&&b.getMessage().getString().equals(Client.text("ui.disconnect_12b95765")))b.active=true;if(submit!=null)submit.setMessage(Component.literal(value?Client.text("ui.checking_350473a9"):action()));}
     private void waiting(String text){sent=System.currentTimeMillis();error=false;status=text;setBusy(true);}
     private void fail(String text,EditBox field){error=true;status=text;setFocused(field);}
@@ -47,6 +49,7 @@ final class AuthScreen extends Screen {
         if((resetting||registering())&&!value.equals(repeat.getValue())){fail(Client.text("ui.passwords_do_not_match_check_the_50e3ca94"),repeat);return;}
         if(resetting&&invitation.getValue().isBlank()){fail(Client.text("ui.enter_the_invitation_you_received_from_b5d27e98"),invitation);return;}
         var j=new JsonObject();j.addProperty("action",resetting?"reset":registering()?"register":"login");j.addProperty("password",value);j.addProperty("remember",remember);j.addProperty("label",System.getProperty("os.name",Client.text("ui.computer_1db1b7e7")));if(resetting)j.addProperty("invitation",invitation.getValue());
+        if(factor!=null)j.addProperty("code",factor.getValue());
         clearSecrets();waiting(Client.text("ui.checking_data_f3aeedf6"));AuthClient.send(j);
     }
     void receive(JsonObject j){sent=0;error=Json.opt(j,"kind","").equals("error");status=Json.opt(j,"text","");if(Json.opt(j,"kind","").equals("resetDone")){resetting=false;AuthClient.offer.addProperty("type","local");AuthClient.forget();clearSecrets();status=Client.text("ui.password_changed_sign_in_with_your_a089f072");rebuildWidgets();}setBusy(false);setFocused(password);}

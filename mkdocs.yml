@@ -72,7 +72,7 @@ nav:
       - Основное:
           - Управление: players/controls.md
           - Установка сборки: players/modpack.md
-          - Меню и задачи: players/community.md
+          - Меню сервера: players/community.md
           - Чат: players/chat.md
           - Настройки и HUD: players/settings.md
           - Обновление: players/updates.md

@@ -14,7 +14,7 @@ public final class ReleaseCorrectionsHarness {
  private static void check(boolean condition,String message){if(!condition)throw new IllegalStateException(message);checks++;}
  private static Button button(String prefix){return Minecraft.getInstance().screen.children().stream().filter(c->c instanceof Button b&&b.getMessage().getString().startsWith(prefix)).map(c->(Button)c).findFirst().orElseThrow();}
  @SubscribeEvent public static void render(net.neoforged.neoforge.client.event.ScreenEvent.Render.Post event){if(System.getenv("RIVET_RELEASE_CORRECTIONS")==null||done)return;var mc=Minecraft.getInstance();try{
-  if(frames==null){if(!(mc.screen instanceof TitleScreen))return;frames=VisualMatrixHarness.samples(5,0,2);check(MapSettings.INSTANCE.size==96,"Fresh minimap default: expected 96, got "+MapSettings.INSTANCE.size);}
+  if(frames==null){if(!(mc.screen instanceof TitleScreen))return;frames=VisualMatrixHarness.samples(6,0,2);check(MapSettings.INSTANCE.size==96,"Fresh minimap default: expected 96, got "+MapSettings.INSTANCE.size);}
   if(System.currentTimeMillis()<next)return;next=System.currentTimeMillis()+140;
   if(frame>0)UiGeometryHarness.verify(mc.screen);
   if(frame==5){var output=new java.io.File(System.getenv("RIVET_RELEASE_CORRECTIONS"));output.mkdirs();UiCaptureHarness.grab(output,"required-components.png",mc.getMainRenderTarget(),message->{});}
@@ -29,6 +29,9 @@ public final class ReleaseCorrectionsHarness {
    button("Component 0").onPress();button(Client.text("ui.review_changes_f5459a86")).onPress();
    if(f.scene()==1){screen.revealRow(100);screen.rebuildWidgets();check(screen.firstRow>0,"Component scrolling");check(!button("Shared Library").active,"Required component cannot be disabled");}
    var rows=screen.children().stream().filter(c->c instanceof UiChoiceRow).map(c->(UiChoiceRow)c).toList();check(!rows.isEmpty(),"Visible rows");if(rows.size()>1)check(rows.get(1).getY()-rows.get(0).getY()>=42,"Description space");
+  }else if(f.scene()==5){
+   var idle=new java.util.concurrent.atomic.AtomicBoolean();var resumed=new java.util.concurrent.atomic.AtomicInteger();var paused=new PackPausedScreen(null,idle::get,resumed::incrementAndGet);mc.setScreen(paused);
+   var resume=button(Client.text("builder.resume"));check(!resume.active,"Resume enabled before transfer released files");resume.onPress();check(resumed.get()==0,"Busy transfer resumed");idle.set(true);paused.tick();check(resume.active,"Resume did not enable when worker finished");resume.onPress();check(resumed.get()==1,"Paused transfer did not resume");
   }else if(f.scene()>=3){
    check(!Client.text("progress.downloading").equals("rivet.progress.downloading"),"Progress translation missing");
    var progress=new dev.abros.rivet.core.InstallProgress("downloading","mods/large-file.jar",5242880,10485760,1,3);

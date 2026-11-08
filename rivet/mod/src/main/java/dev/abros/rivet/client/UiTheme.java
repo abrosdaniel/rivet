@@ -19,7 +19,7 @@ public final class UiTheme {
  static int mix(int a,int b,float t){int out=0;for(int shift=0;shift<=24;shift+=8)out|=((int)(((a>>>shift)&255)*(1-t)+((b>>>shift)&255)*t))<<shift;return out;}
  static void panel(GuiGraphics g,int x,int y,int w,int h,int color){UiKit.plate(g,x,y,w,h,AccessibilityScreen.background(color));}
 
- public static void shell(Screen s,GuiGraphics g){if(s instanceof CommunityScreen||s instanceof TaskScreen||s instanceof ReportQueueScreen||s instanceof ServerMenuScreen||s instanceof FeatureListScreen f&&f.kind.equals("players"))UiWorkspace.fit(s.width,s.height).draw(g);}
+ public static void shell(Screen s,GuiGraphics g){if(s instanceof CommunityScreen||s instanceof ReportQueueScreen||s instanceof ServerMenuScreen||s instanceof FeatureListScreen f&&f.kind.equals("players"))UiWorkspace.fit(s.width,s.height).draw(g);}
 
  public static void button(AbstractButton b,GuiGraphics g){
   var font=Minecraft.getInstance().font;int x=b.getX(),y=b.getY(),w=b.getWidth(),h=b.getHeight();String text=b.getMessage().getString();var style=UiActions.style(b);

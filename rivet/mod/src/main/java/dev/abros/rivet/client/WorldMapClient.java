@@ -21,6 +21,7 @@ public final class WorldMapClient {
     // One reserved slot accepts the final snapshot before reset/shutdown discards memory.
     // A new world cannot produce dirty tiles until its queued reads (after that snapshot) finish.
     private static final int IO_CAPACITY=256;
+    static final MapCacheBudget CACHE_BUDGET=MapCacheBudget.forHeap(Runtime.getRuntime().maxMemory());
     private static final ThreadPoolExecutor IO=new ThreadPoolExecutor(1,1,30,TimeUnit.SECONDS,new ArrayBlockingQueue<>(IO_CAPACITY+1),r->{var t=new Thread(r,"Rivet map files");t.setDaemon(true);return t;});
     // Saved pixels must not wait behind a full terrain index or thousands of tile reads.
     private static final ThreadPoolExecutor PREVIEW_IO=new ThreadPoolExecutor(1,1,30,TimeUnit.SECONDS,new ArrayBlockingQueue<>(256),r->{var t=new Thread(r,"Rivet map previews");t.setDaemon(true);return t;});
@@ -86,20 +87,26 @@ public final class WorldMapClient {
     static void reload(){MapBlockColors.clear();resample();Minimap.reset();MapMobIcons.clear();}
     static void chunkLoaded(net.minecraft.client.multiplayer.ClientLevel level,net.minecraft.world.level.ChunkPos pos){scanned.keySet().removeIf(k->k.dimension().equals(level.dimension().location().toString())&&k.x()==pos.x&&k.z()==pos.z);idleTick=Integer.MIN_VALUE;}
     static void shutdown(){flush(true);enqueue(()->writes.drain(System.currentTimeMillis(),16416,true,(key,ex)->com.mojang.logging.LogUtils.getLogger().warn("Map snapshot remains unsaved",ex)));INDEX_IO.shutdown();PREVIEW_IO.shutdown();IO.shutdown();try{if(!PREVIEW_IO.awaitTermination(5,TimeUnit.SECONDS))com.mojang.logging.LogUtils.getLogger().warn("Rivet map previews did not finish before shutdown");if(!IO.awaitTermination(5,TimeUnit.SECONDS))com.mojang.logging.LogUtils.getLogger().warn("Rivet map saving did not finish before shutdown");}catch(InterruptedException ex){Thread.currentThread().interrupt();}}
+    private static boolean storageMaintenance;
+    static boolean storageAvailable(){return !storageMaintenance&&Minecraft.getInstance().level==null&&repository==null&&writes.size()==0&&!writing.get()&&IO.getActiveCount()==0&&IO.getQueue().isEmpty()&&INDEX_IO.getActiveCount()==0&&INDEX_IO.getQueue().isEmpty()&&PREVIEW_IO.getActiveCount()==0&&PREVIEW_IO.getQueue().isEmpty();}
+    static boolean maintainStorage(java.util.concurrent.Callable<Void> work,java.util.function.Consumer<Exception> done){
+        if(!storageAvailable())return false;storageMaintenance=true;
+        if(!submit(()->{Exception error=null;try{work.call();}catch(Exception ex){error=ex;}var result=error;Minecraft.getInstance().execute(()->{storageMaintenance=false;done.accept(result);});})){storageMaintenance=false;return false;}return true;
+    }
     static boolean allowed() {
+        if(storageMaintenance)return false;
         var mc=Minecraft.getInstance();if(mc.player==null||mc.level==null)return false;
         if(mc.hasSingleplayerServer())return dev.abros.rivet.server.ServerMap.worldId()!=null;
-        var j=ServerMenuClient.state;
-        return ServerMenuClient.supports("world-map")&&j.has("map")&&j.getAsJsonObject("map").has("world")&&j.getAsJsonObject("map").get("enabled").getAsBoolean();
+        return ClientMapPolicy.current().enabled();
     }
     private static UUID identity() {
-        var mc=Minecraft.getInstance();return mc.hasSingleplayerServer()?dev.abros.rivet.server.ServerMap.worldId():UUID.fromString(ServerMenuClient.state.getAsJsonObject("map").get("world").getAsString());
+        var mc=Minecraft.getInstance();return mc.hasSingleplayerServer()?dev.abros.rivet.server.ServerMap.worldId():ClientMapPolicy.current().world();
     }
     static MapRepository ownRepository(){return repository;}
     static boolean io(Runnable work){return submit(work);}
     static boolean previewIo(Runnable work){try{PREVIEW_IO.execute(work);return true;}catch(RejectedExecutionException ex){return false;}}
     static UUID worldId(){return world;}
-    static boolean cavesAllowed(){var mc=Minecraft.getInstance();if(!allowed())return false;if(mc.hasSingleplayerServer())return dev.abros.rivet.server.ServerMap.cavesAllowed();var policy=ServerMenuClient.state.getAsJsonObject("map");return !policy.has("caves")||policy.get("caves").getAsBoolean();}
+    static boolean cavesAllowed(){var mc=Minecraft.getInstance();if(!allowed())return false;if(mc.hasSingleplayerServer())return dev.abros.rivet.server.ServerMap.cavesAllowed();return ClientMapPolicy.current().caves();}
     static MapExport.Source exportSource(MapLayer layer){if(repository==null||!allowed())return null;var snapshot=new HashMap<MapRepository.Chunk,MapTile>();for(var e:tiles.entrySet())if(e.getKey().layer().equals(layer))snapshot.put(new MapRepository.Chunk(e.getKey().x(),e.getKey().z()),e.getValue().copy());return new MapExport.Source(repository,receivedRepository,Map.copyOf(snapshot));}
     static boolean ready() { return repository!=null&&allowed(); }
     static String error() { return metadataErrors.isEmpty()&&diskErrors.isEmpty()?error:Client.tr("map.filesError").getString(); }
@@ -145,6 +152,8 @@ public final class WorldMapClient {
         UUID id=identity(),owner=mc.player.getUUID();
         if(!id.equals(world)||!owner.equals(player)) {
             reset();deaths.observe(mc.player.isDeadOrDying());world=id;player=owner;repository=new MapRepository(mc.gameDirectory.toPath().resolve("rivet/maps"),id,owner);receivedRepository=new MapRepository(mc.gameDirectory.toPath().resolve("rivet/maps-received"),id,owner);
+            String worldLabel=mc.getSingleplayerServer()!=null?mc.getSingleplayerServer().getWorldData().getLevelName():mc.getCurrentServer()!=null?mc.getCurrentServer().name:"";String playerLabel=mc.player.getGameProfile().getName();
+            submit(()->{try{new MapStorage(mc.gameDirectory.toPath().resolve("rivet")).remember(id,owner,worldLabel,playerLabel);}catch(java.io.IOException ignored){}});
         }
         if(!(markersReady&&categoriesReady&&territoriesReady)&&!markersLoading&&System.currentTimeMillis()>=markerRetry){
             var repo=repository;boolean readMarkers=!markersReady,readCategories=!categoriesReady,readTerritories=!territoriesReady;
@@ -186,22 +195,22 @@ public final class WorldMapClient {
     static MapTile tile(MapLayer layer,int x,int z) {var own=ownTile(layer,x,z);return own==null?null:combined(new TileKey(layer,x,z),own);}
     private static MapTile combined(TileKey key,MapTile own){retryLegacyTile(key);if(!receivedTiles.containsKey(key))return own;return combinedTiles.computeIfAbsent(key,k->MapTileMerge.merge(own,receivedTiles.get(k)));}
     private static MapTile ownTile(MapLayer layer,int x,int z) {
-        var key=new TileKey(layer,x,z);var tile=tiles.get(key);if(tile!=null)return tile;if(tiles.size()>=8192&&writes.size()>=8192)return null;
+        var key=new TileKey(layer,x,z);var tile=tiles.get(key);if(tile!=null)return tile;if(tiles.size()>=CACHE_BUDGET.tiles()&&writes.size()>=8192)return null;
         if(repository!=null&&writes.pending(writeKey(repository,key))==null&&!legacyIndexRetries.containsKey(layer)&&indexAreaReady(layer,x,x,z,z)&&!explored(key)){tile=new MapTile();tiles.put(key,tile);evict();return tile;}
         if(repository==null||System.currentTimeMillis()<retries.getOrDefault(key,0L)||loading.size()>=64||!loading.add(key))return null;
         var repo=repository;var received=receivedRepository;var mc=Minecraft.getInstance();
-        if(!submit(()->{try{var queued=writes.pending(writeKey(repo,key));var read=queued==null?repo.read(layer,x,z).orElseGet(MapTile::new):((MapTile)queued).copy();var shared=readLegacyTile(repo,received,key);mc.execute(()->{if(repository==repo){loading.remove(key);retries.remove(key);diskErrors.remove(key);tiles.put(key,read);if(shared!=null)receivedTiles.put(key,shared);combinedTiles.remove(key);MapTerrainCache.changed(key);evict();}});}catch(Exception ex){mc.execute(()->{if(repository==repo){loading.remove(key);retries.put(key,System.currentTimeMillis()+30000);trimRetries(retries);failed(repo,key,ex);}});}}))loading.remove(key);
+        if(!submit(()->{try{var queued=writes.pending(writeKey(repo,key));var read=queued==null?repo.readRecovering(layer,x,z).orElseGet(MapTile::new):((MapTile)queued).copy();var shared=readLegacyTile(repo,received,key);mc.execute(()->{if(repository==repo){loading.remove(key);retries.remove(key);diskErrors.remove(key);tiles.put(key,read);if(shared!=null)receivedTiles.put(key,shared);combinedTiles.remove(key);MapTerrainCache.changed(key);evict();}});}catch(Exception ex){mc.execute(()->{if(repository==repo){loading.remove(key);retries.put(key,System.currentTimeMillis()+30000);trimRetries(retries);failed(repo,key,ex);}});}}))loading.remove(key);
         return null;
     }
     private static void legacyIndexFailed(MapRepository repo,MapLayer layer,Exception failure){Minecraft.getInstance().execute(()->{if(repository==repo){legacyIndexRetries.put(layer,System.currentTimeMillis()+30000);failed(repo,new LegacyPart(layer),failure);}});}
     private static MapTile readLegacyTile(MapRepository repo,MapRepository received,TileKey key){
-        try{var shared=received.read(key.layer(),key.x(),key.z()).orElse(null);Minecraft.getInstance().execute(()->{if(repository==repo){legacyTileRetries.remove(key);diskErrors.remove(new LegacyPart(key));}});return shared;}
+        try{var shared=received.readRecovering(key.layer(),key.x(),key.z()).orElse(null);Minecraft.getInstance().execute(()->{if(repository==repo){legacyTileRetries.remove(key);diskErrors.remove(new LegacyPart(key));}});return shared;}
         catch(Exception failure){Minecraft.getInstance().execute(()->{if(repository==repo){legacyTileRetries.put(key,System.currentTimeMillis()+30000);trimRetries(legacyTileRetries);failed(repo,new LegacyPart(key),failure);}});return null;}
     }
     private static void retryLegacyTile(TileKey key){
         if(repository==null||!legacyTileRetries.containsKey(key)||System.currentTimeMillis()<legacyTileRetries.get(key)||legacyLoading.size()>=32||!legacyLoading.add(key))return;
         var repo=repository;var received=receivedRepository;
-        if(!submit(()->{var shared=readLegacyTile(repo,received,key);Minecraft.getInstance().execute(()->{if(repository==repo){legacyLoading.remove(key);if(shared!=null){receivedTiles.put(key,shared);combinedTiles.remove(key);MapTerrainCache.changed(key);}}});}))legacyLoading.remove(key);
+        if(!submit(()->{var shared=readLegacyTile(repo,received,key);Minecraft.getInstance().execute(()->{if(repository==repo){legacyLoading.remove(key);if(shared!=null&&tiles.containsKey(key)){receivedTiles.put(key,shared);combinedTiles.remove(key);MapTerrainCache.changed(key);}}});}))legacyLoading.remove(key);
     }
     static boolean indexed(MapLayer layer){return indexed.contains(layer);}
     static boolean explored(TileKey key){
@@ -236,7 +245,7 @@ public final class WorldMapClient {
         return explored(key)?tile(key.layer(),key.x(),key.z()):null;
     }
     private static void evict() {
-        while(tiles.size()>8192){var key=tiles.keySet().iterator().next();if(dirty.contains(key)&&!save(key,tiles.get(key)))return;tiles.remove(key);var discoveries=known.get(key.layer());if(discoveries!=null)discoveries.remove(new MapRepository.Chunk(key.x(),key.z()));receivedTiles.remove(key);combinedTiles.remove(key);}
+        while(tiles.size()>CACHE_BUDGET.tiles()){var key=tiles.keySet().iterator().next();if(dirty.contains(key)&&!save(key,tiles.get(key)))return;tiles.remove(key);var discoveries=known.get(key.layer());if(discoveries!=null)discoveries.remove(new MapRepository.Chunk(key.x(),key.z()));receivedTiles.remove(key);combinedTiles.remove(key);}
     }
     private static boolean save(TileKey key,MapTile tile) {
         var repo=repository;var snapshot=tile.copy();
@@ -289,7 +298,7 @@ public final class WorldMapClient {
     static void frame(){long timing=dev.abros.rivet.core.PerformanceMetrics.start();try{MapTerrainCache.beginFrame();sample();}finally{dev.abros.rivet.core.PerformanceMetrics.end("client.map.sample",timing);}}
     private static void sample(){
         long now=System.nanoTime(),elapsed=lastFrame==0?16_000_000:now-lastFrame;lastFrame=now;
-        if(!ready()||writes.size()>=8192||tiles.size()>8192)return;
+        if(!ready()||writes.size()>=8192||tiles.size()>CACHE_BUDGET.tiles())return;
         // Share the time budget across ticks and frames, including low-FPS windows.
         long budget=MapWorkBudget.samplingNanos(elapsed);
         long deadline=now+budget;

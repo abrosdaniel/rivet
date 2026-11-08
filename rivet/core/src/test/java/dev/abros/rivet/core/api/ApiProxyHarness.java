@@ -40,28 +40,28 @@ public final class ApiProxyHarness {
   var tls=SSLContext.getInstance("TLS");tls.init(null,managers.getTrustManagers(),null);
   var h=new ApiLoadBrowserHarness(Path.of(args[0]),ORIGIN);
   try(var client=HttpClient.newBuilder().sslContext(tls).version(HttpClient.Version.HTTP_1_1).connectTimeout(Duration.ofSeconds(5)).build();var untrusted=HttpClient.newHttpClient()){
-   rejectCertificate(untrusted,ORIGIN+"/api/v1/tasks");
-   rejectCertificate(client,"https://127.0.0.1:24483/api/v1/tasks");
+   rejectCertificate(untrusted,ORIGIN+"/api/v1/me/notifications");
+   rejectCertificate(client,"https://127.0.0.1:24483/api/v1/me/notifications");
    for(String protocol:new String[]{"TLSv1.2","TLSv1.3"}){
     var parameters=new SSLParameters();parameters.setProtocols(new String[]{protocol});
     try(var versioned=HttpClient.newBuilder().sslContext(tls).sslParameters(parameters).build()){
-     var versionResponse=versioned.send(request("tasks").GET().build(),HttpResponse.BodyHandlers.discarding());
+     var versionResponse=versioned.send(request("me/notifications").GET().build(),HttpResponse.BodyHandlers.discarding());
      check(versionResponse.sslSession().orElseThrow().getProtocol().equals(protocol),"TLS protocol mismatch");
      check(versionResponse.statusCode()==401,"TLS request reached wrong handler");
     }
    }
-   var redirect=client.send(HttpRequest.newBuilder(URI.create("http://localhost:24484/api/v1/tasks")).GET().build(),HttpResponse.BodyHandlers.discarding());
-   check(redirect.statusCode()==308&&redirect.headers().firstValue("location").orElse("").equals(ORIGIN+"/api/v1/tasks"),"HTTPS redirect");
-   var response=client.send(request("tasks").header("Authorization","Bearer "+h.secret).header("X-Rivet-Session",h.tokens.getFirst()).GET().build(),HttpResponse.BodyHandlers.ofString());
-   check(response.statusCode()==200,"HTTPS tasks: "+response.statusCode());owned(response.body(),0);
+   var redirect=client.send(HttpRequest.newBuilder(URI.create("http://localhost:24484/api/v1/me/notifications")).GET().build(),HttpResponse.BodyHandlers.discarding());
+   check(redirect.statusCode()==308&&redirect.headers().firstValue("location").orElse("").equals(ORIGIN+"/api/v1/me/notifications"),"HTTPS redirect");
+   var response=client.send(request("me/notifications").header("Authorization","Bearer "+h.secret).header("X-Rivet-Session",h.tokens.getFirst()).GET().build(),HttpResponse.BodyHandlers.ofString());
+   check(response.statusCode()==200,"HTTPS me/notifications: "+response.statusCode());owned(response.body(),0);
    check(response.headers().firstValue("cache-control").orElse("").contains("no-store"),"Private response cache policy lost");
-   var cors=client.send(request("tasks").header("Origin","https://evil.invalid").GET().build(),HttpResponse.BodyHandlers.discarding());check(cors.statusCode()==403,"Foreign Origin allowed");
-   var browserKey=client.send(request("tasks").header("Origin",ORIGIN).header("Authorization","Bearer "+h.secret).GET().build(),HttpResponse.BodyHandlers.discarding());check(browserKey.statusCode()==403,"Browser bearer permitted");
+   var cors=client.send(request("me/notifications").header("Origin","https://evil.invalid").GET().build(),HttpResponse.BodyHandlers.discarding());check(cors.statusCode()==403,"Foreign Origin allowed");
+   var browserKey=client.send(request("me/notifications").header("Origin",ORIGIN).header("Authorization","Bearer "+h.secret).GET().build(),HttpResponse.BodyHandlers.discarding());check(browserKey.statusCode()==403,"Browser bearer permitted");
    String expired=ticket(client,h);Thread.sleep(5300);denied(client,expired,ORIGIN);
    String ticket=ticket(client,h);var listener=new Listener();var socket=connect(client,ticket,ORIGIN,listener);
    try{
     check(socket.getSubprotocol().equals("rivet.v1"),"Ticket leaked as selected protocol");
-    socket.sendText("{\"type\":\"watch\",\"id\":\"mine\",\"path\":\"tasks\",\"query\":{},\"session\":null,\"cursor\":null}",true).join();
+    socket.sendText("{\"type\":\"watch\",\"id\":\"mine\",\"path\":\"me/notifications\",\"query\":{},\"session\":null,\"cursor\":null}",true).join();
     var snapshot=listener.messages.poll(10,TimeUnit.SECONDS);check(snapshot!=null&&snapshot.get("type").getAsString().equals("resource.snapshot"),"Missing WSS snapshot");owned(snapshot.getAsJsonObject("data").get("resource").toString(),0);
     denied(client,ticket,ORIGIN);denied(client,ticket(client,h),"https://evil.invalid");
     h.sessions.revokePlayer(h.players.getFirst());listener.closed.get(8,TimeUnit.SECONDS);

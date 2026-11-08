@@ -16,6 +16,7 @@ import java.io.*;
 /** All state belongs to the current connection; no identities leak between servers. */
 public final class SkinClient {
  private record ReadySkin(String hash,boolean slim){}
+ private static final Map<UUID,String> readyCapes=new LinkedHashMap<>();
  private static final Map<UUID,ReadySkin> readySkins=new LinkedHashMap<>(256,.75f,true);
  private static final Map<UUID,JsonObject> profiles=new LinkedHashMap<>(1024,.75f,true);
  private static final dev.abros.rivet.core.skins.SkinProfileLookup identities=new dev.abros.rivet.core.skins.SkinProfileLookup();
@@ -41,39 +42,44 @@ public final class SkinClient {
  private static final RequestSession session=new RequestSession();private static byte[] uploadBytes;static boolean retryable;private static String pending="";
  public static void install(){SkinWire.client=SkinClient::receive;NeoForge.EVENT_BUS.addListener((net.neoforged.neoforge.client.event.RenderNameTagEvent e)->{if(Minecraft.getInstance().screen instanceof SkinsScreen s&&s.isPreview(e.getEntity()))e.setCanRender(net.neoforged.neoforge.common.util.TriState.FALSE);});NeoForge.EVENT_BUS.addListener((net.neoforged.neoforge.client.event.ClientTickEvent.Post e)->tick());}
  public static boolean available(){var c=Minecraft.getInstance().getConnection();return c!=null&&c.hasChannel(SkinWire.Request.TYPE)&&!disabled;}
- private static void tick(){var c=Minecraft.getInstance().getConnection();if(connection!=c){connection=c;initialized=false;epoch++;resetDisk();identities.clear();for(var item:awaited)item.future.complete(item.fallback);awaited.clear();awaitingAppearance.clear();var directory=cache();cacheTask(()->prune(directory));profiles.clear();readySkins.clear();requested.clear();incoming.clear();fetching.clear();outgoing.clear();library=new JsonObject();status="";busy=false;disabled=false;session.cancel();retryable=false;uploadBytes=null;for(var id:textures.values())Minecraft.getInstance().getTextureManager().release(id);textures.clear();}fetching.entrySet().removeIf(e->{if(System.currentTimeMillis()-e.getValue()>30000){incoming.remove(e.getKey());return true;}return false;});identities.tick(System.currentTimeMillis());completeAwaited();if(!available())return;if(!initialized&&Minecraft.getInstance().player!=null){initialized=true;if(!busy)command("list","",false);}boolean authenticated=AuthClient.available();if(authenticated&&!wasAuthenticated)requested.clear();wasAuthenticated=authenticated;for(int i=0;i<4&&!outgoing.isEmpty();i++)PacketDistributor.sendToServer(new SkinWire.Request(Json.GSON.toJson(outgoing.removeFirst())));if(session.timeout(System.currentTimeMillis())){busy=false;outgoing.removeIf(p->pending.equals(Json.opt(p,"request","")));retryable=uploadBytes==null||dev.abros.rivet.network.Protocol.supportedFeatures.contains("skin-receipts");status=Client.text("ui.no_response_try_the_request_again_f91cd888");changed();}}
+ private static void tick(){var c=Minecraft.getInstance().getConnection();if(connection!=c){connection=c;initialized=false;epoch++;resetDisk();identities.clear();for(var item:awaited)item.future.complete(item.fallback);awaited.clear();awaitingAppearance.clear();var directory=cache();cacheTask(()->prune(directory));profiles.clear();readySkins.clear();readyCapes.clear();requested.clear();incoming.clear();fetching.clear();outgoing.clear();library=new JsonObject();status="";busy=false;disabled=false;session.cancel();retryable=false;uploadBytes=null;for(var id:textures.values())Minecraft.getInstance().getTextureManager().release(id);textures.clear();}fetching.entrySet().removeIf(e->{if(System.currentTimeMillis()-e.getValue()>30000){incoming.remove(e.getKey());return true;}return false;});identities.tick(System.currentTimeMillis());completeAwaited();if(!available())return;if(!initialized&&Minecraft.getInstance().player!=null){initialized=true;if(!busy)command("list","",false);}boolean authenticated=AuthClient.available();if(authenticated&&!wasAuthenticated)requested.clear();wasAuthenticated=authenticated;for(int i=0;i<4&&!outgoing.isEmpty();i++)PacketDistributor.sendToServer(new SkinWire.Request(Json.GSON.toJson(outgoing.removeFirst())));if(session.timeout(System.currentTimeMillis())){busy=false;outgoing.removeIf(p->pending.equals(Json.opt(p,"request","")));retryable=uploadBytes==null||dev.abros.rivet.network.Protocol.supportedFeatures.contains("skin-receipts");status=Client.text("ui.no_response_try_the_request_again_f91cd888");changed();}}
  private static void send(JsonObject j){if(available())outgoing.add(j);}
  static void command(String op,String id,boolean slim){command(op,id,slim,"");}
  static void command(String op,String id,boolean slim,String name){if(busy)return;uploadBytes=null;var j=new JsonObject();j.addProperty("op",op);j.addProperty("name",name);j.addProperty("id",id);j.addProperty("slim",slim);dispatch(session.begin(j,!op.equals("list"),System.currentTimeMillis()));}
- static void upload(String name,boolean slim,byte[] bytes){if(busy)return;uploadBytes=bytes.clone();var begin=new JsonObject();begin.addProperty("op","begin");begin.addProperty("name",name);begin.addProperty("slim",slim);begin.addProperty("size",bytes.length);dispatch(session.begin(begin,true,System.currentTimeMillis()));}
+ static void upload(String name,boolean slim,byte[] bytes){upload(name,slim,bytes,false);}
+ static void upload(String name,boolean slim,byte[] bytes,boolean cape){if(busy)return;uploadBytes=bytes.clone();var begin=new JsonObject();begin.addProperty("op","begin");begin.addProperty("asset",cape?"cape":"skin");begin.addProperty("name",name);begin.addProperty("slim",slim);begin.addProperty("size",bytes.length);dispatch(session.begin(begin,true,System.currentTimeMillis()));}
  static void retry(){if(busy||!retryable)return;dispatch(session.retry(System.currentTimeMillis()));changed();}
  private static void dispatch(JsonObject command){pending=Json.str(command,"request");busy=true;retryable=false;status=uploadBytes==null?"":Client.text("server.loading");send(command);if(uploadBytes!=null)for(int offset=0;offset<uploadBytes.length;offset+=4096){var part=new JsonObject();part.addProperty("op","chunk");part.addProperty("request",pending);part.addProperty("offset",offset);part.addProperty("data",Base64.getEncoder().encodeToString(Arrays.copyOfRange(uploadBytes,offset,Math.min(uploadBytes.length,offset+4096))));send(part);}}
  private static void changed(){if(Minecraft.getInstance().screen instanceof SkinsScreen s)s.updated();else if(Minecraft.getInstance().screen instanceof QuickSkinsScreen s)s.updated();}
- private static void profile(JsonObject j){UUID owner=UUID.fromString(Json.str(j,"owner"));awaitingAppearance.remove(owner);profiles.put(owner,j);while(profiles.size()>1024)profiles.remove(profiles.keySet().iterator().next());String hash=Json.opt(j,"hash","");if(!hash.isEmpty())texture(hash);}
+ private static void profile(JsonObject j){UUID owner=UUID.fromString(Json.str(j,"owner"));awaitingAppearance.remove(owner);profiles.put(owner,j);while(profiles.size()>1024)profiles.remove(profiles.keySet().iterator().next());String hash=Json.opt(j,"hash","");if(!hash.isEmpty())texture(hash);String cape=Json.opt(j,"capeHash","");if(!cape.isEmpty())capeTexture(cape);}
  private static void receive(JsonObject j){try{switch(Json.str(j,"kind")){
-  case "disabled"->{disabled=true;epoch++;resetDisk();identities.clear();for(var item:awaited)item.future.complete(item.fallback);awaited.clear();awaitingAppearance.clear();busy=false;session.cancel();uploadBytes=null;retryable=false;outgoing.clear();profiles.clear();readySkins.clear();status=Client.text("ui.skins_are_disabled_on_this_server_16907d57");changed();}
+  case "disabled"->{disabled=true;epoch++;resetDisk();identities.clear();for(var item:awaited)item.future.complete(item.fallback);awaited.clear();awaitingAppearance.clear();busy=false;session.cancel();uploadBytes=null;retryable=false;outgoing.clear();profiles.clear();readySkins.clear();readyCapes.clear();status=Client.text("ui.skins_are_disabled_on_this_server_16907d57");changed();}
   case "error"->{identities.receive(Json.opt(j,"request",""),Optional.empty(),System.currentTimeMillis());if(session.receive(j)){busy=false;retryable=false;uploadBytes=null;outgoing.removeIf(p->pending.equals(Json.opt(p,"request","")));status=Json.opt(j,"text",Client.text("ui.loading_error_badc6064"));changed();}}
   case "library"->{if(!session.receive(j))return;uploadBytes=null;retryable=false;library=j;profile(j.getAsJsonObject("profile"));busy=false;status="";changed();}
   case "appearance"->profile(j);
   case "identity"->{Optional<dev.abros.rivet.core.skins.SkinProfileLookup.Identity> identity=Optional.empty();if(j.has("owner")&&dev.abros.rivet.core.auth.AuthStore.validName(Json.str(j,"name")))identity=Optional.of(new dev.abros.rivet.core.skins.SkinProfileLookup.Identity(UUID.fromString(Json.str(j,"owner")),Json.str(j,"name")));identities.receive(Json.opt(j,"request",""),identity,System.currentTimeMillis());}
-  case "blob"->{String hash=Json.str(j,"hash");if(!fetching.containsKey(hash))return;int size=j.get("size").getAsInt(),offset=j.get("offset").getAsInt();if(size<33||size>1024*1024)throw new IOException();byte[] part=Base64.getDecoder().decode(Json.str(j,"data"));var buffer=incoming.computeIfAbsent(hash,k->new ByteArrayOutputStream());if(offset!=buffer.size()||part.length>4096||part.length==0||part.length>size-offset)throw new IOException();buffer.writeBytes(part);if(buffer.size()==size){byte[] png=buffer.toByteArray();incoming.remove(hash);fetching.remove(hash);if(!Hashes.sha256(png).equals(hash))throw new IOException();register(hash,png);persist(hash,png);}}
+  case "blob"->{boolean cape=Json.opt(j,"asset","skin").equals("cape");String hash=Json.str(j,"hash"),key=cape?"cape:"+hash:hash;if(!fetching.containsKey(key))return;int size=j.get("size").getAsInt(),offset=j.get("offset").getAsInt();if(size<33||size>1024*1024)throw new IOException();byte[] part=Base64.getDecoder().decode(Json.str(j,"data"));var buffer=incoming.computeIfAbsent(key,k->new ByteArrayOutputStream());if(offset!=buffer.size()||part.length>4096||part.length==0||part.length>size-offset)throw new IOException();buffer.writeBytes(part);if(buffer.size()==size){byte[] png=buffer.toByteArray();incoming.remove(key);fetching.remove(key);if(!Hashes.sha256(png).equals(hash))throw new IOException();register(hash,png,cape);persist(hash,png);}}
  }}catch(Exception invalid){incoming.clear();}}
- private static ResourceLocation register(String hash,byte[] png)throws IOException{dev.abros.rivet.core.skins.SkinImage.normalize(png,1024*1024);var image=NativeImage.read(png);if(image.getWidth()!=64||image.getHeight()!=64){image.close();throw new IOException(Client.text("ui.invalid_skin_dimensions_0188d5c9"));}var id=ResourceLocation.fromNamespaceAndPath("rivet","skins/"+hash);Minecraft.getInstance().getTextureManager().register(id,new DynamicTexture(image));textures.put(hash,id);while(textures.size()>256){var first=textures.keySet().iterator().next();Minecraft.getInstance().getTextureManager().release(textures.remove(first));}return id;}
+ private static ResourceLocation register(String hash,byte[] png)throws IOException{return register(hash,png,false);}
+ private static ResourceLocation register(String hash,byte[] png,boolean cape)throws IOException{byte[] pixels=cape?dev.abros.rivet.core.skins.CapeImage.normalize(png,1024*1024):dev.abros.rivet.core.skins.SkinImage.normalize(png,1024*1024);var image=NativeImage.read(pixels);if(image.getWidth()!=64||image.getHeight()!=(cape?32:64)){image.close();throw new IOException(Client.text("ui.invalid_skin_dimensions_0188d5c9"));}var id=ResourceLocation.fromNamespaceAndPath("rivet",(cape?"capes/":"skins/")+hash);Minecraft.getInstance().getTextureManager().register(id,new DynamicTexture(image));textures.put(cape?"cape:"+hash:hash,id);while(textures.size()>256){var first=textures.keySet().iterator().next();Minecraft.getInstance().getTextureManager().release(textures.remove(first));}return id;}
  static ResourceLocation preview(byte[] png)throws IOException{return register(Hashes.sha256(png),png);}
- static ResourceLocation texture(String hash){
+ static ResourceLocation capePreview(byte[] png)throws IOException{return register(Hashes.sha256(png),png,true);}
+ static ResourceLocation capeTexture(String hash){return texture(hash,true);}
+ static ResourceLocation texture(String hash){return texture(hash,false);}
+ private static ResourceLocation texture(String hash,boolean cape){
   if(!hash.matches("[0-9a-f]{64}"))return null;
-  var found=textures.get(hash);long now=System.currentTimeMillis();int generation=epoch;String key=generation+":"+hash;
-  if(found!=null||!available()||!fetching.containsKey(hash)&&fetching.size()>=64||now-fetching.getOrDefault(hash,0L)<=15000||!diskReads.add(key))return found;
-  fetching.put(hash,now);incoming.remove(hash);var path=cache().resolve(hash+".png");
+  String assetKey=cape?"cape:"+hash:hash;var found=textures.get(assetKey);long now=System.currentTimeMillis();int generation=epoch;String key=generation+":"+assetKey;
+  if(found!=null||!available()||!fetching.containsKey(assetKey)&&fetching.size()>=64||now-fetching.getOrDefault(assetKey,0L)<=15000||!diskReads.add(key))return found;
+  fetching.put(assetKey,now);incoming.remove(assetKey);var path=cache().resolve(hash+".png");
   try{DISK.execute(()->{
    if(generation!=epoch){diskReads.remove(key);return;}
    byte[] cached=null;try{if(java.nio.file.Files.size(path)<=1024*1024){var bytes=java.nio.file.Files.readAllBytes(path);if(Hashes.sha256(bytes).equals(hash))cached=bytes;}}catch(Exception ignored){}
    final byte[] data=cached;
    Minecraft.getInstance().execute(()->{diskReads.remove(key);if(generation!=epoch)return;
-    if(data!=null)try{register(hash,data);fetching.remove(hash);return;}catch(Exception ignored){}
-    var j=new JsonObject();j.addProperty("op","blob");j.addProperty("hash",hash);send(j);
+    if(data!=null)try{register(hash,data,cape);fetching.remove(assetKey);return;}catch(Exception ignored){}
+    var j=new JsonObject();j.addProperty("op",cape?"capeBlob":"blob");j.addProperty("hash",hash);send(j);
    });
-  });}catch(java.util.concurrent.RejectedExecutionException busy){diskReads.remove(key);fetching.remove(hash);}
+  });}catch(java.util.concurrent.RejectedExecutionException busy){diskReads.remove(key);fetching.remove(assetKey);}
   return found;
  }
 
@@ -106,7 +112,7 @@ public final class SkinClient {
   return skin(profile.getId(),fallback);
  }
 
- public static PlayerSkin skin(UUID owner,PlayerSkin original){if(owner==null||vanillaLookup.get()||!Minecraft.getInstance().isSameThread()||!available())return original;long now=System.currentTimeMillis();if(outgoing.size()<128&&(now-requested.getOrDefault(owner,0L)>60000||awaitingAppearance.containsKey(owner)&&now-awaitingAppearance.get(owner)>5000)){requested.put(owner,now);awaitingAppearance.put(owner,now);while(requested.size()>1024){UUID first=requested.keySet().iterator().next();requested.remove(first);awaitingAppearance.remove(first);}var j=new JsonObject();j.addProperty("op","appearance");j.addProperty("owner",owner.toString());send(j);}var p=profiles.get(owner);if(p==null)return original;String hash=Json.opt(p,"hash","");if(hash.isEmpty()){readySkins.remove(owner);return original;}
+ public static PlayerSkin skin(UUID owner,PlayerSkin original){if(owner==null||vanillaLookup.get()||!Minecraft.getInstance().isSameThread()||!available())return original;long now=System.currentTimeMillis();if(outgoing.size()<128&&(now-requested.getOrDefault(owner,0L)>60000||awaitingAppearance.containsKey(owner)&&now-awaitingAppearance.get(owner)>5000)){requested.put(owner,now);awaitingAppearance.put(owner,now);while(requested.size()>1024){UUID first=requested.keySet().iterator().next();requested.remove(first);awaitingAppearance.remove(first);}var j=new JsonObject();j.addProperty("op","appearance");j.addProperty("owner",owner.toString());send(j);}var p=profiles.get(owner);if(p==null)return original;original=withCape(owner,p,original);String hash=Json.opt(p,"hash","");if(hash.isEmpty()){readySkins.remove(owner);return original;}
   boolean slim=p.get("slim").getAsBoolean();var texture=texture(hash);
   if(texture==null){
    // An appearance notification can arrive before its PNG. Keep the last loaded skin during that gap.
@@ -116,7 +122,19 @@ public final class SkinClient {
    var ready=readySkins.get(owner);if(ready==null||!ready.hash().equals(hash)||ready.slim()!=slim)readySkins.put(owner,new ReadySkin(hash,slim));
    while(readySkins.size()>1024)readySkins.remove(readySkins.keySet().iterator().next());
   }
-  return new PlayerSkin(texture,null,null,null,slim?PlayerSkin.Model.SLIM:PlayerSkin.Model.WIDE,false);}
+  return new PlayerSkin(texture,null,original.capeTexture(),original.elytraTexture(),slim?PlayerSkin.Model.SLIM:PlayerSkin.Model.WIDE,false);}
+ private static PlayerSkin withCape(UUID owner,JsonObject profile,PlayerSkin original){
+  if(!dev.abros.rivet.network.Protocol.supportedFeatures.contains("skin-capes"))return original;
+  boolean hidden=profile.has("capeHidden")&&profile.get("capeHidden").getAsBoolean();String hash=Json.opt(profile,"capeHash","");
+  ResourceLocation cape=original.capeTexture();
+  if(hidden||hash.isEmpty())readyCapes.remove(owner);
+  if(hidden)cape=null;
+  else if(!hash.isEmpty()){
+   var loaded=capeTexture(hash);if(loaded!=null){readyCapes.put(owner,hash);cape=loaded;}else{String prior=readyCapes.get(owner);if(prior!=null&&textures.containsKey("cape:"+prior))cape=textures.get("cape:"+prior);}
+   while(readyCapes.size()>1024)readyCapes.remove(readyCapes.keySet().iterator().next());
+  }
+  return Objects.equals(cape,original.capeTexture())?original:new PlayerSkin(original.texture(),original.textureUrl(),cape,original.elytraTexture(),original.model(),original.secure());
+ }
  private static void completeAwaited(){
   if(awaited.isEmpty())return;long now=System.currentTimeMillis();var ready=new ArrayList<Awaited>();
   for(var item:awaited){var profile=profiles.get(item.owner);if(now>=item.deadline||profile!=null&&(Json.opt(profile,"hash","").isEmpty()||textures.containsKey(Json.str(profile,"hash"))))ready.add(item);}
@@ -140,7 +158,7 @@ public final class SkinClient {
   var mc=Minecraft.getInstance();if(mc.player==null)return DefaultPlayerSkin.get(new UUID(0,0));
   var original=vanillaSkin(mc.player.getGameProfile());var p=profiles.get(mc.player.getUUID());if(p==null)return original;
   String hash=Json.opt(p,"fallbackHash",Json.opt(p,"active","").isEmpty()?Json.opt(p,"hash",""):"");
-  var texture=texture(hash);return texture==null?original:new PlayerSkin(texture,null,null,null,p.has("fallbackSlim")&&p.get("fallbackSlim").getAsBoolean()?PlayerSkin.Model.SLIM:PlayerSkin.Model.WIDE,false);
+  var texture=texture(hash);return texture==null?original:new PlayerSkin(texture,null,original.capeTexture(),original.elytraTexture(),p.has("fallbackSlim")&&p.get("fallbackSlim").getAsBoolean()?PlayerSkin.Model.SLIM:PlayerSkin.Model.WIDE,false);
  }
  static PlayerSkin skin(UUID owner){var c=Minecraft.getInstance().getConnection();var info=c==null?null:c.getPlayerInfo(owner);return skin(owner,info==null?DefaultPlayerSkin.get(owner):info.getSkin());}
 }

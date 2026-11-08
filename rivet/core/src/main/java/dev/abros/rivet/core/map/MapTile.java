@@ -10,6 +10,8 @@ public final class MapTile {
     private final String[] biomes=new String[256];
     private final byte[] blockLight=new byte[256],skyLight=new byte[256];
     {Arrays.fill(blockLight,(byte)-1);Arrays.fill(skyLight,(byte)-1);}
+    private static final java.util.regex.Pattern BIOME_ID=java.util.regex.Pattern.compile("[a-z0-9_.-]+:[a-z0-9_./-]+");
+    static boolean validBiome(String value){return value!=null&&value.length()<=256&&(value.isEmpty()||BIOME_ID.matcher(value).matches());}
     private long revision;
     public MapTile(){this(new int[256],new int[256]);}
     public MapTile(int[] colors,int[] heights){this(colors,heights,heights,opaque(),new boolean[256]);}
@@ -31,7 +33,7 @@ public final class MapTile {
     public boolean glowing(int x,int z){return glowing[index(x,z)];}
     public java.util.List<MapOverlay> layers(int x,int z){return layers[index(x,z)];}
     public String biome(int x,int z){String value=biomes[index(x,z)];return value==null?"":value;}
-    public boolean biome(int x,int z,String value){if(value==null||value.length()>256||!value.isEmpty()&&!value.matches("[a-z0-9_.-]+:[a-z0-9_./-]+"))throw new IllegalArgumentException("Invalid biome");int i=index(x,z);if(biome(x,z).equals(value))return false;biomes[i]=value;revision++;return true;}
+    public boolean biome(int x,int z,String value){int i=index(x,z);if(biome(x,z).equals(value))return false;if(!validBiome(value))throw new IllegalArgumentException("Invalid biome");biomes[i]=value;revision++;return true;}
     public int blockLight(int x,int z){return blockLight[index(x,z)];}
     public boolean blockLight(int x,int z,int light){if(light< -1||light>15)throw new IllegalArgumentException("Invalid block light");int i=index(x,z);if(blockLight[i]==light)return false;blockLight[i]=(byte)light;revision++;return true;}
     public int skyLight(int x,int z){return skyLight[index(x,z)];}

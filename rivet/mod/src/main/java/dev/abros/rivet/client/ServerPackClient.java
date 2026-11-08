@@ -24,13 +24,17 @@ public final class ServerPackClient {
  }
  private static final class Flow {
   final Screen parent;final Minecraft mc;final ServerAddress address;final ServerData data;final boolean quick;final TransferState transfer;
-  final AtomicBoolean cancel=new AtomicBoolean();volatile PackClient active;final PackLoadingScreen loading;
+  final AtomicBoolean cancel=new AtomicBoolean();final java.util.concurrent.atomic.AtomicInteger working=new java.util.concurrent.atomic.AtomicInteger();volatile boolean committing,staging;volatile PackClient active;final PackLoadingScreen loading;
   CoreUpdater.Update coreUpdate;PackDiscovery.Status preflight;boolean coreRequired;
-  String catalogWarning="";boolean configure;PackDiscovery.Endpoint endpoint;PackClient.Offer offer;PackInstaller installer;PackTrust trust;String server;
-  Flow(Screen parent,Minecraft mc,ServerAddress address,ServerData data,boolean quick,TransferState transfer){this.parent=parent;this.mc=mc;this.address=address;this.data=data;this.quick=quick;this.transfer=transfer;server=address.getHost().toLowerCase(Locale.ROOT)+":"+address.getPort();loading=new PackLoadingScreen(parent,this::cancel);}
-  void cancel(){cancel.set(true);var client=active;if(client!=null)try{client.close();}catch(Exception ignored){}mc.setScreen(parent);}
-  void fail(Exception ex){if(cancel.get())return;mc.execute(()->{if(!cancel.get())mc.setScreen(new ReviewScreen(parent,Client.tr("ui.server_pack_88518674"),Errors.message(ex),Client.tr("ui.retry_request_fcb97cf7"),()->{var retry=new Flow(parent,mc,address,data,quick,transfer);retry.configure=configure;retry.check();},true));});}
-  void background(Runnable task){try{Client.CONNECT.execute(task);}catch(Exception ex){fail(ex);}}
+  Set<String> resumeChoices;String resumeManifest="";String catalogWarning="";boolean configure;PackDiscovery.Endpoint endpoint;PackClient.Offer offer;PackInstaller installer;PackTrust trust;String server;
+  Flow(Screen parent,Minecraft mc,ServerAddress address,ServerData data,boolean quick,TransferState transfer){this.parent=parent;this.mc=mc;this.address=address;this.data=data;this.quick=quick;this.transfer=transfer;server=address.getHost().toLowerCase(Locale.ROOT)+":"+address.getPort();loading=new PackLoadingScreen(parent,this::cancel);loading.pause=this::pause;loading.canPause=()->staging&&!committing;loading.canCancel=()->!committing;}
+  boolean requestCancel(){synchronized(this){if(committing)return false;cancel.set(true);}var client=active;if(client!=null)try{client.close();}catch(Exception ignored){}return true;}
+  void cancel(){if(requestCancel())mc.setScreen(parent);}
+  void pause(){if(!staging||!requestCancel())return;mc.setScreen(new PackPausedScreen(parent,()->working.get()==0,()->{retry().check();}));}
+  Flow retry(){var retry=new Flow(parent,mc,address,data,quick,transfer);retry.configure=configure;retry.resumeChoices=resumeChoices;retry.resumeManifest=resumeManifest;return retry;}
+  synchronized boolean beginCommit(){if(cancel.get())return false;committing=true;return true;}
+  void fail(Exception ex){if(cancel.get())return;mc.execute(()->{if(!cancel.get())mc.setScreen(new ReviewScreen(parent,Client.tr("ui.server_pack_88518674"),Errors.message(ex),Client.tr("ui.retry_request_fcb97cf7"),()->{retry().check();},true));});}
+  void background(Runnable task){working.incrementAndGet();try{Client.CONNECT.execute(()->{try{task.run();}finally{working.decrementAndGet();}});}catch(Exception ex){working.decrementAndGet();fail(ex);}}
   void check(){mc.setScreen(loading);background(()->{try{
    Client.ensureHub();
    installer=new PackInstaller(Client.hub.game,Client.hub.cache,dev.abros.rivet.Rivet.VERSION,Client.hub.neoVersion());trust=new PackTrust(Client.hub.game);
@@ -45,18 +49,18 @@ public final class ServerPackClient {
   }catch(Exception ex){fail(ex);}});}
   void fetch(boolean accepted){background(()->{try(var client=new PackClient(preflight.routes(),cancel)){active=client;if(cancel.get())return;if(accepted)trust.accept(server,endpoint.fingerprint());server=trust.canonical(server,endpoint.fingerprint());offer=client.manifest();if(offer==null){if(coreRequired){coreOnly();return;}if(configure)throw new java.io.IOException(Client.text("ui.the_owner_has_not_published_a_92a25485"));resume();return;}
    if(!PackRuntime.supported(offer.manifest().minecraft(),offer.manifest().loader(),Client.hub.neoVersion()))throw new java.io.IOException(Client.text("ui.install_minecraft_50fb718a")+offer.manifest().minecraft()+Client.text("ui.and_neoforge_b399f786")+offer.manifest().loader()+Client.text("ui.before_connecting_6905d240"));
-   var selected=installer.choices(server,offer.manifest());var review=installer.review(server,offer.manifest(),selected);
+   var selected=resumeChoices!=null&&resumeManifest.equals(offer.hash())?resumeChoices:installer.choices(server,offer.manifest());var review=installer.review(server,offer.manifest(),selected);
    if(!coreRequired&&!configure&&review.plan().changes().isEmpty()&&installer.installedHash().equals(offer.hash())){installer.validateMods(review);if(!Json.opt(review.state(),"packServer","").equals(server)){installer.saveSelection(review);}resume();return;}
    mc.execute(()->{if(!cancel.get())mc.setScreen(new ServerPackScreen(parent,offer.manifest(),selected,choice->review(choice)));});
-  }catch(Exception ex){fail(ex);}finally{active=null;}});}
-  void review(Set<String> choice){mc.setScreen(loading);background(()->{try{var base=installer.review(server,offer.manifest(),choice);
+  }catch(Exception ex){fail(ex);}finally{active=null;staging=false;}});}
+  void review(Set<String> choice){resumeChoices=Set.copyOf(choice);resumeManifest=offer.hash();mc.setScreen(loading);background(()->{try{var base=installer.review(server,offer.manifest(),choice);
    if(coreUpdate==null&&!base.plan().changes().isEmpty()){
     var catalog=Client.hub.coreCatalog(false);coreUpdate=catalog.updates().stream().filter(u->Versions.sameMajor(u.version(),dev.abros.rivet.Rivet.VERSION)&&Versions.compare(u.version(),dev.abros.rivet.Rivet.VERSION)>0&&preflight.compatible(u.version(),u.protocols())&&u.protocols().get("helper").getAsInt()==WireProtocols.version("helper")).findFirst().orElse(null);
     if(catalog.partial())catalogWarning=Client.text("update.partialCatalog");
    }
    if(cancel.get())return;var review=coreUpdate==null?base:installer.withCore(base,Client.loadedJar,coreUpdate);var text=new StringBuilder(catalogWarning.isEmpty()?"":catalogWarning+"\n\n").append(coreUpdate==null?"":Client.tr("update.combined",dev.abros.rivet.Rivet.VERSION,coreUpdate.version()).getString()+"\n\n").append(Client.text("ui.files_a8faed18")+review.plan().changes().size()+Client.text("ui.download_a39bb753")+review.plan().downloadBytes()+Client.text("ui.bytes_beea81d5"));for(var change:review.plan().changes())text.append(change.after()==null?Client.text("ui.delete_1c562302"):change.before()==null?Client.text("ui.add_8e5f90ba"):Client.text("ui.replace_90e10d85")).append(change.path()).append('\n');if(!review.plan().conflicts().isEmpty())text.append(Client.text("ui.existing_or_modified_files_affected_f592057d")).append(String.join("\n",review.plan().conflicts()));text.append(review.plan().changes().isEmpty()?Client.text("ui.the_files_already_match_the_pack_62a4af53"):Client.text("ui.existing_files_being_modified_will_be_01a9083a"));mc.execute(()->{if(!cancel.get())mc.setScreen(new ReviewScreen(parent,Client.tr("ui.pack_changes_d70cc394"),text.toString(),Component.literal(review.plan().changes().isEmpty()?Client.text("map.tool.save"):Client.text("install")),()->stage(review),true));});}catch(Exception ex){fail(ex);}});}
   void coreOnly(){mc.execute(()->{if(cancel.get())return;mc.setScreen(new ReviewScreen(parent,Client.tr("update.required"),Client.tr("update.coreRequired",dev.abros.rivet.Rivet.VERSION,coreUpdate.version()).getString(),Client.tr("install"),()->{
-   mc.setScreen(loading);background(()->{try{if(cancel.get())return;String id=Client.hub.prepareCoreUpdate(Client.loadedJar,coreUpdate,event->loading.progress=event,cancel);Client.pending=id;mc.execute(()->{if(!cancel.get())mc.setScreen(new RestartScreen(parent,id));});}catch(Exception ex){fail(ex);}});
+   staging=true;mc.setScreen(loading);background(()->{try{if(cancel.get())return;String id=Client.hub.prepareCoreUpdate(Client.loadedJar,coreUpdate,event->loading.progress=event,cancel,this::beginCommit);Client.pending=id;mc.execute(()->{if(!cancel.get())mc.setScreen(new RestartScreen(parent,id));});}catch(Exception ex){fail(ex);}finally{staging=false;}});
   },true));});}
   void stage(PackInstaller.Review review){
    if(review.plan().changes().isEmpty()){
@@ -65,15 +69,16 @@ public final class ServerPackClient {
      mc.execute(()->{if(!cancel.get())mc.setScreen(new TextScreen(parent,Client.tr("ui.server_pack_88518674"),Client.text("ui.component_selection_saved_the_pack_files_15d12937")));});
     }catch(Exception ex){fail(ex);}});return;
    }
-   mc.setScreen(loading);background(()->{String id="";try(var client=new PackClient(preflight.routes(),cancel)){active=client;id=installer.stage(review,client,cancel,text->loading.message=text,event->loading.progress=event);if(cancel.get()){new Transactions(Client.hub.game).abortReady(id);return;}Client.hub.startHelper(id);Client.pending=id;String ready=id;mc.execute(()->{if(!cancel.get())mc.setScreen(new RestartScreen(parent,ready));});}catch(Exception ex){if(!id.isEmpty())try{new Transactions(Client.hub.game).abortReady(id);}catch(Exception ignored){}fail(ex);}finally{active=null;}});}
+   staging=true;mc.setScreen(loading);background(()->{String id="";try(var client=new PackClient(preflight.routes(),cancel)){active=client;id=installer.stage(review,client,cancel,text->loading.message=text,event->loading.progress=event);if(!beginCommit()){new Transactions(Client.hub.game).abortReady(id);return;}Client.hub.startHelper(id);Client.pending=id;String ready=id;mc.execute(()->{if(!cancel.get())mc.setScreen(new RestartScreen(parent,ready));});}catch(Exception ex){if(!id.isEmpty())try{new Transactions(Client.hub.game).abortReady(id);}catch(Exception ignored){}fail(ex);}finally{active=null;staging=false;}});}
   void resume(){mc.execute(()->{if(cancel.get())return;resuming=true;try{ConnectScreen.startConnecting(parent,mc,address,data,quick,transfer);}finally{resuming=false;}});}
  }
  private static final class PackLoadingScreen extends Screen {
-  final Screen parent;final Runnable cancel;volatile dev.abros.rivet.core.InstallProgress progress=dev.abros.rivet.core.InstallProgress.phase("checking");volatile String message=Client.text("ui.checking_server_pack_f3bfd987");UiDialog dialog;
+  final Screen parent;final Runnable cancel;Runnable pause;java.util.function.BooleanSupplier canPause=()->false,canCancel=()->true;net.minecraft.client.gui.components.Button pauseButton,cancelButton;volatile dev.abros.rivet.core.InstallProgress progress=dev.abros.rivet.core.InstallProgress.phase("checking");volatile String message=Client.text("ui.checking_server_pack_f3bfd987");UiDialog dialog;
   PackLoadingScreen(Screen parent,Runnable cancel){super(Client.tr("ui.server_pack_88518674"));this.parent=parent;this.cancel=cancel;}
-  protected void init(){dialog=UiDialog.fit(width,height,360,180);var f=dialog.footer();addRenderableWidget(UiActions.button(Client.tr("cancel"),UiActions.Tone.NORMAL,"",b->cancel.run()).bounds(f.x(),f.bottom()-20,f.width(),20).build());}
+  protected void init(){dialog=UiDialog.fit(width,height,360,180);var f=dialog.footer();int w=pause==null?f.width():(f.width()-8)/2;cancelButton=addRenderableWidget(UiActions.button(Client.tr("cancel"),UiActions.Tone.NORMAL,"",b->{if(canCancel.getAsBoolean())cancel.run();}).bounds(f.x(),f.bottom()-20,w,20).build());if(pause!=null)pauseButton=addRenderableWidget(UiActions.button(Client.tr("builder.pause"),UiActions.Tone.NORMAL,"",b->{if(canPause.getAsBoolean())pause.run();}).bounds(f.x()+w+8,f.bottom()-20,w,20).build());tick();}
+  public void tick(){if(pauseButton!=null)pauseButton.active=canPause.getAsBoolean();if(cancelButton!=null)cancelButton.active=canCancel.getAsBoolean();}
   public void renderBackground(net.minecraft.client.gui.GuiGraphics g,int x,int y,float d){var f=dialog.frame();UiDialog.surface(g,f.x(),f.y(),f.width(),f.height());}
   public void render(net.minecraft.client.gui.GuiGraphics g,int x,int y,float d){UiDialog.render(parent,this,g,d,()->{super.render(g,x,y,d);var h=dialog.header();UiHeading.dialog(g,font,title,h.x(),dialog.frame().y(),h.width());var b=dialog.body();var lines=font.split(Component.literal(message),b.width());for(int i=0;i<Math.min(2,lines.size());i++)g.drawString(font,lines.get(i),b.x(),b.y()+i*font.lineHeight,UiKit.muted(),false);UiProgress.draw(g,font,b.x(),b.bottom()-40,b.width(),progress);});}
-  public void onClose(){cancel.run();}public boolean isPauseScreen(){return false;}
+  public void onClose(){if(canCancel.getAsBoolean())cancel.run();}public boolean isPauseScreen(){return false;}
  }
 }

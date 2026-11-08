@@ -81,6 +81,7 @@ public final class JavaDomains implements AutoCloseable {
   public CompletableFuture<Profile> profile(UUID id){return submit(()->{var j=read("profiles/"+id.toString(),Map.of()).getAsJsonObject("item");return new Profile(UUID.fromString(s(j,"uuid")),s(j,"name"),s(j,"about"),s(j,"interests"),s(j,"revision"));});}
   public CompletableFuture<NotificationPreferences> notificationPreferences(){return submit(()->{var j=read("me/notification-preferences",Map.of()).getAsJsonObject("item");var muted=new ArrayList<String>();j.getAsJsonArray("muted").forEach(e->muted.add(e.getAsString()));return new NotificationPreferences(muted,n(j,"snoozeUntil"),s(j,"revision"));});}
   public CompletableFuture<Page<Notice>> notifications(String cursor){return submit(()->page(read("me/notifications",query(cursor)),"items",j->new Notice(s(j,"id"),s(j,"title"),s(j,"body"),s(j,"section"),n(j,"at"),b(j,"read"))));}
+  public CompletableFuture<Page<Notice>> notifications(String cursor,String locale){return submit(()->page(read("me/notifications",notificationQuery(cursor,locale)),"items",j->new Notice(s(j,"id"),s(j,"title"),s(j,"body"),s(j,"section"),n(j,"at"),b(j,"read"))));}
   public CompletableFuture<Page<ChatMessage>> chat(String cursor){return submit(()->page(read("chat/history",query(cursor)),"items",j->new ChatMessage(s(j,"id"),n(j,"at"),s(j,"channel"),s(j,"text"))));}
   public CompletableFuture<Page<Channel>> channels(String cursor){return submit(()->page(read("chat/channels",query(cursor)),"items",j->new Channel(s(j,"id"),s(j,"name"))));}
   public CompletableFuture<Publications> publications(boolean own,String cursor,OptionalLong snapshot){return submit(()->{var q=new HashMap<>(query(cursor));if(snapshot.isPresent())q.put("snapshot",Long.toString(snapshot.getAsLong()));var j=read((own?"me/":"")+"map/objects",q);var p=page(j,"items",JavaDomains::publication);return new Publications(p.items(),p.nextCursor(),n(j,"snapshot"));});}
@@ -93,6 +94,7 @@ public final class JavaDomains implements AutoCloseable {
    return new Receipt(operationId,s(result,"id"),s(result,"revision"),b(result,"replayed"));
   });}
  }
+ private static Map<String,String> notificationQuery(String cursor,String locale){var result=new HashMap<>(query(cursor));result.put("locale",Objects.requireNonNull(locale));return result;}
  private static String cursor(String value){if(value==null||value.length()>256)throw new ApiException(INVALID_ARGUMENT,"Invalid cursor");return value;}
  private static Map<String,String> query(String value){return cursor(value).isEmpty()?Map.of():Map.of("cursor",value);}
  private static <T> Page<T> page(JsonObject j,String field,Function<JsonObject,T> convert){var items=new ArrayList<T>();for(var item:j.getAsJsonArray(field))items.add(convert.apply(item.getAsJsonObject()));return new Page<>(items,s(j,"nextCursor"));}
