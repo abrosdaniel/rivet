@@ -40,7 +40,7 @@ final class MapIntegrationLayers {
    glyph(g,m,x,y,size);occupied.add(new NativeLayout.Box(x-size/2,y-size/2,size,size));
    String label=UiKit.fit(font,m.name(),120);int w=font.width(label)+8;var box=new NativeLayout.Box(x-w/2,y+size/2+2,w,13);
    if(box.x()>=0&&box.right()<width&&box.bottom()<height&&!occupied.intersects(box)&&reserved.stream().noneMatch(b->b.x()<box.right()&&b.right()>box.x()&&b.y()<box.bottom()&&b.bottom()>box.y())){
-    UiKit.control(g,box.x(),box.y(),box.width(),box.height(),UiKit.surface());g.drawString(font,label,box.x()+4,box.y()+2,UiKit.text(),false);occupied.add(box);
+    UiKit.control(g,box.x(),box.y(),box.width(),box.height(),UiKit.surface());UiCanvas.text(g,font,label,box.x()+4,box.y()+2,UiKit.text(),false);occupied.add(box);
    }
   }
  }

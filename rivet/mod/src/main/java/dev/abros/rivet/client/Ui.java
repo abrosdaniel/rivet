@@ -7,9 +7,9 @@ final class Ui {
  static int text(GuiGraphics g,Font f,String s,int x,int y,int c){return text(g,f,s,x,y,c,true);}
  static int text(GuiGraphics g,Font f,Component s,int x,int y,int c){return text(g,f,s,x,y,c,true);}
  static int text(GuiGraphics g,Font f,net.minecraft.util.FormattedCharSequence s,int x,int y,int c){return text(g,f,s,x,y,c,true);}
- static int text(GuiGraphics g,Font f,String s,int x,int y,int c,boolean shadow){return g.drawString(f,s,x,y,UiPalette.color(c),false);}
- static int text(GuiGraphics g,Font f,Component s,int x,int y,int c,boolean shadow){return g.drawString(f,s,x,y,UiPalette.color(c),false);}
- static int text(GuiGraphics g,Font f,net.minecraft.util.FormattedCharSequence s,int x,int y,int c,boolean shadow){return g.drawString(f,s,x,y,UiPalette.color(c),false);}
+ static int text(GuiGraphics g,Font f,String s,int x,int y,int c,boolean shadow){return UiCanvas.text(g,f,s,x,y,UiPalette.color(c),false);}
+ static int text(GuiGraphics g,Font f,Component s,int x,int y,int c,boolean shadow){return UiCanvas.text(g,f,s,x,y,UiPalette.color(c),false);}
+ static int text(GuiGraphics g,Font f,net.minecraft.util.FormattedCharSequence s,int x,int y,int c,boolean shadow){return UiCanvas.text(g,f,s,x,y,UiPalette.color(c),false);}
  static void centered(GuiGraphics g,Font f,String s,int x,int y,int c){text(g,f,s,x-f.width(s)/2,y,c);}
  static void centered(GuiGraphics g,Font f,Component s,int x,int y,int c){text(g,f,s,x-f.width(s)/2,y,c);}
  static void centered(GuiGraphics g,Font f,net.minecraft.util.FormattedCharSequence s,int x,int y,int c){text(g,f,s,x-f.width(s)/2,y,c);}

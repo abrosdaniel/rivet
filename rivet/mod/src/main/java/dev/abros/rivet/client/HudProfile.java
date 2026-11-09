@@ -18,7 +18,7 @@ final class HudProfile {
  }
  static int height(boolean preview){var lines=lines(preview);return lines.isEmpty()&&!shown("head")?0:Math.max(shown("head")?24:0,lines.size()*12)+16;}
  static void draw(GuiGraphics g,int x,int y,int w,boolean preview){var mc=Minecraft.getInstance();var rows=lines(preview);boolean head=shown("head");int content=Math.max(head?24:0,rows.size()*12);if(head){int hy=y+8+(content-24)/2;g.fill(x+7,hy-1,x+33,hy+25,UiPalette.scrollTrack());PlayerFaceRenderer.draw(g,mc.player==null?SkinClient.ordinarySkin():SkinClient.skin(mc.player.getUUID()),x+8,hy,24);}
-  int tx=x+(head?42:10),ty=y+8+(content-rows.size()*12)/2,limit=w-(head?52:20);for(var line:rows){g.drawString(mc.font,net.minecraft.locale.Language.getInstance().getVisualOrder(mc.font.substrByWidth(line.text(),Math.max(0,limit))),tx,ty,line.primary()?UiKit.text():UiKit.muted(),false);ty+=12;}
+  int tx=x+(head?42:10),ty=y+8+(content-rows.size()*12)/2,limit=w-(head?52:20);for(var line:rows){UiCanvas.text(g,mc.font,net.minecraft.locale.Language.getInstance().getVisualOrder(mc.font.substrByWidth(line.text(),Math.max(0,limit))),tx,ty,line.primary()?UiKit.text():UiKit.muted(),false);ty+=12;}
  }
  static String fullText(){return lines(false).stream().map(line->line.text().getString()).collect(java.util.stream.Collectors.joining("\n"));}
  private static Component metadata(String value){var out=Component.empty();PlayerText.text(value).visit((style,text)->{if(style.getColor()!=null)style=style.withColor(readable(style.getColor().getValue()));out.append(Component.literal(text).withStyle(style));return Optional.empty();},net.minecraft.network.chat.Style.EMPTY);return out;}

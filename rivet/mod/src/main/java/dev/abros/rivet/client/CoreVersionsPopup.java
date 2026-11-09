@@ -3,7 +3,6 @@ package dev.abros.rivet.client;
 import dev.abros.rivet.Rivet;
 import dev.abros.rivet.core.CoreUpdater;
 import net.minecraft.client.gui.GuiGraphics;
-import net.minecraft.client.gui.components.Button;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.network.chat.Component;
 import java.util.List;
@@ -59,13 +58,13 @@ final class CoreVersionsPopup extends ScrollScreen {
     @Override public void render(GuiGraphics graphics,int x,int y,float delta){
         UiDialog.render(parent,this,graphics,delta,()->{super.render(graphics,x,y,delta);
             Branding.icon(graphics,left()+12,top()+12,14);
-            graphics.drawString(font,Client.text("ui.rivet_update_5591c964"),left()+32,top()+15,UiKit.text(),false);
-            graphics.drawString(font,Client.text("ui.installed_version_81f7e135")+Rivet.VERSION,left()+12,top()+34,UiKit.muted(),false);
-            if(versions.isEmpty()&&!failed&&!partial)graphics.drawString(font,loading?Client.text("ui.fetching_versions_ab017709"):Client.text("ui.no_versions_available_50a8c186"),left()+12,top()+58,UiKit.muted(),false);
+            UiCanvas.text(graphics,font,Client.text("ui.rivet_update_5591c964"),left()+32,top()+15,UiKit.text(),false);
+            UiCanvas.text(graphics,font,Client.text("ui.installed_version_81f7e135")+Rivet.VERSION,left()+12,top()+34,UiKit.muted(),false);
+            if(versions.isEmpty()&&!failed&&!partial)UiCanvas.text(graphics,font,loading?Client.text("ui.fetching_versions_ab017709"):Client.text("ui.no_versions_available_50a8c186"),left()+12,top()+58,UiKit.muted(),false);
             String message=loading?Client.text("ui.checking_available_versions_8195b233"):!status.isBlank()?status:selected==null?Client.text("ui.select_a_version_to_install_7949aa4b"):Client.text("ui.install_02059d44")+selected.version()+Client.text("ui.a_game_restart_will_be_required_825c7633");
             if(installing||loading)UiProgress.draw(graphics,font,left()+12,bottom()-78,panelWidth()-24,installing?progress:dev.abros.rivet.core.InstallProgress.phase("checking"));
             var lines=font.split(Component.literal(message),panelWidth()-24);
-            for(int i=0;!installing&&!loading&&i<Math.min(2,lines.size());i++)graphics.drawString(font,lines.get(i),left()+12,bottom()-60+i*11,UiKit.muted(),false);
+            for(int i=0;!installing&&!loading&&i<Math.min(2,lines.size());i++)UiCanvas.text(graphics,font,lines.get(i),left()+12,bottom()-60+i*11,UiKit.muted(),false);
             graphics.flush();
         });
     }

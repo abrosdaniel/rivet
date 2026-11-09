@@ -33,20 +33,20 @@ final class TradeAdminScreen extends ScrollScreen {
  @Override public void tick(){if(!ServerMenuClient.may("rivet.trade.view"))onClose();if(loading&&System.currentTimeMillis()-requestedAt>10000)loading=false;}
  @Override public void onClose(){if(!mode().equals("list"))TradeClient.command("rivet tradeadmin");else minecraft.setScreen(new ServerMenuScreen(null,"admin"));}
  @Override public void renderBackground(GuiGraphics g,int x,int y,float dt){workspace.draw(g);}
- @Override public void render(GuiGraphics g,int mx,int my,float dt){super.render(g,mx,my,dt);workspace.heading(g,font,id().isEmpty()?title:Component.literal(Json.str(data,"name")));var area=workspace.page();g.drawString(font,UiKit.fit(font,id().isEmpty()?Client.text("trade.admin.title"):Json.str(data,"name"),Math.max(1,area.width()-100)),area.x()+100,area.y()+1,UiKit.text(),false);if(!mode().equals("list"))g.drawString(font,UiKit.fit(font,TradeCard.created(data),Math.max(1,area.width()-100)),area.x()+100,area.y()+13,UiKit.muted(),false);
-  if(!mode().equals("list")&&data.get("pages").getAsInt()>1){g.drawString(font,UiKit.fit(font,Client.tr("trade.admin.page",data.get("page").getAsInt()+1,data.get("pages").getAsInt()).getString(),100),area.x()+22,workspace.footer().y()+6,UiKit.muted(),false);}
+ @Override public void render(GuiGraphics g,int mx,int my,float dt){super.render(g,mx,my,dt);workspace.heading(g,font,id().isEmpty()?title:Component.literal(Json.str(data,"name")));var area=workspace.page();UiCanvas.text(g,font,UiKit.fit(font,id().isEmpty()?Client.text("trade.admin.title"):Json.str(data,"name"),Math.max(1,area.width()-100)),area.x()+100,area.y()+1,UiKit.text(),false);if(!mode().equals("list"))UiCanvas.text(g,font,UiKit.fit(font,TradeCard.created(data),Math.max(1,area.width()-100)),area.x()+100,area.y()+13,UiKit.muted(),false);
+  if(!mode().equals("list")&&data.get("pages").getAsInt()>1){UiCanvas.text(g,font,UiKit.fit(font,Client.tr("trade.admin.page",data.get("page").getAsInt()+1,data.get("pages").getAsInt()).getString(),100),area.x()+22,workspace.footer().y()+6,UiKit.muted(),false);}
   if(mode().equals("detail")){
    int gap=16,trayWidth=(area.width()-gap)/2,top=area.y()+54;
    int cell=18,columns=6;
    for(int side=0;side<2;side++){int tx=area.x()+side*(trayWidth+gap);String name=Json.str(data,side==0?"nameA":"nameB");
     net.minecraft.client.gui.components.PlayerFaceRenderer.draw(g,SkinClient.skin(java.util.UUID.fromString(Json.str(data,side==0?"uuidA":"uuidB"))),tx,top,16);
-    g.drawString(font,UiKit.fit(font,name,trayWidth-22),tx+21,top+4,UiKit.text(),false);
+    UiCanvas.text(g,font,UiKit.fit(font,name,trayWidth-22),tx+21,top+4,UiKit.text(),false);
     int sx=tx+(trayWidth-cell*columns)/2,sy=top+22;
     for(int slot=0;slot<12;slot++){int px=sx+(slot%columns)*cell,py=sy+(slot/columns)*cell;g.fill(px,py,px+cell-1,py+cell-1,UiKit.surface(UiKit.Surface.CONTROL));if(mx>=px&&mx<px+cell-1&&my>=py&&my<py+cell-1)g.fill(px,py,px+cell-1,py+cell-1,UiKit.surface(UiKit.Surface.HOVER));}
-    for(var icon:icons){if(icon.slot()/24!=side)continue;int slot=icon.slot()%24,px=sx+(slot%columns)*cell,py=sy+(slot/columns)*cell;var item=icon.item();g.renderItem(item,px+(cell-16)/2,py+(cell-16)/2);String count=TradeScreen.compactCount(icon.after());g.pose().pushPose();g.pose().translate(0,0,200);g.drawString(font,count,px+cell-2-font.width(count),py+cell-9,0xFFFFFF,true);g.pose().popPose();if(mx>=px&&mx<px+cell&&my>=py&&my<py+cell){var tooltip=new java.util.ArrayList<>(getTooltipFromItem(minecraft,item));tooltip.add(Component.literal("× "+String.format(java.util.Locale.ROOT,"%,d",icon.after()).replace(',',' ')));g.renderTooltip(font,tooltip,item.getTooltipImage(),mx,my);}}
+    for(var icon:icons){if(icon.slot()/24!=side)continue;int slot=icon.slot()%24,px=sx+(slot%columns)*cell,py=sy+(slot/columns)*cell;var item=icon.item();g.renderItem(item,px+(cell-16)/2,py+(cell-16)/2);String count=TradeScreen.compactCount(icon.after());g.pose().pushPose();g.pose().translate(0,0,200);UiCanvas.text(g,font,count,px+cell-2-font.width(count),py+cell-9,0xFFFFFF,true);g.pose().popPose();if(mx>=px&&mx<px+cell&&my>=py&&my<py+cell){var tooltip=new java.util.ArrayList<>(getTooltipFromItem(minecraft,item));tooltip.add(Component.literal("× "+String.format(java.util.Locale.ROOT,"%,d",icon.after()).replace(',',' ')));g.renderTooltip(font,tooltip,item.getTooltipImage(),mx,my);}}
    }
   }
-  if(!mode().equals("detail")&&data.getAsJsonArray("rows").isEmpty())g.drawString(font,Client.tr("trade.admin.empty"),area.x(),area.y()+(mode().equals("list")?32:56),UiKit.muted(),false);
+  if(!mode().equals("detail")&&data.getAsJsonArray("rows").isEmpty())UiCanvas.text(g,font,Client.tr("trade.admin.empty"),area.x(),area.y()+(mode().equals("list")?32:56),UiKit.muted(),false);
  }
  @Override public boolean isPauseScreen(){return false;}
 }

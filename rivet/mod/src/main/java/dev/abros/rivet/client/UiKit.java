@@ -4,6 +4,7 @@ import net.minecraft.client.gui.GuiGraphics;
 final class UiKit {
  static final int ACCENT=0xFF83C6C4;
  static final int CONTROL_HEIGHT=20, ROW_STRIDE=24, GAP=4, INSET=8, CHECK_SIZE=10;
+ static final int RADIUS_CONTROL=5, RADIUS_PANEL=8;
  static final int SPACE_SMALL=4, SPACE_MEDIUM=8, SPACE_LARGE=12, SPACE_SECTION=16;
  enum Surface { CANVAS, PANEL, CONTROL, INPUT, SELECTED, HOVER }
  private UiKit(){}
@@ -22,10 +23,11 @@ final class UiKit {
   case HOVER->UiTheme.mix(UiPalette.foundation(2),text(),0.09f);
  };}
  /** Rectangles remain available for clipping, tracks and quantitative fills. */
- static void surface(GuiGraphics g,int x,int y,int w,int h,int color){if(w>0&&h>0)g.fill(x,y,x+w,y+h,color);}
- /** Integer scanlines keep native text and small GUI scales crisp; no textures or allocations. */
+ static void surface(GuiGraphics g,int x,int y,int w,int h,int color){if(w>0&&h>0&&!UiCanvas.rounded(g,x,y,w,h,0,color,false))g.fill(x,y,x+w,y+h,color);}
+ /** Shared GPU shape; scanlines are the compatibility fallback. */
  static void rounded(GuiGraphics g,int x,int y,int w,int h,int radius,int color){
   if(w<=0||h<=0)return;
+  if(UiCanvas.rounded(g,x,y,w,h,radius,color,false))return;
   int r=Math.max(0,Math.min(radius,Math.min(w,h)/2));
   surface(g,x,y+r,w,h-2*r,color);
   for(int row=0;row<r;row++){
@@ -36,6 +38,7 @@ final class UiKit {
  }
  static void ring(GuiGraphics g,int x,int y,int w,int h,int radius,int color){
   if(w<=0||h<=0)return;
+  if(UiCanvas.rounded(g,x,y,w,h,radius,color,true))return;
   int r=Math.max(0,Math.min(radius,Math.min(w,h)/2));
   if(r==0){g.renderOutline(x,y,w,h,color);return;}
   for(int row=0;row<r;row++){
@@ -47,20 +50,31 @@ final class UiKit {
   }
   surface(g,x,y+r,1,h-2*r,color);surface(g,x+w-1,y+r,1,h-2*r,color);
  }
+ /** Annular sectors share the same renderer as controls; native geometry is recovery only. */
+ static void sector(GuiGraphics g,int x,int y,double inner,double outer,double start,double end,int color){
+  if(UiCanvas.sector(g,x,y,(float)inner,(float)outer,(float)Math.toDegrees(start),(float)Math.toDegrees(end-start),color))return;
+  g.flush();com.mojang.blaze3d.systems.RenderSystem.enableBlend();com.mojang.blaze3d.systems.RenderSystem.defaultBlendFunc();com.mojang.blaze3d.systems.RenderSystem.setShader(net.minecraft.client.renderer.GameRenderer::getPositionColorShader);
+  var b=com.mojang.blaze3d.vertex.Tesselator.getInstance().begin(com.mojang.blaze3d.vertex.VertexFormat.Mode.QUADS,com.mojang.blaze3d.vertex.DefaultVertexFormat.POSITION_COLOR);var matrix=g.pose().last().pose();
+  int steps=Math.max(2,(int)Math.ceil((end-start)*outer/4));
+  for(int i=0;i<steps;i++){double a=start+(end-start)*i/steps,c=start+(end-start)*(i+1)/steps;
+   for(double[] point:new double[][]{{outer,a},{inner,a},{inner,c},{outer,c}})b.addVertex(matrix,x+(float)(Math.cos(point[1])*point[0]),y+(float)(Math.sin(point[1])*point[0]),0).setColor(color);
+  }
+  com.mojang.blaze3d.vertex.BufferUploader.drawWithShader(b.buildOrThrow());com.mojang.blaze3d.systems.RenderSystem.disableBlend();
+ }
  static void material(GuiGraphics g,int x,int y,int w,int h){
-  rounded(g,x,y+3,w,h,8,0x24000000);
-  rounded(g,x,y,w,h,8,AccessibilityScreen.background(surface()));
+  if(!AccessibilityScreen.highContrast()&&!UiCanvas.shadow(g,x,y+2,w,h,RADIUS_PANEL,0x30000000))rounded(g,x,y+3,w,h,RADIUS_PANEL,0x24000000);
+  rounded(g,x,y,w,h,RADIUS_PANEL,AccessibilityScreen.background(surface()));
+  ring(g,x,y,w,h,RADIUS_PANEL,UiTheme.mix(surface(),border(),AccessibilityScreen.highContrast()?1:.35f));
  }
  /** Floating controls over a busy canvas: quiet edge, soft elevation, opaque readable content. */
  static void floating(GuiGraphics g,int x,int y,int w,int h){
-  rounded(g,x-1,y+4,w+2,h,9,0x18000000);
   material(g,x,y,w,h);
   if(AccessibilityScreen.highContrast())ring(g,x,y,w,h,8,border());
  }
  static void plate(GuiGraphics g,int x,int y,int w,int h,int color){rounded(g,x,y,w,h,6,color);}
- static void control(GuiGraphics g,int x,int y,int w,int h,int color){rounded(g,x,y,w,h,4,color);}
+ static void control(GuiGraphics g,int x,int y,int w,int h,int color){rounded(g,x,y,w,h,RADIUS_CONTROL,color);}
  static void divider(GuiGraphics g,int x,int y,int width){if(width>0)g.fill(x,y,x+width,y+1,border());}
- static void focus(GuiGraphics g,int x,int y,int width,int height){ring(g,x,y,width,height,4,accent());}
+ static void focus(GuiGraphics g,int x,int y,int width,int height){ring(g,x,y,width,height,RADIUS_CONTROL,accent());}
  static void checkbox(GuiGraphics g,int x,int y,boolean checked,int color){
   rounded(g,x,y,CHECK_SIZE,CHECK_SIZE,2,surface(Surface.INPUT));ring(g,x,y,CHECK_SIZE,CHECK_SIZE,2,checked?color:border());
   if(checked)UiIcons.draw(g,UiIcons.CHECK,x-1,y-1,color);

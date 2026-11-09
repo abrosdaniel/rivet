@@ -74,9 +74,9 @@ def main():
         server = start_server('first')
         stages = [('hdReview', 'RivetTradeA')] if args.review_hd else [('capeReview', 'RivetTradeA')] if args.review_capes else [('adminReview', 'RivetTradeStaff')] if args.review_admin else [('review', 'RivetTradeA')] if args.review else [s for s in STAGES if not args.stage or s[0] in args.stage]
         if args.hd_check and not review:
-            stages = stages + [('hdReview', 'RivetTradeA'), ('hdReload', 'RivetTradeA')]
+            stages = stages + [('hdReview', 'RivetTradeA'), ('hdReload', 'RivetTradeA'), ('officialCape', 'RivetTradeA'), ('officialCapeReload', 'RivetTradeA')]
         for stage, player in stages:
-            if stage in ('claimA', 'resume', 'draftReturn', 'cursorReconnect', 'frozenOwner', 'hdReload'):
+            if stage in ('claimA', 'resume', 'draftReturn', 'cursorReconnect', 'frozenOwner', 'hdReload', 'officialCapeReload'):
                 if stage == 'resume':
                     server.kill()
                     server.wait(timeout=20)
@@ -91,6 +91,11 @@ def main():
                     client_env['RIVET_TRADE_SCENARIO'] = 'hdReview'
                     client_env['RIVET_HD_RELOAD'] = '1'
                 client_env['RIVET_HD_CAPTURES'] = str(work / 'hd-captures')
+            if stage in ('officialCape', 'officialCapeReload'):
+                client_env['RIVET_TRADE_SCENARIO'] = 'officialCape'
+                client_env['RIVET_HD_CAPTURES'] = str(work / 'official-cape-captures')
+                if stage == 'officialCapeReload':
+                    client_env['RIVET_OFFICIAL_RELOAD'] = '1'
             log = work / (stage + '.log')
             with log.open('w') as stream:
                 client = subprocess.Popen(command(work, java, 'client') + ['--username', player, '--width', '1280', '--height', '1024'], cwd=work / 'client', env=client_env, stdout=stream, stderr=subprocess.STDOUT)
@@ -102,7 +107,7 @@ def main():
                 marker = {'review': 'RIVET_TRADE_REVIEW_READY', 'adminReview': 'RIVET_TRADE_ADMIN_REVIEW_READY', 'capeReview': 'RIVET_CAPE_REVIEW_READY', 'hdReview': 'RIVET_HD_APPEARANCE_OK'}[stage]
                 verify(log, marker)
             else:
-                verify(log, 'RIVET_HD_RELOAD_OK width=1024' if stage == 'hdReload' else 'RIVET_HD_APPEARANCE_OK width=1024 capeWidth=1024' if stage == 'hdReview' else 'RIVET_TRADE_OK ' + stage)
+                verify(log, 'RIVET_OFFICIAL_CAPE_OK' if stage in ('officialCape', 'officialCapeReload') else 'RIVET_HD_RELOAD_OK width=1024' if stage == 'hdReload' else 'RIVET_HD_APPEARANCE_OK width=1024 capeWidth=1024' if stage == 'hdReview' else 'RIVET_TRADE_OK ' + stage)
         print('RIVET_TRADE_NETWORK_OK', flush=True)
     finally:
         if server is not None:

@@ -25,4 +25,13 @@ import static org.junit.jupiter.api.Assertions.*;
   var disabled=new SkinStore(db,new SkinSettings(true,1,8,"false",false,1,256));assertThrows(IllegalArgumentException.class,()->disabled.mutate(owner,"capeHide",input(""),null));assertEquals("",Json.str(disabled.appearance(owner),"capeHash"));
   store.mutate(owner,"capeSelect",input(""),null);assertEquals("",Json.str(store.appearance(owner),"capeHash"));assertEquals(1,store.library(owner).getAsJsonObject("capes").getAsJsonArray("entries").size());
  }
+ @Test void officialCapeSurvivesCustomDeleteHideAndReloadWithoutUsingQuota()throws Exception{
+  var db=TestDatabase.database(temp);var settings=new SkinSettings(true,1,8,"nickname");var store=new SkinStore(db,settings);var owner=UUID.randomUUID();var png=SkinImageTest.png(64,32);
+  store.fallback(owner,"appearance-v2:nickname:test",null,false,png,System.currentTimeMillis());
+  String hash=Json.str(store.appearance(owner),"officialCapeHash");assertFalse(hash.isEmpty());assertEquals(hash,Json.str(store.appearance(owner),"capeHash"));assertEquals(0,store.library(owner).getAsJsonObject("capes").getAsJsonArray("entries").size());
+  store.mutate(owner,"capeUpload",input(""),png);String id=Json.str(store.library(owner).getAsJsonObject("capes"),"active");store.mutate(owner,"capeDelete",input(id),null);assertTrue(store.capeBytes(hash).length>0);
+  store.mutate(owner,"capeHide",input(""),null);assertEquals("",Json.str(store.appearance(owner),"capeHash"));assertEquals(hash,Json.str(store.appearance(owner),"officialCapeHash"));
+  store=new SkinStore(db,settings);store.mutate(owner,"capeSelect",input(""),null);assertEquals(hash,Json.str(store.appearance(owner),"capeHash"));
+  store.fallback(owner,"appearance-v2:nickname:test",null,false,null,System.currentTimeMillis());assertEquals("",Json.str(store.appearance(owner),"officialCapeHash"));
+ }
 }

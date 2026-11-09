@@ -54,10 +54,10 @@ public final class TradeScreen extends AbstractContainerScreen<TradeMenu> {
   if(item.getCount()<100){super.renderSlotContents(g,item,slot,countString);return;}
   // Keep native durability, cooldown and drag previews; only abbreviate the count.
   super.renderSlotContents(g,item,slot,"");String label=compactCount(item.getCount());float scale=Math.min(1F,16F/font.width(label));
-  g.pose().pushPose();g.pose().translate(slot.x+17,slot.y+17-font.lineHeight*scale,200);g.pose().scale(scale,scale,1);g.drawString(font,label,-font.width(label),0,0xFFFFFF,true);g.pose().popPose();
+  g.pose().pushPose();g.pose().translate(slot.x+17,slot.y+17-font.lineHeight*scale,200);g.pose().scale(scale,scale,1);UiCanvas.text(g,font,label,-font.width(label),0,0xFFFFFF,true);g.pose().popPose();
  }
  @Override protected java.util.List<Component> getTooltipFromContainerItem(net.minecraft.world.item.ItemStack item){var lines=new java.util.ArrayList<>(super.getTooltipFromContainerItem(item));if(item.getCount()>1)lines.add(Client.tr("trade.quantity",exactCount(item.getCount())));return lines;}
- private void text(GuiGraphics g,Component label,int x,int y,int color){g.drawString(font,label,x,y,color,false);}
+ private void text(GuiGraphics g,Component label,int x,int y,int color){UiCanvas.text(g,font,label,x,y,color,false);}
  private void centered(GuiGraphics g,Component label,int y,int color){text(g,label,(imageWidth-font.width(label))/2,y,color);}
  private void fit(GuiGraphics g,Component label,int x,int y,int width,int color){text(g,Component.literal(UiKit.fit(font,label.getString(),width)),x,y,color);}
  private void bar(GuiGraphics g,int x,int page,int count){if(count<=1)return;g.fill(leftPos+x,topPos+29,leftPos+x+4,topPos+83,rivetStyle()?UiKit.surface(UiKit.Surface.INPUT):0xFF888888);int h=Math.max(5,54/count),y=topPos+29+(54-h)*page/(count-1);g.fill(leftPos+x,y,leftPos+x+4,y+h,rivetStyle()?UiKit.muted():0xFFEEEEEE);}

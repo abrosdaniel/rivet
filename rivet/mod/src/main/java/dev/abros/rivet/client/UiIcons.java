@@ -4,7 +4,7 @@ import net.minecraft.client.gui.GuiGraphics;
 /** Standard Rivet glyphs on a 12-pixel grid; map artwork delegates to its colour atlas. */
 final class UiIcons {
  private UiIcons(){}
- static final String BRUSH="brush";
+ static final String BRUSH="brush", EYE="eye", EYE_OFF="eye_off";
  static final String SEARCH="search",REFRESH="refresh",SAVE="save",CHECK="check",DELETE="delete",PLUS="plus",DOWN="down",UP="up",RIGHT="right",CLEAR="clear",PIN="pin",TARGET="target",HOME="home",STAR="star",FLAG="flag",CHEST="chest",DIMENSION="dimension";
  private static final Map<String,int[][]> LINES=Map.ofEntries(
   Map.entry(BRUSH,new int[][]{{5,5,9,1},{9,1,10,2},{10,2,6,7},{5,5,6,7},{4,6,2,7},{2,7,2,9},{2,9,1,10},{1,10,4,10},{4,10,6,8},{6,8,4,6}}),
@@ -25,6 +25,6 @@ final class UiIcons {
   Map.entry(FLAG,new int[][]{{2,1,2,10},{2,1,9,1},{9,1,7,4},{7,4,9,6},{9,6,2,6}}),
   Map.entry(CHEST,new int[][]{{1,3,10,3},{10,3,10,10},{10,10,1,10},{1,10,1,3},{1,6,10,6},{5,5,5,8},{6,5,6,8}}),
   Map.entry(DIMENSION,new int[][]{{1,3,5,1},{5,1,10,3},{10,3,5,6},{5,6,1,3},{1,6,5,9},{5,9,10,6}}));
- static void draw(GuiGraphics g,String icon,int x,int y,int color){if(MapGlyphs.supports(icon)){MapGlyphs.draw(g,icon,x-2,y-2,color);return;}if((color>>>24)==0)color|=0xff000000;if(icon.equals(PLUS)){g.fill(x+5,y+2,x+7,y+10,color);g.fill(x+2,y+5,x+10,y+7,color);return;}if(icon.equals(REFRESH)){line(g,x+3,y+2,x+7,y+2,color);line(g,x+7,y+2,x+9,y+4,color);g.fill(x+7,y+4,x+11,y+6,color);g.fill(x+9,y+2,x+11,y+6,color);line(g,x+9,y+7,x+7,y+9,color);line(g,x+7,y+9,x+3,y+9,color);line(g,x+3,y+9,x+1,y+7,color);line(g,x+1,y+7,x+1,y+4,color);line(g,x+1,y+4,x+3,y+2,color);return;}var lines=LINES.get(icon);if(lines==null)return;for(int[] p:lines)line(g,x+p[0],y+p[1],x+p[2],y+p[3],color);}
- private static void line(GuiGraphics g,int x,int y,int endX,int endY,int color){int dx=Math.abs(endX-x),dy=-Math.abs(endY-y),sx=x<endX?1:-1,sy=y<endY?1:-1,error=dx+dy;while(true){g.fill(x,y,x+1,y+1,color);if(x==endX&&y==endY)return;int twice=2*error;if(twice>=dy){error+=dy;x+=sx;}if(twice<=dx){error+=dx;y+=sy;}}}
+ static void draw(GuiGraphics g,String icon,int x,int y,int color){if(MapGlyphs.supports(icon)){MapGlyphs.draw(g,icon,x-2,y-2,color);return;}if((color>>>24)==0)color|=0xff000000;if(icon.equals(EYE)||icon.equals(EYE_OFF)){line(g,x,y+6,x+3,y+3,color);line(g,x+3,y+3,x+8,y+3,color);line(g,x+8,y+3,x+11,y+6,color);line(g,x+11,y+6,x+8,y+9,color);line(g,x+8,y+9,x+3,y+9,color);line(g,x+3,y+9,x,y+6,color);UiKit.rounded(g,x+4,y+4,4,4,2,color);if(icon.equals(EYE_OFF))line(g,x,y+11,x+11,y,color);return;}if(icon.equals(PLUS)){g.fill(x+5,y+2,x+7,y+10,color);g.fill(x+2,y+5,x+10,y+7,color);return;}if(icon.equals(REFRESH)){line(g,x+3,y+2,x+7,y+2,color);line(g,x+7,y+2,x+9,y+4,color);g.fill(x+7,y+4,x+11,y+6,color);g.fill(x+9,y+2,x+11,y+6,color);line(g,x+9,y+7,x+7,y+9,color);line(g,x+7,y+9,x+3,y+9,color);line(g,x+3,y+9,x+1,y+7,color);line(g,x+1,y+7,x+1,y+4,color);line(g,x+1,y+4,x+3,y+2,color);return;}var lines=LINES.get(icon);if(lines==null)return;for(int[] p:lines)line(g,x+p[0],y+p[1],x+p[2],y+p[3],color);}
+ private static void line(GuiGraphics g,int x,int y,int endX,int endY,int color){if(UiCanvas.line(g,x,y,endX,endY,color))return;int dx=Math.abs(endX-x),dy=-Math.abs(endY-y),sx=x<endX?1:-1,sy=y<endY?1:-1,error=dx+dy;while(true){g.fill(x,y,x+1,y+1,color);if(x==endX&&y==endY)return;int twice=2*error;if(twice>=dy){error+=dy;x+=sx;}if(twice<=dx){error+=dx;y+=sy;}}}
 }

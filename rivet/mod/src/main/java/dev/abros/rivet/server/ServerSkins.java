@@ -78,9 +78,9 @@ public final class ServerSkins {
  }
  private static boolean refreshFallback(SkinStore s,SkinSettings configuration,PgDatabase database,Map<UUID,Long> attempts,UUID owner,String name,boolean onlineMode)throws Exception{
   String mode=configuration.mojangFallback();UUID official=null;if(mode.equals("UUID")){official=database.transaction(()->{try(var q=database.connection().prepareStatement("SELECT official FROM auth_accounts WHERE uuid=?")){q.setString(1,owner.toString());try(var r=q.executeQuery()){return r.next()&&r.getString(1)!=null?UUID.fromString(r.getString(1)):null;}}});if(official==null&&onlineMode)official=owner;}
-  if(name==null&&mode.equals("nickname"))return false;String source=mode+":"+(mode.equals("UUID")?official:name);long now=System.currentTimeMillis();if(now-s.checked(owner,source)<86400000)return false;
+  if(name==null&&mode.equals("nickname"))return false;String source="appearance-v2:"+mode+":"+(mode.equals("UUID")?official:name);long now=System.currentTimeMillis();if(now-s.checked(owner,source)<86400000)return false;
   if(mode.equals("false")||mode.equals("UUID")&&official==null){if(store!=s)return false;s.fallback(owner,source,null,false,now);return true;}
   if(now-attempts.getOrDefault(owner,0L)<60000)return false;if(!attempts.containsKey(owner)&&attempts.size()>=4096){attempts.entrySet().removeIf(entry->now-entry.getValue()>=60000);if(attempts.size()>=4096)return false;}attempts.put(owner,now);
-  try{var result=MojangSkins.find(name,official);if(store!=s||Thread.currentThread().isInterrupted())return false;s.fallback(owner,source,result.png(),result.slim(),now);return true;}catch(Exception unavailable){com.mojang.logging.LogUtils.getLogger().debug("Rivet Mojang skin fallback unavailable ({})",unavailable.getClass().getSimpleName());return false;}
+  try{var result=MojangSkins.find(name,official);if(store!=s||Thread.currentThread().isInterrupted())return false;s.fallback(owner,source,result.png(),result.slim(),result.cape(),now);return true;}catch(Exception unavailable){com.mojang.logging.LogUtils.getLogger().debug("Rivet Mojang skin fallback unavailable ({})",unavailable.getClass().getSimpleName());return false;}
  }
 }

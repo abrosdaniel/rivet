@@ -14,7 +14,6 @@ final class MapToolIcons {
         int index = KEYS.indexOf(key);
         if (index < 0) return;
         if ((colour >>> 24) == 0) colour |= 0xff000000;
-        if (UiPalette.light()) colour = 0xffe8edf2;
         g.flush();
         float[] previous = RenderSystem.getShaderColor().clone();
         try {

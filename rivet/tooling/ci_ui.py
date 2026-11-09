@@ -10,7 +10,7 @@ work = root / '.local/ci-ui'
 prepare(root, work, 5432, 'rivet_test', 25579)
 restore(root, Path(os.environ['RIVET_TEST_RUNTIME']), work)
 (work / 'client/options.txt').write_text('onboardAccessibility:false\nlang:' + os.environ['RIVET_UI_LANGUAGE'] + '\n')
-env = dict(os.environ)
+env = dict(os.environ, RIVET_UI_RENDER_STRICT="true")
 env['MOD_CLASSES'] = os.pathsep.join('rivet%%' + str(work / 'build' / part) for part in (
     'mod/classes/java/main', 'mod/resources/main', 'mod/classes/java/uiHarness',
     'core/classes/java/main', 'core/resources/main', 'api/classes/java/main'))

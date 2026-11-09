@@ -14,8 +14,10 @@ public final class UiTheme {
  public static boolean owns(Screen s){return s!=null&&!(s instanceof TradeScreen)&&s.getClass().getPackageName().equals("dev.abros.rivet.client");}
  static boolean keyboardFocus(AbstractWidget w){return w.active&&w.visible&&w.isFocused()&&Minecraft.getInstance().getLastInputType().isKeyboard()&&(RENDER_SCREEN.get()==null||RENDER_SCREEN.get()==Minecraft.getInstance().screen);}
  static boolean highlighted(AbstractWidget w){return w.active&&w.visible&&(w.isHovered()||keyboardFocus(w));}
- static float hover(AbstractWidget w){float target=highlighted(w)?1:0;if(!AccessibilityScreen.animations())return target;long now=System.nanoTime();var state=motion.get(w);if(state==null){motion.put(w,new HoverState(target,now));return target;}float step=Math.min(1,(now-state.at)/(AccessibilityScreen.motionMillis()*1000000f));state.at=now;state.value+=Math.copySign(Math.min(Math.abs(target-state.value),step),target-state.value);return state.value;}
+ static float hover(AbstractWidget w){float target=highlighted(w)?1:0;if(!AccessibilityScreen.animations())return target;long now=System.nanoTime();var state=motion.get(w);if(state==null){motion.put(w,new HoverState(target,now));return target;}float elapsed=Math.min(.1f,Math.max(0,(now-state.at)/1000000000f));state.at=now;float blend=1-(float)Math.exp(-elapsed*4600/AccessibilityScreen.motionMillis());state.value+=(target-state.value)*blend;if(Math.abs(target-state.value)<.002f)state.value=target;return state.value;}
 
+ /** Quiet controls fade to transparency, never to a different opaque panel colour. */
+ static int hoverOverlay(float progress){return (UiKit.surface(UiKit.Surface.HOVER)&0xFFFFFF)|(Math.round(255*Math.max(0,Math.min(1,progress)))<<24);}
  static int mix(int a,int b,float t){int out=0;for(int shift=0;shift<=24;shift+=8)out|=((int)(((a>>>shift)&255)*(1-t)+((b>>>shift)&255)*t))<<shift;return out;}
  static void panel(GuiGraphics g,int x,int y,int w,int h,int color){UiKit.plate(g,x,y,w,h,AccessibilityScreen.background(color));}
 
@@ -27,12 +29,12 @@ public final class UiTheme {
   float hover=b.active?hover(b):0;
   int base=UiKit.surface(UiKit.Surface.CONTROL);
   if(style.tone()==UiActions.Tone.PRIMARY)base=accent;else if(style.tone()==UiActions.Tone.DANGER)base=mix(UiKit.surface(),accent,0.12f);
-  if(UiActions.isQuiet(b)){if(UiActions.selected(b)||hover>0)UiKit.control(g,x,y,w,h,UiActions.selected(b)?UiKit.surface(UiKit.Surface.SELECTED):mix(UiKit.surface(),UiKit.surface(UiKit.Surface.HOVER),hover));}
+  if(UiActions.isQuiet(b)){if(UiActions.selected(b)||hover>0)UiKit.control(g,x,y,w,h,UiActions.selected(b)?UiKit.surface(UiKit.Surface.SELECTED):hoverOverlay(hover));}
   else UiKit.control(g,x,y,w,h,b.active?mix(base,style.tone()==UiActions.Tone.PRIMARY?mix(accent,UiKit.onAccent(),.10f):UiKit.surface(UiKit.Surface.HOVER),hover):UiKit.surface());
   if(keyboardFocus(b))UiKit.focus(g,x,y,w,h);
   if(UiActions.isTool(b)){UiIcons.draw(g,style.icon(),x+(w-12)/2,y+(h-12)/2,b.active?UiActions.iconColor(b,UiKit.text()):UiKit.muted());return;}
   if(text.equals("×")||text.equals("+")||text.equals("↑")||text.equals("↓")){UiIcons.draw(g,text.equals("×")?UiIcons.CLEAR:text.equals("↑")?UiIcons.UP:text.equals("↓")?UiIcons.DOWN:UiIcons.PLUS,x+(w-12)/2,y+(h-12)/2,b.active?UiKit.text():UiKit.muted());return;}
-  if(w<=24&&text.codePointCount(0,text.length())==1){g.drawString(font,text,x+(w-font.width(text))/2,y+(h-8)/2,b.active?UiKit.text():UiKit.muted(),false);return;}
+  if(w<=24&&text.codePointCount(0,text.length())==1){UiCanvas.text(g,font,text,x+(w-font.width(text))/2,y+(h-8)/2,b.active?UiKit.text():UiKit.muted(),false);return;}
   boolean dropdown=text.endsWith(" ▾");if(dropdown)text=text.substring(0,text.length()-2);if(text.startsWith("+ "))text=text.substring(2);
   int foreground=b.active?(style.tone()==UiActions.Tone.PRIMARY?UiKit.onAccent():UiKit.text()):UiKit.muted(),ty=y+(h-8)/2;
   // A settings selector is a label/value row; its original message and native hit box stay intact.
@@ -45,7 +47,7 @@ public final class UiTheme {
    String icon=dropdown?"":style.icon();int trailing=dropdown?18:0;if(font.width(text)+30+trailing>w)icon="";int reserve=icon.isEmpty()?0:18;
    String shown=UiKit.fit(font,text,w-16-reserve-trailing);int tx=dropdown||UiActions.isLeading(b)?x+UiKit.INSET:x+(w-font.width(shown)-reserve)/2;
    if(!icon.isEmpty())UiIcons.draw(g,icon,tx,y+(h-12)/2,b.active?(style.tone()==UiActions.Tone.PRIMARY?foreground:accent):UiKit.muted());
-   if(style.tone()==UiActions.Tone.PRIMARY&&b.active)g.drawString(font,shown,tx+reserve,ty,foreground,false);else Ui.text(g,font,shown,tx+reserve,ty,foreground,false);
+   if(style.tone()==UiActions.Tone.PRIMARY&&b.active)UiCanvas.text(g,font,shown,tx+reserve,ty,foreground,false);else Ui.text(g,font,shown,tx+reserve,ty,foreground,false);
   }
   if(dropdown)UiIcons.draw(g,UiIcons.DOWN,x+w-16,y+(h-12)/2,b.active?UiKit.muted():UiPalette.color(0xFF687580));
  }

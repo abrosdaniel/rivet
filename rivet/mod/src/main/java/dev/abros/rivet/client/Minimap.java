@@ -31,7 +31,7 @@ final class Minimap {
  static void invalidate(){nextUpdate=0;}
  static void reset(){generation++;composing=false;if(texture!=null)Minecraft.getInstance().getTextureManager().release(TEXTURE);texture=null;displayed=null;imageSide=0;projection=null;motion.reset();textureSide=0;textureDimension="";nextUpdate=drawn=0;terrainSignature=Long.MIN_VALUE;hits.clear();bounds=new NativeLayout.Box(0,0,0,0);EXPAND.setDown(false);}
  static boolean visible(){var mc=Minecraft.getInstance();return MapSettings.INSTANCE.enabled&&WorldMapClient.ready()&&mc.player!=null&&!mc.options.hideGui&&(!mc.getDebugOverlay().showDebugScreen()||HudSettings.INSTANCE.debug)&&(mc.screen==null||mc.screen instanceof ChatScreen||mc.screen instanceof HudInteractionScreen);}
- static void draw(GuiGraphics g,boolean preview){long timing=dev.abros.rivet.core.PerformanceMetrics.start();try{drawContents(g,preview);}finally{dev.abros.rivet.core.PerformanceMetrics.end("client.minimap.draw",timing);}}
+ static void draw(GuiGraphics g,boolean preview){long timing=dev.abros.rivet.core.PerformanceMetrics.start();try{UiCanvas.scoped(g,()->drawContents(g,preview));}finally{dev.abros.rivet.core.PerformanceMetrics.end("client.minimap.draw",timing);}}
  private static void drawContents(GuiGraphics g,boolean preview){
   hits.clear();if(!preview&&!visible()){bounds=new NativeLayout.Box(0,0,0,0);return;}
   var mc=Minecraft.getInstance();var s=MapSettings.INSTANCE;var captions=captions();int wanted=(int)Math.round(s.size*(!preview&&EXPAND.isDown()?1.6:1));
@@ -67,10 +67,10 @@ final class Minimap {
    double inset=2+Math.max(mc.font.width(letter),mc.font.lineHeight)*compassScale/2;
    var compass=MinimapProjection.compass(projection.screenX(wx,wz),projection.screenY(wx,wz),side/2d-inset,s.round);
    g.pose().pushPose();g.pose().translate(x+side/2d+compass[0],y+side/2d+compass[1],0);g.pose().scale(compassScale,compassScale,1);
-   g.drawString(mc.font,letter,-mc.font.width(letter)/2,-4,0xfff4f4f4,true);g.pose().popPose();
+   UiCanvas.text(g,mc.font,letter,-mc.font.width(letter)/2,-4,0xfff4f4f4,true);g.pose().popPose();
   }
   if(preview&&!WorldMapClient.ready())g.drawCenteredString(mc.font,Client.text("map.minimap"),x+side/2,y+side/2+16,UiKit.text());
-  if(!captions.isEmpty()){g.pose().pushPose();g.pose().translate(x,y+side+2,0);UiHudSurface.panel(g,side,captions.size()*11+4,s.opacity);for(int n=0;n<captions.size();n++){String text=captions.get(n);float factor=Math.min(1,(side-8f)/Math.max(1,mc.font.width(text)));g.pose().pushPose();g.pose().translate(side/2f,3+n*11,0);g.pose().scale(factor,factor,1);g.drawString(mc.font,text,-mc.font.width(text)/2,0,UiKit.text(),false);g.pose().popPose();}g.pose().popPose();}
+  if(!captions.isEmpty()){g.pose().pushPose();g.pose().translate(x,y+side+2,0);UiHudSurface.panel(g,side,captions.size()*11+4,s.opacity);for(int n=0;n<captions.size();n++){String text=captions.get(n);float factor=Math.min(1,(side-8f)/Math.max(1,mc.font.width(text)));g.pose().pushPose();g.pose().translate(side/2f,3+n*11,0);g.pose().scale(factor,factor,1);UiCanvas.text(g,mc.font,text,-mc.font.width(text)/2,0,UiKit.text(),false);g.pose().popPose();}g.pose().popPose();}
   drawn=now;
  }
  static List<MapMarker> nearestMarkers(double cx,double cz,String dimension,double zoom){long began=dev.abros.rivet.core.PerformanceMetrics.start();try{var s=MapSettings.INSTANCE;if(WorldMapClient.displayedMarkers().isEmpty()||zoom<MapRenderSettings.INSTANCE.markerMinZoom)return List.of();var visibility=WorldMapClient.markerVisibility(true);return NearestSelection.select(WorldMapClient.displayedMarkers(),64,m->m.dimension().equals(dimension)&&visibility.test(m)&&(!m.death()||s.deathMinimap),m->Math.hypot(m.x()-cx,m.z()-cz));}finally{dev.abros.rivet.core.PerformanceMetrics.end("client.minimap.select",began);}}

@@ -12,7 +12,7 @@ class UiEditBox extends EditBox {
   setTextColor(UiKit.text());setTextColorUneditable(UiKit.muted());setTextShadow(false);
   if(!border){super.renderWidget(g,mx,my,delta);return;}
   UiKit.control(g,x,y,w,h,UiPalette.inputSurface());
-  UiKit.ring(g,x,y,w,h,4,UiFields.outline(this));
+  UiKit.ring(g,x,y,w,h,UiKit.RADIUS_CONTROL,UiFields.outline(this));
   // Native bordered geometry is reproduced while replacing only the background sprite.
   setBordered(false);setX(x+4);setY(y+(h-8)/2);setWidth(Math.max(1,w-8));
   try{super.renderWidget(g,mx,my,delta);}finally{setX(x);setY(y);setWidth(w);setBordered(true);}

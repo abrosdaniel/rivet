@@ -6,7 +6,6 @@ import dev.abros.rivet.core.map.*;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.screens.Screen;
-import net.minecraft.client.gui.components.AbstractWidget;
 import net.minecraft.network.chat.Component;
 import java.util.*;
 
@@ -243,7 +242,7 @@ final class WorldMapScreen extends Screen {
         String label=String.format(Locale.ROOT,"%.1f",Math.hypot(end[0]-rulerStart[0],end[1]-rulerStart[1]))+" "+Client.tr("map.blocks").getString();
         double angle=Math.atan2(dy,dx);if(angle>Math.PI/2)angle-=Math.PI;else if(angle< -Math.PI/2)angle+=Math.PI;
         double mid=(t0+t1)/2;g.pose().pushPose();g.pose().translate(ax+mid*dx,ay+mid*dy,0);g.pose().mulPose(com.mojang.math.Axis.ZP.rotation((float)angle));
-        int lw=font.width(label);UiKit.material(g,-lw/2-5,-18,lw+10,14);g.drawString(font,label,-lw/2,-15,UiKit.text(),false);g.pose().popPose();
+        int lw=font.width(label);UiKit.material(g,-lw/2-5,-18,lw+10,14);UiCanvas.text(g,font,label,-lw/2,-15,UiKit.text(),false);g.pose().popPose();
 
     }
     private void markerGlyph(GuiGraphics g,String icon,int x,int y,int color){int size=markerSize(),half=size/2;UiKit.rounded(g,x-half,y-half,size,size,3,UiKit.surface());UiKit.ring(g,x-half,y-half,size,size,3,color|0xff000000);if(MapGlyphs.MARKERS.contains(icon))MapGlyphs.marker(g,icon,x-half+2,y-half+2,Math.max(1,size-4));else{g.pose().pushPose();g.pose().translate(x,y,0);g.pose().scale(size/24f,size/24f,1);UiIcons.draw(g,MapGlyphs.icon(icon),-6,-6,color);g.pose().popPose();}}
@@ -253,7 +252,7 @@ final class WorldMapScreen extends Screen {
         String labelName=m.death()?dev.abros.rivet.core.map.MapDeathLifecycle.countdown(m,System.currentTimeMillis()):markerPanel!=null&&m.id().equals(markerPanel.marker.id())?markerPanel.draftName():m.name();markerGlyph(g,m.icon(),x,y,m.color());if(m.icon().equals("none"))MapGlyphs.initial(g,labelName,x,y,markerSize()-4,m.color());if(labelName.isBlank())return;String name=UiKit.fit(font,labelName,140);int w=font.width(name)+10;var label=new NativeLayout.Box(x-w/2,y+markerSize()/2+2,w,14);
         if(label.x()<0||label.right()>width||label.bottom()>height)return;
         if(!m.death()&&deathLabels.stream().anyMatch(b->b.x()<label.right()&&b.right()>label.x()&&b.y()<label.bottom()&&b.bottom()>label.y()))return;
-        if(!labelBlocked(occupied,label)){UiKit.control(g,label.x(),label.y(),label.width(),label.height(),UiKit.surface());g.drawString(font,name,label.x()+5,label.y()+3,UiKit.text(),false);occupied.add(label);}
+        if(!labelBlocked(occupied,label)){UiKit.control(g,label.x(),label.y(),label.width(),label.height(),UiKit.surface());UiCanvas.text(g,font,name,label.x()+5,label.y()+3,UiKit.text(),false);occupied.add(label);}
     }
     private static boolean labelBlocked(dev.abros.rivet.core.BoxIntersectionIndex occupied,NativeLayout.Box label){long began=dev.abros.rivet.core.PerformanceMetrics.start();try{return occupied.intersects(label);}finally{dev.abros.rivet.core.PerformanceMetrics.end("client.worldmap.collision",began);}}
     @Override public void renderBackground(GuiGraphics g,int x,int y,float delta){com.mojang.blaze3d.systems.RenderSystem.setShaderColor(1,1,1,1);UiKit.surface(g,0,0,width,height,UiKit.surface(UiKit.Surface.CANVAS));g.flush();terrain(g);var b=toolbar();UiKit.floating(g,b.x(),b.y(),b.width(),b.height());if(markerDrawer){b=drawerBox();UiKit.floating(g,b.x(),b.y(),b.width(),b.height());}UiKit.floating(g,8,height-40,32,32);if(markerPanel==null||markerBox().y()>=40)UiKit.floating(g,width-36,4,32,32);if(markerPanel!=null)markerPanel.render(g,markerBox()); }

@@ -14,6 +14,21 @@ PARTS = ('mod/classes/java/main', 'mod/resources/main', 'mod/classes/java/uiHarn
          'mod/compatibility-tests')
 
 
+def native_resource_filter(directory, names):
+    """The exported runtime is platform-bound; the release JAR remains universal."""
+    path = Path(directory).as_posix()
+    systems = {'Darwin': 'macos', 'Windows': 'windows', 'Linux': 'linux'}
+    cpus = {'aarch64': 'arm64', 'arm64': 'arm64', 'AMD64': 'x64', 'x86_64': 'x64'}
+    system, cpu = systems.get(platform.system()), cpus.get(platform.machine())
+    if not system or not cpu:
+        return []  # Unknown platforms keep everything rather than lose a dependency.
+    if path.endswith('/io/github/humbleui/skija'):
+        return [name for name in names if name in systems.values() and name != system]
+    if path.endswith('/io/github/humbleui/skija/' + system):
+        return [name for name in names if name in ('arm64', 'x64') and name != cpu]
+    return []
+
+
 def revision(root):
     return subprocess.check_output(['git', '-C', str(root), 'rev-parse', 'HEAD'], text=True).strip()
 
@@ -25,7 +40,7 @@ def export(root, work, target):
     for part in PARTS:
         source = work / 'build' / part
         if source.exists():
-            shutil.copytree(source, target / 'build' / part)
+            shutil.copytree(source, target / 'build' / part, ignore=native_resource_filter)
     dev = work / 'build/mod/moddev'
     out = target / 'build/mod/moddev'
     shutil.copytree(dev / 'artifacts', out / 'artifacts')

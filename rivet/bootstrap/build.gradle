@@ -64,7 +64,20 @@ tasks.register('verifyBundle') {
                 }
                 libraries[dependency.identifier.artifact] = entries
             }
-            assert libraries.keySet() == ['postgresql', 'HikariCP', 'bcprov-jdk18on', 'bcutil-jdk18on', 'bcpkix-jdk18on', 'httpclient5', 'httpcore5', 'httpcore5-h2', 'Java-WebSocket'] as Set
+            assert libraries.keySet() == ['postgresql', 'HikariCP', 'bcprov-jdk18on', 'bcutil-jdk18on', 'bcpkix-jdk18on', 'httpclient5', 'httpcore5', 'httpcore5-h2', 'Java-WebSocket', 'skija-shared', 'types'] as Set
+            assert libraries['skija-shared'].contains('io/github/humbleui/skija/Canvas.class')
+            assert innerEntries.containsKey('assets/rivet/font/notosans.ttf')
+            assert innerEntries.containsKey('META-INF/licenses/NotoSans-OFL.txt')
+            ['macos', 'linux', 'windows'].each { os ->
+                ['arm64', 'x64'].each { arch ->
+                    def prefix = "io/github/humbleui/skija/${os}/${arch}/"
+                    def library = os == 'macos' ? 'libskija.dylib' : os == 'windows' ? 'skija.dll' : 'libskija.so'
+                    assert innerEntries.containsKey((prefix + library).toString())
+                    if (os == 'windows') assert !innerEntries.containsKey((prefix + 'icudtl.dat').toString())
+                }
+            }
+            assert innerEntries.containsKey('io/github/humbleui/skija/windows/shared/icudtl.dat')
+            assert !innerEntries.keySet().any { it.contains('VectorPrototype') }
             assert libraries['postgresql'].contains('org/postgresql/Driver.class')
             assert libraries['HikariCP'].contains('com/zaxxer/hikari/HikariDataSource.class')
             assert !innerEntries.keySet().any { it.contains('sqlite') }

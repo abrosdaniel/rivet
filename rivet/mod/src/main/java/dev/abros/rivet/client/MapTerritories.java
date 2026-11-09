@@ -49,7 +49,7 @@ final class MapTerritories {
   for(int i=0;i<points.size()-(closed?0:1);i++)line(g,points.get(i),points.get((i+1)%points.size()),color,left,top,width,height,round);
   if(!closed)for(var p:points)if(p[0]>=left+3&&p[0]<left+width-3&&p[1]>=top+3&&p[1]<top+height-3)g.fill((int)p[0]-2,(int)p[1]-2,(int)p[0]+3,(int)p[1]+3,color);
   if(!closed&&points.size()>=3){var p=points.getFirst();if(p[0]>=left+4&&p[0]<left+width-4&&p[1]>=top+4&&p[1]<top+height-4)g.renderOutline((int)p[0]-4,(int)p[1]-4,9,9,color);}
-  if(!name.isEmpty()){var font=net.minecraft.client.Minecraft.getInstance().font;String label=UiKit.fit(font,name,120);int w=font.width(label),x=(int)((minX+maxX-w)/2),y=(int)(w+8>maxX-minX?minY-12:(minY+maxY)/2);if(x>=left&&x+w<left+width&&y>=top&&y+10<top+height)g.drawString(font,label,x,y,color,true);}
+  if(!name.isEmpty()){var font=net.minecraft.client.Minecraft.getInstance().font;String label=UiKit.fit(font,name,120);int w=font.width(label),x=(int)((minX+maxX-w)/2),y=(int)(w+8>maxX-minX?minY-12:(minY+maxY)/2);if(x>=left&&x+w<left+width&&y>=top&&y+10<top+height)UiCanvas.text(g,font,label,x,y,color,true);}
  }
  private static void line(GuiGraphics g,double[] a,double[] b,int color,int left,int top,int width,int height,boolean round){
   double dx=b[0]-a[0],dy=b[1]-a[1],lo=0,hi=1;double[] p={-dx,dx,-dy,dy},q={a[0]-left,left+width-1-a[0],a[1]-top,top+height-1-a[1]};

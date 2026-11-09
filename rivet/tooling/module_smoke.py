@@ -78,7 +78,7 @@ def main():
             # Packaged tests must use only the libraries shipped inside the JAR.
             cp = args.game / 'build/mod/moddev/serverLegacyClasspath.txt'
             bundled = ('httpclient5-', 'httpcore5-', 'HikariCP-', 'postgresql-',
-                       'bcprov-', 'bcutil-', 'bcpkix-', 'Java-WebSocket-')
+                       'bcprov-', 'bcutil-', 'bcpkix-', 'Java-WebSocket-', 'skija-shared-', 'types-')
             cp.write_text('\n'.join(p for p in cp.read_text().splitlines() if not Path(p).name.startswith(bundled)) + '\n')
             env = dict(os.environ, RIVET_MODULE_SMOKE=args.mode)
             env.pop('MOD_CLASSES', None)

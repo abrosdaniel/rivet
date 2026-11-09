@@ -28,7 +28,7 @@ final class ChatChannelIndicator {
   // Native completions occupy the left edge above input; move the badge to the right while they are open.
   int x=accessor.rivet$suggestions().isVisible()?g.guiWidth()-w-4:Math.max(4,input.getX());int y=Math.max(0,input.getY()-h-2);
   bounds=new dev.abros.rivet.core.NativeLayout.Box(x,y,w,h);UiKit.plate(g,x,y,w,h,UiKit.surface());
-  g.drawString(mc.font,fitted,x+4,y+2,0xFF000000|color(ChatHints.parse(text).channel()),false);
+  UiCanvas.text(g,mc.font,fitted,x+4,y+2,0xFF000000|color(ChatHints.parse(text).channel()),false);
  }
  private ChatChannelIndicator(){}
 }

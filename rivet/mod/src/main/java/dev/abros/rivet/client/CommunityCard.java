@@ -32,7 +32,7 @@ final class CommunityCard extends Button {
   String eyebrow=section.equals("groups")?value("type")+" · "+(item.has("recruiting")&&item.get("recruiting").getAsBoolean()?Client.text("ui.registration_open_4bd5a5ce"):Client.text("ui.registration_closed_a0d3acee")):CommunityScreen.name(section);
   var font=Minecraft.getInstance().font;var titleLines=titleLayout.lines(font,heading,Math.max(1,x+w-left-26));int lineCount=Math.min(h>=78?2:1,titleLines.size());
   var tooltip=titleLines.size()>lineCount?titleTooltip:null;if(getTooltip()!=tooltip)setTooltip(tooltip);
-  for(int n=0;n<lineCount;n++)g.drawString(font,titleLines.get(n),left,y+8+n*11,UiKit.text(),false);
+  for(int n=0;n<lineCount;n++)UiCanvas.text(g,font,titleLines.get(n),left,y+8+n*11,UiKit.text(),false);
   int extra=Math.max(0,lineCount-1)*11;
   if(h>=54){String badge=item.has("attention")?value("attention"):eyebrow;int bw=Math.min(x+w-left-12,Minecraft.getInstance().font.width(badge)+10);if(bw>8){if(item.has("attention")||section.equals("moderation"))UiBadge.draw(g,Minecraft.getInstance().font,badge,left-2,y+20+extra,bw,color());else line(g,badge,left,y+23+extra,x+w-left-12,UiKit.muted());}}
   if(selected||UiTheme.highlighted(this))UiIcons.draw(g,UiIcons.RIGHT,x+w-22,y+6,color());

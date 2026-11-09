@@ -159,7 +159,7 @@ def main():
     # Dev classpaths add Rivet's libraries explicitly. Packaged runs must obtain
     # those libraries only from JarJar, just like a player's installation.
     bundled = ('httpclient5-', 'httpcore5-', 'HikariCP-', 'postgresql-',
-               'bcprov-', 'bcutil-', 'bcpkix-', 'Java-WebSocket-')
+               'bcprov-', 'bcutil-', 'bcpkix-', 'Java-WebSocket-', 'skija-shared-', 'types-')
     for side in ('client', 'server'):
         for suffix in ('LegacyClasspath.txt', 'RunVmArgs.txt', 'RunProgramArgs.txt', 'Log4j2.xml'):
             source = source_dev / (side + suffix)

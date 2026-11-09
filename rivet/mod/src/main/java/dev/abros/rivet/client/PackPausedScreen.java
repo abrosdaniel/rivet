@@ -16,7 +16,7 @@ final class PackPausedScreen extends Screen {
  }
  @Override public void tick(){if(continueButton!=null)continueButton.active=idle.getAsBoolean();}
  @Override public void renderBackground(GuiGraphics g,int x,int y,float d){var f=layout.frame();UiDialog.surface(g,f.x(),f.y(),f.width(),f.height());}
- @Override public void render(GuiGraphics g,int x,int y,float d){UiDialog.render(parent,this,g,d,()->{super.render(g,x,y,d);var h=layout.header();UiHeading.dialog(g,font,title,h.x(),layout.frame().y(),h.width());var b=layout.body();int at=b.y();for(var line:font.split(Client.tr("builder.paused.details"),b.width())){g.drawString(font,line,b.x(),at,UiKit.muted(),false);at+=font.lineHeight+2;}});}
+ @Override public void render(GuiGraphics g,int x,int y,float d){UiDialog.render(parent,this,g,d,()->{super.render(g,x,y,d);var h=layout.header();UiHeading.dialog(g,font,title,h.x(),layout.frame().y(),h.width());var b=layout.body();int at=b.y();for(var line:font.split(Client.tr("builder.paused.details"),b.width())){UiCanvas.text(g,font,line,b.x(),at,UiKit.muted(),false);at+=font.lineHeight+2;}});}
  @Override public void onClose(){minecraft.setScreen(parent);}
  @Override public boolean isPauseScreen(){return false;}
 }

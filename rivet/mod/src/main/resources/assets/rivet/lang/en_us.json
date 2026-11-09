@@ -2967,7 +2967,6 @@
   "rivet.wardrobe.search": "Search",
   "rivet.wardrobe.turn": "Front / back",
   "rivet.chat.personal": "Private",
-  "rivet.chat.personalCommandsHint": "/msg, /w, /tell Name text → private message",
   "rivet.chat.personalHint": "{trigger}Name: text → private message",
   "rivet.chat.personalUnavailable": "Specify an available online player: private message was not sent.",
   "rivet.chat.you": "You",

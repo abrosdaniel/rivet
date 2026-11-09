@@ -12,7 +12,22 @@ public final class CapeStore {
  private void write(String namespace,String id,JsonObject value)throws Exception{try(var q=db.connection().prepareStatement("INSERT INTO records(namespace,id,body) VALUES(?,?,?::jsonb) ON CONFLICT(namespace,id) DO UPDATE SET body=excluded.body")){q.setString(1,namespace);q.setString(2,id);q.setString(3,Json.GSON.toJson(value));q.executeUpdate();}}
  private JsonObject profile(UUID owner)throws Exception{var p=read("cape-profile",owner.toString());if(!p.has("entries"))p.add("entries",new JsonArray());if(!p.has("active"))p.addProperty("active","");if(!p.has("hidden"))p.addProperty("hidden",false);return p;}
  public JsonObject library(UUID owner)throws Exception{return db.communityTransaction(()->{var p=profile(owner);p.addProperty("enabled",settings.enabled()&&settings.capes());p.addProperty("limit",settings.maxCapesPerPlayer());p.addProperty("maxBytes",settings.maxCapeBytes());p.addProperty("maxResolution",settings.maxCapeResolution());return p;});}
- public JsonObject appearance(UUID owner)throws Exception{return db.communityTransaction(()->{var p=profile(owner);var out=new JsonObject();out.addProperty("capeHidden",settings.enabled()&&settings.capes()&&p.get("hidden").getAsBoolean());out.addProperty("capeHash","");if(settings.enabled()&&settings.capes()&&!p.get("hidden").getAsBoolean())for(var e:p.getAsJsonArray("entries")){var row=e.getAsJsonObject();if(Json.str(row,"id").equals(Json.str(p,"active")))out.addProperty("capeHash",Json.str(row,"hash"));}return out;});}
+ public JsonObject appearance(UUID owner)throws Exception{return db.communityTransaction(()->{
+  var p=profile(owner);var out=new JsonObject();boolean enabled=settings.enabled()&&settings.capes(),hidden=enabled&&p.get("hidden").getAsBoolean();
+  String official=enabled?Json.opt(read("cape-official",owner.toString()),"hash",""):"";
+  out.addProperty("officialCapeHash",official);out.addProperty("capeHidden",hidden);out.addProperty("capeHash",enabled&&!hidden&&Json.str(p,"active").isEmpty()?official:"");
+  if(enabled&&!hidden)for(var e:p.getAsJsonArray("entries")){var row=e.getAsJsonObject();if(Json.str(row,"id").equals(Json.str(p,"active")))out.addProperty("capeHash",Json.str(row,"hash"));}
+  return out;
+ });}
+ /** Official appearance is separate from the library and undo history; it consumes no upload slot. */
+ void official(UUID owner,byte[] data)throws Exception{
+  byte[] png=data==null?null:CapeImage.normalize(data,1024*1024,64);
+  db.communityTransaction(()->{db.lock("capes");var value=new JsonObject();String hash=png==null?"":Hashes.sha256(png);value.addProperty("hash",hash);
+   if(png!=null){var blob=new JsonObject();blob.addProperty("png",Base64.getEncoder().encodeToString(png));write("cape-image",hash,blob);}
+   write("cape-official",owner.toString(),value);clean();return null;
+  });
+ }
+ private void clean()throws Exception{try(var q=db.connection().createStatement()){q.executeUpdate("DELETE FROM records image WHERE image.namespace='cape-image' AND NOT EXISTS(SELECT 1 FROM records p CROSS JOIN LATERAL jsonb_array_elements(CASE WHEN p.namespace='cape-profile' THEN p.body->'entries' ELSE '[]'::jsonb END) e WHERE p.namespace='cape-profile' AND e->>'hash'=image.id) AND NOT EXISTS(SELECT 1 FROM records p WHERE p.namespace='cape-official' AND p.body->>'hash'=image.id)");}}
  public void mutate(UUID owner,String op,JsonObject input,byte[] data)throws Exception{
   if(!settings.enabled()||!settings.capes())throw new IllegalArgumentException(Messages.text("rivet.cape.disabled"));
   byte[] png=op.equals("capeUpload")?CapeImage.normalize(data,settings.maxCapeBytes(),settings.maxCapeResolution()):null;
@@ -24,7 +39,7 @@ public final class CapeStore {
     default->throw new IllegalArgumentException("Unknown cape operation");
    }
    write("cape-profile",owner.toString(),p);
-   if(op.equals("capeDelete"))try(var q=db.connection().createStatement()){q.executeUpdate("DELETE FROM records image WHERE image.namespace='cape-image' AND NOT EXISTS(SELECT 1 FROM records p CROSS JOIN LATERAL jsonb_array_elements(CASE WHEN p.namespace='cape-profile' THEN p.body->'entries' ELSE '[]'::jsonb END) e WHERE p.namespace='cape-profile' AND e->>'hash'=image.id)");}
+   if(op.equals("capeDelete"))clean();
    return null;
   });
  }

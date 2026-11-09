@@ -36,14 +36,10 @@ jobs:
           DEFAULT_BRANCH: ${{ github.event.repository.default_branch }}
           FULL: ${{ github.event_name != 'workflow_dispatch' || inputs.full }}
         run: python3 rivet/tooling/ci_plan.py --event "$EVENT" --ref "$REF" --default-branch "$DEFAULT_BRANCH" --full "$FULL" --base "$BASE" >> "$GITHUB_OUTPUT"
-  java:
+  java-linux:
     needs: plan
     if: contains(fromJSON(needs.plan.outputs.checks), 'java')
-    strategy:
-      fail-fast: false
-      matrix:
-        os: ${{ fromJSON(needs.plan.outputs.platforms) }}
-    runs-on: ${{ matrix.os }}
+    runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
       - uses: actions/setup-java@cf277c60eb25467037889841efdb72551f06f6c3
@@ -80,6 +76,43 @@ jobs:
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
         if: always()
         with:
+          name: rivet-ubuntu-latest
+          overwrite: true
+          path: |
+            rivet/mod/build/libs/*.jar
+            native-build/build/*/reports/tests/
+            native-build/build/*/test-results/
+            rivet/mod/build/reports/tests/
+            rivet/mod/build/test-results/
+            rivet/api/build/reports/tests/
+            rivet/core/build/reports/tests/
+            rivet/helper/build/reports/tests/
+            rivet/helper/build/test-results/
+            rivet/bootstrap/build/reports/tests/
+  java-platforms:
+    needs: plan
+    if: contains(fromJSON(needs.plan.outputs.checks), 'java') && needs.plan.outputs.full == 'true'
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [windows-latest, macos-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+      - uses: actions/setup-java@cf277c60eb25467037889841efdb72551f06f6c3
+        with:
+          distribution: temurin
+          java-version: '21'
+          cache: gradle
+      - name: Prepare Gradle distribution
+        timeout-minutes: 10
+        shell: bash
+        run: bash rivet/tooling/prepare_gradle.sh
+      - name: Build and test
+        run: ./gradlew build --no-daemon
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        if: always()
+        with:
           name: rivet-${{ matrix.os }}
           overwrite: true
           path: |
@@ -93,6 +126,19 @@ jobs:
             rivet/helper/build/reports/tests/
             rivet/helper/build/test-results/
             rivet/bootstrap/build/reports/tests/
+  java:
+    needs: [plan, java-linux, java-platforms]
+    if: always() && contains(fromJSON(needs.plan.outputs.checks), 'java')
+    runs-on: ubuntu-latest
+    steps:
+      - name: Require every selected Java platform
+        env:
+          LINUX: ${{ needs.java-linux.result }}
+          PLATFORMS: ${{ needs.java-platforms.result }}
+          FULL: ${{ needs.plan.outputs.full }}
+        run: |
+          test "$LINUX" = success
+          if [ "$FULL" = true ]; then test "$PLATFORMS" = success; fi
   postgres:
     needs: plan
     if: contains(fromJSON(needs.plan.outputs.checks), 'postgres')
@@ -149,12 +195,13 @@ jobs:
       - run: python -m unittest discover -s rivet/tooling/tests
 
   ui:
-    needs: [plan, java]
+    needs: [plan, java-linux]
     if: contains(fromJSON(needs.plan.outputs.checks), 'ui')
     strategy:
       fail-fast: false
       matrix:
         language: [ru_ru, en_us]
+        suite: [components, interaction, layout]
     runs-on: ubuntu-latest
     timeout-minutes: 45
     env:
@@ -176,6 +223,7 @@ jobs:
           java-version: '21'
       - run: sudo apt-get update && sudo apt-get install -y xvfb libgl1-mesa-dri libglx-mesa0 libopenal1
       - name: Check pack components and appearance profiles
+        if: matrix.suite == 'components'
         timeout-minutes: 6
         env:
           RIVET_RELEASE_CORRECTIONS: ${{ github.workspace }}/visual/pack
@@ -185,6 +233,7 @@ jobs:
           timeout --signal=TERM --kill-after=20s 5m xvfb-run -a -s '-screen 0 1280x1024x24' python3 rivet/tooling/ci_ui.py 2>&1 | tee visual-pack.log
           python3 rivet/tooling/verify_ui_snapshots.py unused checks visual-pack.log RIVET_RELEASE_CORRECTIONS_OK
       - name: Check native components
+        if: matrix.suite == 'components'
         timeout-minutes: 6
         env:
           RIVET_APPROVED_UI: ${{ github.workspace }}/visual/approved
@@ -193,7 +242,19 @@ jobs:
           set -o pipefail
           timeout --signal=TERM --kill-after=20s 5m xvfb-run -a -s '-screen 0 1280x1024x24' python3 rivet/tooling/ci_ui.py 2>&1 | tee visual-approved.log
       - run: python3 rivet/tooling/verify_ui_snapshots.py visual/approved/screenshots checks visual-approved.log RIVET_APPROVED_UI_OK
+        if: matrix.suite == 'components'
+      - name: Check account and moderation dialogs
+        if: matrix.suite == 'components'
+        timeout-minutes: 6
+        env:
+          RIVET_NESTED_UI: ${{ github.workspace }}/visual/nested
+          LIBGL_ALWAYS_SOFTWARE: '1'
+        run: |
+          set -o pipefail
+          timeout --signal=TERM --kill-after=20s 5m xvfb-run -a -s '-screen 0 1280x1024x24' python3 rivet/tooling/ci_ui.py 2>&1 | tee visual-nested.log
+          python3 rivet/tooling/verify_ui_snapshots.py unused checks visual-nested.log RIVET_NESTED_UI_OK
       - name: Check HUD
+        if: matrix.suite == 'interaction'
         timeout-minutes: 6
         env:
           RIVET_HUD_UI: ${{ github.workspace }}/visual/hud
@@ -202,7 +263,9 @@ jobs:
           set -o pipefail
           timeout --signal=TERM --kill-after=20s 5m xvfb-run -a -s '-screen 0 1280x1024x24' python3 rivet/tooling/ci_ui.py 2>&1 | tee visual-hud.log
       - run: python3 rivet/tooling/verify_ui_snapshots.py visual/hud/screenshots checks visual-hud.log RIVET_HUD_UI_OK
+        if: matrix.suite == 'interaction'
       - name: Check task flows and navigation
+        if: matrix.suite == 'interaction'
         timeout-minutes: 6
         env:
           RIVET_NATIVE_UI: ${{ github.workspace }}/visual/tasks
@@ -212,6 +275,7 @@ jobs:
           timeout --signal=TERM --kill-after=20s 5m xvfb-run -a -s '-screen 0 1280x1024x24' python3 rivet/tooling/ci_ui.py 2>&1 | tee visual-tasks.log
           python3 rivet/tooling/verify_ui_snapshots.py visual/tasks/screenshots checks visual-tasks.log RIVET_NATIVE_OK
       - name: Check adaptive layouts and live resizing
+        if: matrix.suite == 'layout'
         timeout-minutes: 6
         env:
           RIVET_ADAPTIVE_UI: ${{ github.workspace }}/visual/adaptive
@@ -220,7 +284,9 @@ jobs:
           set -o pipefail
           timeout --signal=TERM --kill-after=20s 5m xvfb-run -a -s '-screen 0 1280x1024x24' python3 rivet/tooling/ci_ui.py 2>&1 | tee visual-adaptive.log
       - run: python3 rivet/tooling/verify_ui_snapshots.py visual/adaptive/screenshots checks visual-adaptive.log RIVET_ADAPTIVE_UI_OK
+        if: matrix.suite == 'layout'
       - name: Verify drag ordering and cancellation
+        if: matrix.suite == 'interaction'
         timeout-minutes: 6
         env:
           RIVET_REORDER_UI: ${{ github.workspace }}/visual/reorder
@@ -229,7 +295,9 @@ jobs:
           set -o pipefail
           timeout --signal=TERM --kill-after=20s 5m xvfb-run -a -s '-screen 0 1280x1024x24' python3 rivet/tooling/ci_ui.py 2>&1 | tee visual-reorder.log
       - run: python3 rivet/tooling/verify_ui_snapshots.py visual/reorder/screenshots checks visual-reorder.log RIVET_REORDER_UI_OK
+        if: matrix.suite == 'interaction'
       - name: Check TAB player lists and input handling
+        if: matrix.suite == 'interaction'
         timeout-minutes: 6
         env:
           RIVET_TAB_LAYOUT_CHECK: '1'
@@ -239,6 +307,7 @@ jobs:
           timeout --signal=TERM --kill-after=20s 5m xvfb-run -a -s '-screen 0 1280x1024x24' python3 rivet/tooling/ci_ui.py 2>&1 | tee visual-tab.log
           python3 rivet/tooling/verify_ui_snapshots.py unused checks visual-tab.log RIVET_TAB_LAYOUT_OK
       - name: Check settings and confirmation flows
+        if: matrix.suite == 'components'
         timeout-minutes: 6
         env:
           RIVET_AUDIT_FIXES_UI: '1'
@@ -250,7 +319,7 @@ jobs:
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
         if: failure()
         with:
-          name: ui-regression-logs-${{ matrix.language }}
+          name: ui-regression-logs-${{ matrix.language }}-${{ matrix.suite }}
           include-hidden-files: true
           path: |
             visual-*.log
@@ -258,7 +327,7 @@ jobs:
             .local/ci-ui/client/crash-reports/
 
   modules:
-    needs: [plan, java]
+    needs: [plan, java-linux]
     if: contains(fromJSON(needs.plan.outputs.checks), 'modules')
     runs-on: ubuntu-latest
     timeout-minutes: 20
@@ -329,7 +398,7 @@ jobs:
             module-checks/*/crash-reports/
 
   map-network:
-    needs: [plan, java]
+    needs: [plan, java-linux]
     if: contains(fromJSON(needs.plan.outputs.checks), 'map-network')
     strategy:
       fail-fast: false
@@ -382,7 +451,7 @@ jobs:
             map-network/client/crash-reports/
 
   builder:
-    needs: [plan, java]
+    needs: [plan, java-linux]
     if: contains(fromJSON(needs.plan.outputs.checks), 'builder')
     strategy:
       fail-fast: false
@@ -452,7 +521,7 @@ jobs:
             combined-update/client-*/rivet/transactions/*/journal.json
 
   envelope:
-    needs: [plan, java]
+    needs: [plan, java-linux]
     if: contains(fromJSON(needs.plan.outputs.checks), 'envelope')
     runs-on: ubuntu-latest
     timeout-minutes: 45
@@ -497,7 +566,7 @@ jobs:
             envelope-native/server/crash-reports/
 
   permissions:
-    needs: [plan, java]
+    needs: [plan, java-linux]
     if: contains(fromJSON(needs.plan.outputs.checks), 'permissions')
     runs-on: ubuntu-latest
     timeout-minutes: 35
@@ -545,7 +614,7 @@ jobs:
             role-network/client/crash-reports/
 
   trade:
-    needs: [plan, java]
+    needs: [plan, java-linux]
     if: contains(fromJSON(needs.plan.outputs.checks), 'trade')
     runs-on: ubuntu-latest
     timeout-minutes: 35

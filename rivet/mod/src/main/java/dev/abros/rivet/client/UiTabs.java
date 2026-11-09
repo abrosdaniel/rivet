@@ -17,7 +17,7 @@ final class UiTabs {
    var button=UiActions.button(Component.literal(labels.get(current)+" ▾"),UiActions.Tone.NORMAL,"",b->Minecraft.getInstance().setScreen(new ChoicePopup(host,Client.text("ui.section_99d406ee"),labels,choose::accept,b).current(current))).bounds(area.x(),area.y(),area.width(),area.height()).build();button.active=enabled;add.accept(button);return;
   }
   var tracks=new NativeLayout.Track[labels.size()];java.util.Arrays.fill(tracks,NativeLayout.Track.flex(1));var boxes=NativeLayout.row(area,UiKit.GAP,tracks);
-  for(int n=0;n<labels.size();n++){int index=n;var box=boxes.get(n);var button=new TabButton(box.x(),box.y(),box.width(),labels.get(n),n==current,()->choose.accept(index));button.active=enabled;add.accept(button);}
+  for(int n=0;n<labels.size();n++){int index=n;var box=boxes.get(n);var button=new TabButton(box.x(),box.y(),box.width(),labels.get(n),n==current,()->choose.accept(index));button.setHeight(box.height());button.active=enabled;add.accept(button);}
  }
  private UiTabs(){}
 }

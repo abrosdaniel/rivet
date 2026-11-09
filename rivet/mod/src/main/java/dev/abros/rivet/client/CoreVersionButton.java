@@ -27,12 +27,13 @@ final class CoreVersionButton extends Button {
     @Override protected net.minecraft.network.chat.MutableComponent createNarrationMessage(){return description().copy();}
     @Override protected void renderWidget(GuiGraphics graphics,int x,int y,float delta){
         refreshTooltip();
-        super.renderWidget(graphics,x,y,delta);
+        UiKit.control(graphics,getX(),getY(),getWidth(),getHeight(),UiTheme.mix(UiKit.surface(UiKit.Surface.CONTROL),UiKit.surface(UiKit.Surface.HOVER),UiTheme.hover(this)));
+        if(UiTheme.keyboardFocus(this))UiKit.focus(graphics,getX(),getY(),getWidth(),getHeight());
         Branding.icon(graphics,getX()+3,getY()+3,14);
         if(Client.offeredUpdate!=null){
             float brightness=AccessibilityScreen.animations()?(float)(0.72+0.28*Math.cos((System.nanoTime()%2_400_000_000L)/2_400_000_000.0*Math.PI*2)):1;
             int gold=0xFF000000|((int)(226*brightness)<<16)|((int)(190*brightness)<<8)|(int)(117*brightness);
-            graphics.renderOutline(getX(),getY(),getWidth(),getHeight(),gold);
+            UiKit.ring(graphics,getX(),getY(),getWidth(),getHeight(),UiKit.RADIUS_CONTROL,gold);
         }
     }
 }

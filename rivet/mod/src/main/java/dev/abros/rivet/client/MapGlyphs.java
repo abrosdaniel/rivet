@@ -27,7 +27,7 @@ final class MapGlyphs {
   }
   if(!Float.isFinite(left))return;
   float scale=(Math.max(1,size-2))/Math.max(right-left,bottom-top);
-  g.pose().pushPose();g.pose().translate(cx,cy,0);g.pose().scale(scale,scale,1);g.pose().translate(-(left+right)/2f,-(top+bottom)/2f,0);g.drawString(font,initial,0,0,color,false);g.pose().popPose();
+  g.pose().pushPose();g.pose().translate(cx,cy,0);g.pose().scale(scale,scale,1);g.pose().translate(-(left+right)/2f,-(top+bottom)/2f,0);UiCanvas.text(g,font,initial,0,0,color,false);g.pose().popPose();
  }
  private static LetterBounds letterBounds(com.mojang.blaze3d.font.GlyphInfo info,dev.abros.rivet.mixin.MapGlyphAccessor glyph){
   int width=0,height=0,left=Integer.MAX_VALUE,right=-1,top=Integer.MAX_VALUE,bottom=-1;

@@ -191,3 +191,41 @@ dependencies {
     // Match Minecraft's transport in isolated TLS failure tests; never package it.
     testImplementation 'io.netty:netty-handler:4.1.97.Final'
 }
+
+// Skia classes stay isolated in their own JVM modules; platform payloads are resources.
+configurations { skiaNatives }
+dependencies {
+    jarJar(implementation('io.github.humbleui:skija-shared') { version { strictly '[0.143.18]'; prefer '0.143.18' }; transitive = false })
+    jarJar(implementation('io.github.humbleui:types') { version { strictly '[0.2.0]'; prefer '0.2.0' }; transitive = false })
+    ['macos-arm64','macos-x64','windows-x64','windows-arm64','linux-x64','linux-arm64'].each { platform ->
+        skiaNatives("io.github.humbleui:skija-${platform}:0.143.18") { transitive = false }
+    }
+}
+// ICU data is architecture-independent. Fail the build if an upstream upgrade changes that.
+def sharedSkiaData = tasks.register('sharedSkiaData') {
+    inputs.files(configurations.skiaNatives)
+    def output = layout.buildDirectory.dir('generated/skiaData')
+    outputs.dir(output)
+    doLast {
+        def copies = configurations.skiaNatives.collectMany { archive ->
+            zipTree(archive).matching { include '**/icudtl.dat' }.files.collect { it.bytes }
+        }
+        assert copies.size() == 2
+        assert java.util.Arrays.equals(copies[0], copies[1]) : 'Windows ICU resources differ'
+        def file = output.get().file('io/github/humbleui/skija/windows/shared/icudtl.dat').asFile
+        file.parentFile.mkdirs()
+        file.bytes = copies[0]
+    }
+}
+tasks.named('processResources') {
+    from(sharedSkiaData)
+    from({ configurations.skiaNatives.collect { zipTree(it) } }) {
+        include 'io/github/humbleui/skija/**'
+        exclude '**/icudtl.dat'
+    }
+}
+if (!project.hasProperty('rivetPackaged')) neoForge.runs.configureEach { run ->
+    ['io.github.humbleui:skija-shared:0.143.18','io.github.humbleui:types:0.2.0'].each { coordinate ->
+        dependencies.add(run.additionalRuntimeClasspathConfiguration.name, coordinate) { transitive = false }
+    }
+}

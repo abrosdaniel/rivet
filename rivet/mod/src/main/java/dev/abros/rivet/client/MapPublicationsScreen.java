@@ -32,7 +32,7 @@ final class MapPublicationsScreen extends ScrollScreen implements CommunityScree
  private String location(JsonObject body,String type){return Client.tr(type.equals("marker")?"map.markerType":"map.territory").getString()+" · "+Json.str(body,"dimension")+(type.equals("marker")?" · "+body.get("x")+", "+body.get("y")+", "+body.get("z"):"");}
  private void action(NativeLayout.Box box,String key,UiActions.Tone tone,Runnable run){addRenderableWidget(UiActions.button(Client.tr(key),tone,"",ignored->run.run()).bounds(box.x(),box.y(),box.width(),20).build()).active=loaded&&!busy&&!loadFailed;}
  private void line(List<java.util.function.Consumer<NativeLayout.Box>> content,Component text,int color){
-  for(var part:font.split(text,Math.max(40,dialog.body().width()-16)))content.add(box->textRows.add(()->drawing.drawString(font,part,box.x(),box.y()+5,color,false)));
+  for(var part:font.split(text,Math.max(40,dialog.body().width()-16)))content.add(box->textRows.add(()->UiCanvas.text(drawing,font,part,box.x(),box.y()+5,color,false)));
  }
  @Override protected void init(){dialog=UiDialog.fit(width,height,440,390);textRows.clear();var b=dialog.body();var selected=selected();
   if(target==null){

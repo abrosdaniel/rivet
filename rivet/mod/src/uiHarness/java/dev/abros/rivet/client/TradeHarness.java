@@ -17,6 +17,14 @@ public final class TradeHarness {
   if(step<0){if(!(mc.screen instanceof TitleScreen))return;deadline=now+120000;ConnectScreen.startConnecting(mc.screen,mc,ServerAddress.parseString(address),new ServerData("Trades",address,ServerData.Type.OTHER),false,null);step=0;return;}
   if(!scenario.equals("review")&&now>deadline)throw new IllegalStateException("Timeout "+scenario+" step="+step+" screen="+(mc.screen==null?"none":mc.screen.getClass().getName()));
   if(mc.player==null||!ServerMenuClient.available()||now<next)return;next=now+700;if(!scenario.equals("review")||step<8)mc.getToasts().clear();
+  if(scenario.equals("officialReview")){
+   if(!SkinClient.available()||SkinClient.busy||!SkinClient.library.has("profile"))return;
+   String hash=dev.abros.rivet.core.Json.opt(SkinClient.library.getAsJsonObject("profile"),"officialCapeHash","");
+   if(hash.isEmpty()||SkinClient.ordinarySkin().capeTexture()==null)return;
+   mc.options.guiScale().set(2);mc.resizeDisplay();RivetHud.QUEUE.clear();mc.getToasts().clear();mc.setScreen(new SkinsScreen(null,true));
+   System.out.println("RIVET_OFFICIAL_REVIEW_READY");done=true;return;
+  }
+  if(scenario.equals("officialCape")){OfficialCapeHarness.tick(mc,now);return;}
   if(scenario.equals("hdReview")){HdAppearanceHarness.tick(mc,now);return;}
   if(scenario.equals("capeReview")){
    int index=step/5,phase=step%5;if(index>=3)return;

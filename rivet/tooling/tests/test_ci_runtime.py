@@ -36,3 +36,15 @@ class Runtime(unittest.TestCase):
                 with self.assertRaises(FileNotFoundError):
                     m.build_or_restore(Path(tmp), Path(tmp), Path(tmp) / 'init.gradle')
                 build.assert_not_called()
+
+    def test_runtime_keeps_host_native_and_shared_data(self):
+        with patch.object(m.platform, 'system', return_value='Windows'), patch.object(m.platform, 'machine', return_value='AMD64'):
+            self.assertEqual(['linux', 'macos'], m.native_resource_filter('/x/io/github/humbleui/skija', ['linux', 'windows', 'macos', 'Other.class']))
+            self.assertEqual(['arm64'], m.native_resource_filter('/x/io/github/humbleui/skija/windows', ['x64', 'arm64', 'shared']))
+            self.assertEqual([], m.native_resource_filter('/x/assets', ['linux', 'arm64']))
+
+        with patch.object(m.platform, 'system', return_value='Linux'), patch.object(m.platform, 'machine', return_value='x86_64'):
+            self.assertEqual(['windows', 'macos'], m.native_resource_filter('/x/io/github/humbleui/skija', ['linux', 'windows', 'macos']))
+            self.assertEqual(['arm64'], m.native_resource_filter('/x/io/github/humbleui/skija/linux', ['x64', 'arm64']))
+        with patch.object(m.platform, 'machine', return_value='unknown'):
+            self.assertEqual([], m.native_resource_filter('/x/io/github/humbleui/skija', ['linux', 'windows', 'macos']))
