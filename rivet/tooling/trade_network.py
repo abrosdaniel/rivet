@@ -59,8 +59,11 @@ def main():
         'core/classes/java/main', 'core/resources/main', 'api/classes/java/main'))
     java = str(Path(env['JAVA_HOME']) / 'bin/java') if 'JAVA_HOME' in env else 'java'
     server = None
+    server_log = None
     def start_server(suffix):
+        nonlocal server_log
         log = work / ('server-' + suffix + '.log')
+        server_log = log
         with log.open('w') as stream:
             process = subprocess.Popen(command(work, java, 'server'), cwd=work / 'server', env=env, stdout=stream, stderr=subprocess.STDOUT)
         deadline = time.monotonic() + 150
@@ -108,6 +111,8 @@ def main():
                 verify(log, marker)
             else:
                 verify(log, 'RIVET_OFFICIAL_CAPE_OK' if stage in ('officialCape', 'officialCapeReload') else 'RIVET_HD_RELOAD_OK width=1024' if stage == 'hdReload' else 'RIVET_HD_APPEARANCE_OK width=1024 capeWidth=1024' if stage == 'hdReview' else 'RIVET_TRADE_OK ' + stage)
+                if stage == 'drops':
+                    verify(server_log, 'RIVET_TRADE_DROPS_WORLD_OK world=129 escrow=127 inventory=0')
         print('RIVET_TRADE_NETWORK_OK', flush=True)
     finally:
         if server is not None:

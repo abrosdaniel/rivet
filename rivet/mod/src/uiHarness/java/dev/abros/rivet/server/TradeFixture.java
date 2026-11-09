@@ -27,6 +27,11 @@ public final class TradeFixture {
    else if(op.equals("joinDeny")){cancelToss=false;cancelJoin=true;}
    else if(op.equals("dropAllow")){cancelToss=false;cancelJoin=false;}
    else if(op.equals("dropClear")){for(var item:p.serverLevel().getEntitiesOfClass(net.minecraft.world.entity.item.ItemEntity.class,p.getBoundingBox().inflate(64)))item.discard();}
+   else if(op.equals("dropCheck")){
+    int count=p.serverLevel().getEntitiesOfClass(net.minecraft.world.entity.item.ItemEntity.class,p.getBoundingBox().inflate(64)).stream().filter(item->item.getItem().is(Items.DIAMOND)).mapToInt(item->item.getItem().getCount()).sum();
+    if(count!=129||p.getInventory().countItem(Items.DIAMOND)!=0||!(p.containerMenu instanceof TradeMenu menu)||!menu.getCarried().isEmpty()||menu.getSlot(0).getItem().getCount()!=127)throw new IllegalStateException("Server drop conservation failed: world="+count+" inventory="+p.getInventory().countItem(Items.DIAMOND));
+    System.out.println("RIVET_TRADE_DROPS_WORLD_OK world=129 escrow=127 inventory=0");
+   }
    else if(op.equals("space")){p.getInventory().setItem(8,ItemStack.EMPTY);}
    return 1;
   })));

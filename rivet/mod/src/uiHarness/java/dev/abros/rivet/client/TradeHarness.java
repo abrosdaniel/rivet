@@ -12,7 +12,7 @@ import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.fml.common.EventBusSubscriber;
 @EventBusSubscriber(modid="rivet",value=Dist.CLIENT)
 public final class TradeHarness {
- private static int step=-1;private static long deadline,next;private static boolean done;private static String id;
+ private static int step=-1;private static long deadline,next,dropSyncDeadline;private static boolean done;private static String id;
  @SubscribeEvent public static void tick(net.neoforged.neoforge.client.event.ClientTickEvent.Post e){String address=System.getenv("RIVET_TRADE_ADDRESS"),scenario=System.getenv("RIVET_TRADE_SCENARIO");if(address==null||done)return;var mc=Minecraft.getInstance();long now=System.currentTimeMillis();try{
   if(step<0){if(!(mc.screen instanceof TitleScreen))return;deadline=now+120000;ConnectScreen.startConnecting(mc.screen,mc,ServerAddress.parseString(address),new ServerData("Trades",address,ServerData.Type.OTHER),false,null);step=0;return;}
   if(!scenario.equals("review")&&now>deadline)throw new IllegalStateException("Timeout "+scenario+" step="+step+" screen="+(mc.screen==null?"none":mc.screen.getClass().getName()));
@@ -275,7 +275,7 @@ public final class TradeHarness {
    else if(menu!=null&&step==13){check(menu.getSlot(0).getItem().getCount()==191,"Q and Ctrl Q remove one and native stack");click(menu,0,0,ClickType.PICKUP);step++;}
    else if(menu!=null&&step==14){click(menu,-999,1,ClickType.PICKUP);step++;}
    else if(menu!=null&&step==15){check(menu.getCarried().getCount()==63,"right outside drops one");mc.screen.mouseClicked((mc.screen.width-256)/2+20,(mc.screen.height-234)/2+160,0);mc.screen.mouseReleased((mc.screen.width-256)/2+20,(mc.screen.height-234)/2+160,0);step++;}
-   else if(menu!=null&&step==16){check(menu.getCarried().isEmpty()&&menu.getSlot(0).getItem().getCount()==127,"left outside drops cursor");int count=0;for(var entity:mc.level.entitiesForRendering())if(entity instanceof net.minecraft.world.entity.item.ItemEntity item&&item.getItem().is(Items.DIAMOND))count+=item.getItem().getCount();check(count==129,"world receives exact dropped quantity");action(menu,1);step++;}
+   else if(menu!=null&&step==16){check(menu.getCarried().isEmpty()&&menu.getSlot(0).getItem().getCount()==127,"left outside drops cursor");int count=0;for(var entity:mc.level.entitiesForRendering())if(entity instanceof net.minecraft.world.entity.item.ItemEntity item&&item.getItem().is(Items.DIAMOND))count+=item.getItem().getCount();if(count!=129){if(dropSyncDeadline==0)dropSyncDeadline=now+5000;check(now<dropSyncDeadline,"world receives exact dropped quantity: expected=129 actual="+count);return;}command("tradeFixture dropCheck");action(menu,1);step++;}
    else if(menu!=null&&step==17){action(menu,2);step++;}
    else if(menu!=null&&step==18){check(menu.fullyCollected()&&mc.player.getInventory().countItem(Items.DIAMOND)==127,"remaining escrow returned exactly once");finish(scenario);}
   }else if(scenario.equals("rapid")){
