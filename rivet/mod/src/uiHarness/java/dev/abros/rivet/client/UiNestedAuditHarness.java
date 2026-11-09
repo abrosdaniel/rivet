@@ -19,7 +19,7 @@ public final class UiNestedAuditHarness {
   if(System.currentTimeMillis()<at)return;at=System.currentTimeMillis()+350;
   try{
    if(step>0){verify(mc.screen instanceof Preview p?p.content:mc.screen);UiCaptureHarness.grab(new java.io.File(output),"nested-"+step+".png",mc.getMainRenderTarget(),m->{});}
-   if(step==FRAMES.size()){step++;System.out.println("RIVET_NESTED_UI_OK frames="+FRAMES.size());mc.stop();return;}
+   if(step==FRAMES.size()){step++;System.out.println("RIVET_NESTED_UI_OK: frames="+FRAMES.size());mc.stop();return;}
    var frame=FRAMES.get(step++);frame.apply();Screen next;
    switch(frame.scene()){
     case 0->{var screen=new AuthApplicationsScreen(null);var sessions=new JsonArray();for(int n=0;n<20;n++){var row=new JsonObject();row.addProperty("id","session-"+n);row.addProperty("application","Example application "+n);row.addProperty("created",1791000000000L);row.addProperty("expires",1791100000000L);sessions.add(row);}set(screen,"sessions",sessions);next=screen;}

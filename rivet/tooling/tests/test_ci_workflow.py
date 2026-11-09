@@ -38,3 +38,13 @@ class Workflow(unittest.TestCase):
         installs = [line for line in text.splitlines() if 'apt-get install' in line and 'xvfb' in line]
         self.assertEqual(6, len(installs))
         self.assertTrue(all('libegl1' in line.split() for line in installs))
+
+    def test_ui_harness_completion_matches_verifier_format(self):
+        workflow = (ROOT / '.github/workflows/ci.yml').read_text()
+        markers = re.findall(r'verify_ui_snapshots.py[^\n]* (RIVET_\w+)', workflow)
+        sources = '\n'.join(p.read_text() for p in (ROOT / 'rivet/mod/src/uiHarness').rglob('*.java'))
+        for marker in markers:
+            with self.subTest(marker=marker):
+                reports = re.findall(r'"' + marker + r'([^"\n]*)"', sources)
+                self.assertEqual(1, len(reports))
+                self.assertTrue(reports[0].startswith(': frames='), reports[0])
