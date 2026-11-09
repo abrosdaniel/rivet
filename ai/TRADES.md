@@ -330,3 +330,25 @@ Fixture теперь использует dirty/save очередь как ск�
 пиксели страниц. Два локальных terrain прогона прошли, включая финальную
 проверку повторного чтения. Timeout дополнен координатами и ожидаемым/реальным
 пикселем. Production-код не менялся. Повтор CI ещё требуется.
+
+
+2026-11-09: combined update fixture ждал публичную проверку версии недостаточно:
+startup callback мог заменить внедрённый unpublished candidate. Теперь ждёт
+барьер IO и завершение NETWORK перед инъекцией; production security не ослаблена.
+Локально direct/proxy/fallback GUI2 install/connect/alias прошли. ChatHints
+показывает ЛС с текущим триггером и /msg /w /tell; native chat прошёл.
+
+По запросу пользователя CI разделён на map shards, Builder layouts/routes и
+Envelope; переносимая commit-bound среда готовится Linux сборкой один раз.
+Независимые suite используют отдельные миры/БД, Trade restart chain сохранён.
+Обычные изменения выбирают затронутые проверки, выпуск требует полный набор.
+Устаревшие checks отменяются, публикация вынесена в защищённый workflow_run
+с проверкой origin/main, success, release-intent и exact commit. Установленный
+клиент не менялся. Remote CI после этих изменений ещё требуется.
+
+Локальная проверка нового CI: 62 tooling tests, 0 failures, 1 opt-in skip;
+actionlint прошёл. Экспорт/перенос runtime: native chat + terrain успешны,
+UI TAB 126 frames успешен без Gradle; packaged module default/disabled/base
+с проверкой START/STOP успешны. Исправлено quoting путей с пробелами при
+переносе Java argfiles. Артефакт содержит зависимости/assets, но не runtime
+world/config/credentials; сборки другой платформы или commit отвергаются.

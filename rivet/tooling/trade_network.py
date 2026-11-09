@@ -4,6 +4,7 @@ Requires a prepared isolated work directory (map_network.prepare) and compiled
 uiHarness classes. Never points at an installed client or a production world.
 """
 import argparse
+from ci_runtime import build_or_restore
 import os
 import json
 import hashlib
@@ -51,8 +52,7 @@ def main():
             identity = uuid.UUID(bytes=hashlib.md5(('OfflinePlayer:' + name).encode()).digest(), version=3)
             operators.append(dict(uuid=str(identity), name=name, level=4, bypassesPlayerLimit=True))
         (work / 'server/ops.json').write_text(json.dumps(operators))
-        with (work / 'prepare.log').open('w') as log:
-            subprocess.run([str(root / 'gradlew'), '-I', str(init), '-PrivetUiHarness', ':mod:classes', ':mod:compileUiHarnessJava', ':mod:prepareClientRun', ':mod:prepareServerRun', '--no-daemon'], cwd=root, stdout=log, stderr=subprocess.STDOUT, check=True, timeout=900)
+        build_or_restore(root, work, init)
     env = dict(os.environ, RIVET_TRADE_FIXTURE='true')
     env['MOD_CLASSES'] = os.pathsep.join('rivet%%' + str(work / 'build' / part) for part in (
         'mod/classes/java/main', 'mod/resources/main', 'mod/classes/java/uiHarness',

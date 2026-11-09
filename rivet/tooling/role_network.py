@@ -1,5 +1,6 @@
 """Live authenticated roles and in-game rename. Requires an isolated, empty PostgreSQL database."""
 import argparse
+from ci_runtime import build_or_restore
 import os
 from pathlib import Path
 import re
@@ -22,8 +23,7 @@ def main():
     config = work / "server/config/rivet-server.toml"
     config.write_text(re.sub(r'^mode = "false"$', 'mode = "base"', config.read_text(), flags=re.M))
     (work / "server/ops.json").write_text("[]")
-    with (work / "prepare.log").open("w") as log:
-        subprocess.run([str(root / "gradlew"), "-I", str(init), "--project-cache-dir", str(work / "gradle"), "-PrivetUiHarness", ":mod:classes", ":mod:compileUiHarnessJava", ":mod:prepareClientRun", ":mod:prepareServerRun", "--no-daemon", "--console=plain"], cwd=root, stdout=log, stderr=subprocess.STDOUT, check=True, timeout=900)
+    build_or_restore(root, work, init)
     download_lp(work / "server/mods/LuckPerms-NeoForge-5.4.150.jar")
     env = os.environ.copy()
     env["RIVET_ROLE_NETWORK_FIXTURE"] = "true"

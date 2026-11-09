@@ -1,5 +1,7 @@
 """Prepare an isolated packaged-server lifecycle check, then verify its log."""
 import argparse
+import os
+import subprocess
 import re
 import shutil
 from pathlib import Path
@@ -57,13 +59,31 @@ def main():
     setup.add_argument("mode", choices=("default", "disabled", "base"))
     setup.add_argument("game", type=Path)
     setup.add_argument("--port", type=int, default=5432)
+    live = commands.add_parser("run")
+    live.add_argument("mode", choices=("default", "disabled", "base"))
+    live.add_argument("game", type=Path)
+    live.add_argument("--port", type=int, default=5432)
     check = commands.add_parser("verify")
     check.add_argument("log", type=Path)
     args = parser.parse_args()
     if args.action == "verify":
         verify(args.log)
     else:
-        prepare(Path(__file__).resolve().parents[2], args.game, args.mode, args.port)
+        root = Path(__file__).resolve().parents[2]
+        prepare(root, args.game, args.mode, args.port)
+        if args.action == 'run':
+            from ci_runtime import restore
+            from map_network import command
+            restore(root, Path(os.environ['RIVET_TEST_RUNTIME']), args.game)
+            # Packaged tests must use only the libraries shipped inside the JAR.
+            cp = args.game / 'build/mod/moddev/serverLegacyClasspath.txt'
+            bundled = ('httpclient5-', 'httpcore5-', 'HikariCP-', 'postgresql-',
+                       'bcprov-', 'bcutil-', 'bcpkix-', 'Java-WebSocket-')
+            cp.write_text('\n'.join(p for p in cp.read_text().splitlines() if not Path(p).name.startswith(bundled)) + '\n')
+            env = dict(os.environ, RIVET_MODULE_SMOKE=args.mode)
+            env.pop('MOD_CLASSES', None)
+            java = str(Path(env['JAVA_HOME']) / 'bin/java')
+            subprocess.run(command(args.game.resolve(), java, 'server'), cwd=args.game, env=env, check=True, timeout=300)
 
 
 if __name__ == "__main__":

@@ -1,5 +1,6 @@
 """Envelope UUID routing, rename and persisted mail across a real server restart."""
 import argparse
+from ci_runtime import build_or_restore
 import hashlib
 import os
 from pathlib import Path
@@ -45,8 +46,7 @@ def main():
     config = work / "server/config/rivet-server.toml"
     config.write_text(re.sub(r'^mode = "false"$', 'mode = "base"', config.read_text(), flags=re.M))
     download(work / "server/mods/envelope.jar")
-    with (work / "prepare.log").open("w") as log:
-        subprocess.run([str(root / "gradlew"), "-I", str(init), "--project-cache-dir", str(work / "gradle"), "-PrivetUiHarness", ":mod:classes", ":mod:compileUiHarnessJava", ":mod:prepareServerRun", "--no-daemon", "--console=plain"], cwd=root, stdout=log, stderr=subprocess.STDOUT, timeout=900, check=True)
+    build_or_restore(root, work, init, server_only=True)
     env = os.environ.copy()
     env["MOD_CLASSES"] = os.pathsep.join("rivet%%" + str(work / "build" / part) for part in ("mod/classes/java/main", "mod/resources/main", "mod/classes/java/uiHarness", "core/classes/java/main", "core/resources/main", "api/classes/java/main"))
     java = str(Path(env["JAVA_HOME"]) / "bin/java") if "JAVA_HOME" in env else "java"

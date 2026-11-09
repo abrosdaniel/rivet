@@ -2967,6 +2967,7 @@
   "rivet.wardrobe.search": "Поиск",
   "rivet.wardrobe.turn": "Спереди / сзади",
   "rivet.chat.personal": "Лично",
+  "rivet.chat.personalCommandsHint": "/msg, /w, /tell Ник текст → личное сообщение",
   "rivet.chat.personalHint": "{trigger}Ник: текст → личное сообщение",
   "rivet.chat.personalUnavailable": "Укажите ник доступного онлайн-игрока: личное сообщение не отправлено.",
   "rivet.chat.you": "Вы",

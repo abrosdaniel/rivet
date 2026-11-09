@@ -126,7 +126,7 @@ def publish(root, artifact, output, signed_updates=False):
     number = version(root)
     tag = "v" + number
     repository = os.environ["GITHUB_REPOSITORY"]
-    commit = os.environ["GITHUB_SHA"]
+    commit = os.environ.get("RIVET_RELEASE_COMMIT") or os.environ["GITHUB_SHA"]
     if run("git", "rev-parse", "HEAD") != commit:
         raise ValueError("Checkout does not match the tested commit")
     available = releases(repository)

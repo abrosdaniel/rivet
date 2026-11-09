@@ -1,6 +1,8 @@
 import importlib.util
 from pathlib import Path
 import unittest
+import sys
+sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 spec = importlib.util.spec_from_file_location("ci_plan", Path(__file__).resolve().parents[1] / "ci_plan.py")
 m = importlib.util.module_from_spec(spec)
@@ -34,3 +36,25 @@ class CiPlan(unittest.TestCase):
         result = m.plan("workflow_dispatch", "refs/heads/fix", "main", False)
         self.assertTrue(result["full"])
         self.assertFalse(result["publish"])
+
+    def test_docs_do_not_start_game_or_database(self):
+        result = m.plan('pull_request', 'refs/pull/1/merge', 'main', False, paths=['docs/server/index.md', 'README.md'])
+        self.assertEqual([], result['checks'])
+        self.assertFalse(result['native'])
+
+    def test_fixture_changes_select_owner_and_shared_changes_select_all(self):
+        result = m.plan('push', 'refs/heads/fix', 'main', False, paths=['rivet/mod/src/uiHarness/java/dev/abros/rivet/client/TradeHarness.java'])
+        self.assertEqual(['java', 'trade'], result['checks'])
+        for path in ['.github/workflows/ci.yml', 'rivet/tooling/ci_runtime.py', 'rivet/core/src/main/java/A.java']:
+            self.assertEqual(list(m.CHECKS), m.affected([path]))
+
+    def test_release_cannot_skip_checks_even_for_docs_only(self):
+        result = m.plan('push', 'refs/heads/main', 'main', False, paths=['README.md'])
+        self.assertTrue(result['publish'])
+        self.assertEqual(list(m.CHECKS), result['checks'])
+
+    def test_native_shards_are_disjoint_and_complete(self):
+        import map_network
+        flattened = [name for names in map_network.SUITES.values() for name in names]
+        self.assertEqual(len(flattened), len(set(flattened)))
+        self.assertEqual({s[0] for s in map_network.SCENARIOS}, set(flattened))

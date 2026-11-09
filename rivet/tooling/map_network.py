@@ -1,5 +1,6 @@
 """Isolated real-server map regressions; completion markers are mandatory, not exit code alone."""
 import argparse
+from ci_runtime import build_or_restore
 import hashlib
 import json
 import os
@@ -31,6 +32,13 @@ SCENARIOS = (
     ("permissions", "RIVET_MAP_PERMISSION_TEST_ADDRESS", "RivetMapGuest", "RIVET_MAP_PERMISSION_OK", 240),
     ("teleport", "RIVET_MAP_TELEPORT_TEST_ADDRESS", "RivetMapTest", "RIVET_MAP_TELEPORT_OK", 240),
 )
+
+# Keep state-dependent sequences together and preserve SCENARIOS order.
+SUITES = {
+    'data': ('updates', 'chat', 'realtime', 'notifications', 'ingress'),
+    'appearance': ('skins', 'wardrobe', 'module', 'integrations'),
+    'terrain': ('persistence', 'terrain', 'publication', 'light', 'permissions', 'teleport'),
+}
 
 def verify(path, marker):
     text = Path(path).read_text(errors="replace")
@@ -110,9 +118,14 @@ def main():
     parser.add_argument("--database", default="rivet_test")
     parser.add_argument("--game-port", type=int, default=25579)
     parser.add_argument("--scenario", choices=[s[0] for s in SCENARIOS], action="append")
+    parser.add_argument("--suite", choices=SUITES)
     parser.add_argument("--auth", action="store_true", help="Exercise scenarios with Rivet Auth base")
     parser.add_argument("--ingress-cycles", type=int, default=1)
     args = parser.parse_args()
+    if args.suite:
+        if args.scenario:
+            parser.error("Choose --suite or --scenario, not both")
+        args.scenario = list(SUITES[args.suite])
     if not 1 <= args.ingress_cycles <= 50:
         parser.error("--ingress-cycles must be between 1 and 50")
     root = Path(__file__).resolve().parents[2]
@@ -122,8 +135,7 @@ def main():
     if args.auth:
         config = work / "server/config/rivet-server.toml"
         config.write_text(re.sub(r'^mode = "false"$', 'mode = "base"', config.read_text(), flags=re.M))
-    with (work / "prepare.log").open("w") as log:
-        subprocess.run([str(root / "gradlew"), "-I", str(init), "--project-cache-dir", str(work / "gradle"), "-PrivetUiHarness", ":mod:classes", ":mod:compileUiHarnessJava", ":mod:prepareClientRun", ":mod:prepareServerRun", "--no-daemon", "--console=plain"], cwd=root, stdout=log, stderr=subprocess.STDOUT, check=True, timeout=900)
+    build_or_restore(root, work, init)
     download_lp(work / "server/mods/LuckPerms-NeoForge-5.4.150.jar")
     env = os.environ.copy()
     env["RIVET_REALTIME_FIXTURE"] = "true" if not args.scenario or "realtime" in args.scenario else "false"

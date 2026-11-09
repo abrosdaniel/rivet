@@ -1,5 +1,6 @@
 """Dedicated-server Java API discovery/lifecycle regression, with an isolated world and PostgreSQL."""
 import argparse
+from ci_runtime import build_or_restore
 import os
 from pathlib import Path
 import subprocess
@@ -84,11 +85,7 @@ def main():
         for old, new in [("minX = -2048", "minX = 0"), ("minZ = -2048", "minZ = 0"), ("maxZ = 2047", "maxZ = 15")]:
             terrain = terrain.replace(old, new)
     config_path.write_text(before + "[api.terrain]" + terrain)
-    with (work / "prepare.log").open("w") as log:
-        subprocess.run([str(root / "gradlew"), "-I", str(init), "--project-cache-dir", str(work / "gradle"),
-                        "-PrivetUiHarness", ":mod:classes", ":mod:compileUiHarnessJava", ":mod:prepareServerRun",
-                        "--no-daemon", "--console=plain"], cwd=root, stdout=log, stderr=subprocess.STDOUT,
-                       check=True, timeout=900)
+    build_or_restore(root, work, init, server_only=True)
     env = dict(os.environ, RIVET_API_SMOKE="false" if args.saved_terrain or args.scheduler_phase else "true", RIVET_SAVED_TERRAIN_SMOKE="true" if args.saved_terrain else "false", RIVET_TERRAIN_SCHEDULE_PHASE=args.scheduler_phase or "")
     env["MOD_CLASSES"] = os.pathsep.join("rivet%%" + str(work / "build" / part) for part in
         ("mod/classes/java/main", "mod/resources/main", "mod/classes/java/uiHarness",

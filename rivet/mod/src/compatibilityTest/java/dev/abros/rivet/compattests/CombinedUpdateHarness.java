@@ -18,6 +18,7 @@ import java.util.List;
 /** Packaged process test. Only the unpublished release catalogue is supplied by the fixture. */
 @EventBusSubscriber(modid="rivet_compat_tests",value=Dist.CLIENT)
 public final class CombinedUpdateHarness {
+ private static java.util.concurrent.Future<?> initialized;private static boolean networkIdle;private static long initializationDeadline;
  private static boolean started,done,reviewed,closing;private static long deadline;private static Screen last,observed;private static int settling;
  @SubscribeEvent public static void tick(net.neoforged.neoforge.client.event.ClientTickEvent.Post event){
   String phase=System.getenv("RIVET_COMBINED_FLOW");if(phase==null||done)return;var mc=Minecraft.getInstance();
@@ -25,6 +26,16 @@ public final class CombinedUpdateHarness {
    String target=System.getenv("RIVET_COMBINED_VERSION");
    if(!started){
     if(!(mc.screen instanceof TitleScreen)||Client.hub==null)return;
+    if(phase.equals("install")&&!"true".equals(System.getenv("RIVET_COMBINED_SIGNED"))){
+     // The startup catalogue runs asynchronously and can otherwise overwrite the
+     // unpublished fixture offer with the currently published (older) release.
+     if(initialized==null){initialized=Client.IO.submit(()->{});initializationDeadline=System.nanoTime()+java.util.concurrent.TimeUnit.SECONDS.toNanos(120);return;}
+     check(System.nanoTime()<initializationDeadline,"Startup catalogue did not finish before fixture setup");
+     var network=(java.util.concurrent.ThreadPoolExecutor)Client.NETWORK;
+     if(!initialized.isDone()||network.getActiveCount()!=0||!network.getQueue().isEmpty()){networkIdle=false;return;}
+     // Let its queued client-thread callback run before installing the fixture.
+     if(!networkIdle){networkIdle=true;return;}
+    }
     started=true;deadline=System.nanoTime()+java.util.concurrent.TimeUnit.SECONDS.toNanos(120);
     check(System.getProperty("rivet.launchGate","").equals("1"),"Packaged bootstrap not active");
     check(Client.loadedJar.startsWith(mc.gameDirectory.toPath().toRealPath()),"Not running isolated installed bundle: "+Client.loadedJar);

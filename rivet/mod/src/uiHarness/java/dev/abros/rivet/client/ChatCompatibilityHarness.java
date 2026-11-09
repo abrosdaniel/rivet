@@ -78,6 +78,8 @@ public final class ChatCompatibilityHarness {
  }
  private static void verifyTriggers(){
   var mc=Minecraft.getInstance();ServerMenuClient.state.addProperty("chatGlobalTrigger","!!");ServerMenuClient.state.addProperty("chatGroupTrigger","@@");ServerMenuClient.state.addProperty("chatLocalTrigger","~");ServerMenuClient.state.addProperty("chatPersonalTrigger","%");
+  check(ChatHints.lines("").contains(Client.text("chat.personalHint").replace("{trigger}","%")),"Private instruction visible before entering trigger");
+  for(String command:java.util.List.of("/msg","/w","/tell"))check(ChatHints.lines(command+" RivetMapTest hello").contains(Client.text("chat.personalCommandsHint")),"Private command hint "+command);
   check(ChatHints.parse("~hello").channel()==dev.abros.rivet.core.ChatChannels.Channel.LOCAL,"Custom local indicator");
   check(ChatHints.parse("!!hello").channel()==dev.abros.rivet.core.ChatChannels.Channel.GLOBAL,"Custom global indicator");
   check(ChatHints.lines("@@Town: hello").stream().anyMatch(line->line.startsWith("@@")),"Custom trigger hint");
