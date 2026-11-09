@@ -36,13 +36,14 @@ public final class MapTerrainHarness {
  private static int expected(int x,int z){int h=height(x,z);return MapColors.surface(color(x,z),0xff000000,h,inside(x,z-1)?height(x,z-1):h,inside(x-1,z-1)?height(x-1,z-1):h,false);}
  private static int[] expectedTile(int cx,int cz,int detail){int[] p=new int[256];for(int z=0;z<16;z++)for(int x=0;x<16;x++)p[z*16+x]=expected(cx*16+x,cz*16+z);return MapDetail.pyramid(p)[detail];}
  private static void check(boolean b,String message){if(!b)throw new IllegalStateException(message);checks++;}
+ private static String unsettled="";
  private static boolean settled(){
   for(int rz=-1;rz<=1;rz++)for(int rx=-1;rx<=1;rx++){
-   var key=new MapRegionTextures.Key(DIM,rx,rz,3);var texture=MapRegionTextures.texture(key,3);if(texture==null||!texture.complete())return false;
+   var key=new MapRegionTextures.Key(DIM,rx,rz,3);var texture=MapRegionTextures.texture(key,3);if(texture==null||!texture.complete()){unsettled="page="+key+" missingOrIncomplete";return false;}
    var pixels=texture.texture().getPixels();if(pixels==null||pixels.getWidth()!=64)return false;
    for(int cz=0;cz<32;cz++)for(int cx=0;cx<32;cx++){
     int[] expected=expectedTile(rx*32+cx,rz*32+cz,3);
-    for(int z=0;z<2;z++)for(int x=0;x<2;x++){int c=expected[z*2+x],rgba=c&0xff00ff00|(c&255)<<16|(c>>>16&255);if(pixels.getPixelRGBA(cx*2+x,cz*2+z)!=rgba)return false;}
+    for(int z=0;z<2;z++)for(int x=0;x<2;x++){int c=expected[z*2+x],rgba=c&0xff00ff00|(c&255)<<16|(c>>>16&255);if(pixels.getPixelRGBA(cx*2+x,cz*2+z)!=rgba){unsettled="page="+key+" pixel="+(cx*2+x)+","+(cz*2+z)+" expected="+Integer.toHexString(rgba)+" actual="+Integer.toHexString(pixels.getPixelRGBA(cx*2+x,cz*2+z));return false;}}
    }
   }
   return true;
@@ -89,7 +90,7 @@ public final class MapTerrainHarness {
   if(ADDRESS==null||done)return;var mc=Minecraft.getInstance();
   try{
    if(phase==-1){if(!(mc.screen instanceof TitleScreen))return;deadline=System.currentTimeMillis()+180000;mc.options.pauseOnLostFocus=false;mc.options.guiScale().set(2);mc.resizeDisplay();ConnectScreen.startConnecting(mc.screen,mc,ServerAddress.parseString(ADDRESS),new ServerData("Map terrain test",ADDRESS,ServerData.Type.OTHER),false,null);phase=0;return;}
-   if(System.currentTimeMillis()>deadline)throw new IllegalStateException("Terrain timeout phase="+phase);
+   if(System.currentTimeMillis()>deadline)throw new IllegalStateException("Terrain timeout phase="+phase+" "+unsettled+" "+raceState());
    if(!WorldMapClient.ready())return;ticks++;
    if(phase==0){if(ticks<100)return;WorldMapClient.flush();
     if(RESTART_FILE!=null&&java.nio.file.Files.exists(java.nio.file.Path.of(RESTART_FILE))){
@@ -175,8 +176,16 @@ public final class MapTerrainHarness {
     check(((Set<?>)field(MapRegionTextures.class,"pending")).contains(new MapRegionTextures.Key(DIM,0,0,3)),"Delayed page escaped its worker barrier");
     check(deferredAttempts==3,"Delayed-page regression did not exercise deferred scheduling");
     System.out.println("RIVET_TERRAIN_DEFERRED_PAGE_OK ticks="+ticks);
-    edited=true;var tile=new MapTile();for(int z=0;z<16;z++)for(int x=0;x<16;x++)tile.set(x,z,color(496+x,496+z),height(496+x,496+z));var key=new WorldMapClient.TileKey(DIM,31,31);((Map<WorldMapClient.TileKey,MapTile>)field(WorldMapClient.class,"tiles")).put(key,tile);MapTerrainCache.changed(key);check(((Map<?,?>)field(MapRegionTextures.class,"invalidated")).containsKey(new MapRegionTextures.Key(DIM,0,0,3)),"In-flight page was not invalidated by edit");holdOldPage.countDown();mc.setScreen(map);phase=7;ticks=0;}
-   else if(phase==7){if(!settled())return;check(true,"Overview update");if(!WorldMapClient.previewIo(()->previewsSaved=true))return;phase=8;}
+    edited=true;var tile=new MapTile();for(int z=0;z<16;z++)for(int x=0;x<16;x++)tile.set(x,z,color(496+x,496+z),height(496+x,496+z));var key=new WorldMapClient.TileKey(DIM,31,31);((Map<WorldMapClient.TileKey,MapTile>)field(WorldMapClient.class,"tiles")).put(key,tile);((Set<WorldMapClient.TileKey>)field(WorldMapClient.class,"dirty")).add(key);MapTerrainCache.changed(key);check(((Map<?,?>)field(MapRegionTextures.class,"invalidated")).containsKey(new MapRegionTextures.Key(DIM,0,0,3)),"In-flight page was not invalidated by edit");holdOldPage.countDown();mc.setScreen(map);phase=7;ticks=0;}
+   else if(phase==7){
+    if(ticks==1){
+     // Match scanner edits: the sample must survive LRU eviction while neighbouring
+     // pages reload. Flush to the real write queue, then force the edited sample cold.
+     WorldMapClient.flush();
+     ((Map<?,?>)field(WorldMapClient.class,"tiles")).remove(new WorldMapClient.TileKey(DIM,31,31));
+    }
+    var reloaded=WorldMapClient.tile(MapLayer.surface(DIM),31,31);if(reloaded==null)return;check(reloaded.height(0,0)==height(496,496),"Edited sample lost after eviction");
+    if(!settled())return;check(true,"Overview update");if(!WorldMapClient.previewIo(()->previewsSaved=true))return;phase=8;}
    else if(phase==8){if(!previewsSaved)return;
     if(RESTART_FILE!=null)java.nio.file.Files.writeString(java.nio.file.Path.of(RESTART_FILE),fixtureRoot+"\n"+fixtureWorld+"\n"+mc.player.getUUID()+"\n");
     if(!MapTerrainCache.work(()->{coloursHeld.countDown();try{holdColours.await();}catch(InterruptedException ex){Thread.currentThread().interrupt();}}))return;
