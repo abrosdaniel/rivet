@@ -24,6 +24,7 @@ final class UiNavigation {
  }
  static void clear(){pages.clear();history.clear();MenuSidebar.clear();outside=null;UiKeyboard.clear();}
  static void open(Screen from,String key){if(dev.abros.rivet.core.RetiredFeatures.contains(key))return;boolean wasForward=forward;forward=true;try{var mc=Minecraft.getInstance();
+  if(key.equals("trades")){TradeClient.command("rivet trades");return;}
   if(key.equals("settings")){mc.setScreen(new GeneralSettingsScreen(from));return;}
   if(from instanceof UiRecordForm editor&&!editor.leavePage(key))return;
   if(key.equals("notifications")){if(from instanceof CommunityScreen menu&&!menu.leavePage())return;mc.setScreen(new NotificationPopup(from));return;}

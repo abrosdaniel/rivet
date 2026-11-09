@@ -4,8 +4,10 @@ import net.minecraft.client.gui.GuiGraphics;
 /** Standard Rivet glyphs on a 12-pixel grid; map artwork delegates to its colour atlas. */
 final class UiIcons {
  private UiIcons(){}
+ static final String BRUSH="brush";
  static final String SEARCH="search",REFRESH="refresh",SAVE="save",CHECK="check",DELETE="delete",PLUS="plus",DOWN="down",UP="up",RIGHT="right",CLEAR="clear",PIN="pin",TARGET="target",HOME="home",STAR="star",FLAG="flag",CHEST="chest",DIMENSION="dimension";
  private static final Map<String,int[][]> LINES=Map.ofEntries(
+  Map.entry(BRUSH,new int[][]{{5,5,9,1},{9,1,10,2},{10,2,6,7},{5,5,6,7},{4,6,2,7},{2,7,2,9},{2,9,1,10},{1,10,4,10},{4,10,6,8},{6,8,4,6}}),
   Map.entry(PLUS,new int[][]{{5,2,5,9},{2,5,9,5}}),
   Map.entry(CHECK,new int[][]{{2,6,4,8},{4,8,10,2}}),
   Map.entry(CLEAR,new int[][]{{2,2,9,9},{9,2,2,9}}),

@@ -94,6 +94,7 @@ final class NotificationPopup extends ScrollScreen implements CommunityScreen.Re
         String section=Json.str(route,"section"),id=Json.str(route,"id");
         if(dev.abros.rivet.core.RetiredFeatures.contains(section)){status=Client.text("core.feature.retired");rebuildWidgets();return;}
         switch(section) {
+            case "trade" -> TradeClient.command("rivet tradeopen "+UUID.fromString(id));
             case "server" -> minecraft.setScreen(new ServerMenuScreen(this,"help"));
             case "map-publications" -> minecraft.setScreen(MapPublicationsScreen.own(this,UUID.fromString(id),Json.str(route,"type")));
             case "spark" -> minecraft.setScreen(new SparkDiagnosticsScreen(this));

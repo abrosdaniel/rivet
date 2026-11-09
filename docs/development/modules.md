@@ -13,6 +13,7 @@ Rivet устанавливается одним JAR. Клиентские и с�
 | Метаданные игроков | ServerSocial | SocialClient | Общие данные для чата, TAB и имён над головой |
 | TAB | ServerSocial | RivetTab | Метаданные игроков и участников объединений |
 | Имена над головой | ServerSocial | PlayerNameplates | Метаданные игроков |
+| Trade — обмены | ServerTrades, TradeNoticeDelivery | TradeClient, TradeListScreen, TradeScreen | TradeBook, TradeJournal, TradeWire; escrow по UUID, доставка через Notifications |
 | Чат | ServerChat | ClientChat, SocialChatControls | Оформление сообщений, метаданные, права каналов |
 | Карта, миникарта и навигация | ServerMap, ServerNavigation, ServerWaystones | ClientMap — WorldMapClient, Minimap, MapCaves, MapRadar, ClientNavigation, MapSettingsScreen | MapRepository, MapTile, MapMarker, MapViewport, MapColors, MapHudPreferences |
 | Скины | ServerSkins | SkinClient | SkinWire, SkinStore |
@@ -165,3 +166,25 @@ Indexor использует `IDENTITY` и `PERMISSIONS`: его журнал и
 </div>
 
 </div>
+
+## Trade
+
+Жизненный цикл `trade` зависит от базы и Notifications. При `trade.enabled = false`
+новые сделки и изменение условий запрещены; восстановление журнала, отмена
+и получение сохранённых предметов продолжают работать. Раздел меню остаётся
+доступен для возврата вещей.
+
+Публикация предложения и возврат предметов сохраняют событие в журнале
+обмена. Отдельный рабочий поток переносит его в Notifications с проверкой
+повторной доставки. Отметка доставки сохраняется в каталоге журнала;
+при временной ошибке базы доставка повторяется. Черновые изменения предметов
+уведомлений не создают. Открытие из уведомления повторно проверяет участие
+игрока в сделке на сервере.
+
+Модерация Trade использует отдельный read-only просмотр `TradeAdministration`;
+контейнеры участников администраторам не выдаются. Каждая операция повторно
+проверяет права и ревизию сделки. Заморозка, отмена, журнал и уведомления входят
+в одну запись TradeJournal. Снимки отправленных условий сохраняются по хешу и
+повторно используются неизменившимися событиями. Незавершённые правки доступны
+только владельцу и сотрудникам с правом просмотра; пользовательские карточки
+отображают исключительно опубликованный встречный состав.

@@ -7,6 +7,9 @@ class ServerSettingsTest {
  // Git may check out the resource with CRLF. Construct fixtures in LF, then explicitly
  // select their wire/file line endings in the tests that exercise Windows configuration.
  private static String fixtureTemplate()throws java.io.IOException{return ServerSettings.template().replace("\r\n","\n");}
+ @Test void hdDefaultsAreAddedWithoutChangingExistingLimits()throws Exception{
+  String old=fixtureTemplate().replace("maxResolution = 256\n", "").replace("maxCapeResolution = 256\n", "");var file=root.resolve("config/rivet-server.toml");Files.createDirectories(file.getParent());Files.writeString(file,old);var settings=ServerSettings.load(root);assertEquals(256,settings.skins().maxResolution());assertEquals(256,settings.skins().maxCapeResolution());String updated=Files.readString(file);assertTrue(updated.contains("maxResolution = 256"));assertTrue(updated.contains("maxCapeResolution = 256"));Files.writeString(file,updated.replace("maxResolution = 256","maxResolution = 512"));assertEquals(512,ServerSettings.load(root).skins().maxResolution());assertThrows(IllegalArgumentException.class,()->ServerSettings.parse(updated.replace("maxCapeResolution = 256","maxCapeResolution = 300")));
+ }
  @Test void actualPackagedTemplateLoadsWithoutRewriting()throws Exception{
   String raw=ServerSettings.template();var file=root.resolve("config/rivet-server.toml");Files.createDirectories(file.getParent());Files.writeString(file,raw);
   assertNotNull(ServerSettings.load(root));assertEquals(raw,Files.readString(file));

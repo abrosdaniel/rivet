@@ -14,6 +14,16 @@
 
 ## Текущая работа
 
+2026-11-09: кандидат 2.11.0 — Trade и HD-скины/плащи до 1024.
+Локальная приёмка и ограничения публикации — ai/TRADES.md.
+
+2026-11-09: система обменов с офлайн-игроками — [состояние и проверки](TRADES.md).
+Trade: отдельный lifecycle, раздел меню, события в Notifications и переключатель
+Minecraft/Rivet под крестиком (Rivet по умолчанию). Единые предложения/подарки,
+карточки с прокруткой и OP-разбор с заморозкой/отменой/историей реализованы.
+Детали и проверки — в TRADES.md.
+Установленный клиент не заменять; после реализации — изолированный просмотр.
+
 2026-11-08: кандидат 2.10.0 — подписанный статический каталог и раздача Rivet
 через Builder. Новый Ed25519 trust anchor в core; приватный ключ исключён из Git,
 локально защищён правами 600. Для CI требуется RIVET_UPDATE_SIGNING_KEY с той же
@@ -1810,3 +1820,25 @@ commit/push/tag/publish не выполнялись. Установленный 
 После CRLF-прогона полный build/verifyBundle с LF и --rerun-tasks: 829 tests,
 0 failures/errors, все 34 задачи выполнены. Кандидат 2.9.0 перепакован и SHA256
 проверены. Remote exact-commit CI не запускался; установленный клиент не изменён.
+
+2026-11-09: исправлены PNG-плащи: SkinClient вычисляет наличие пикселей в
+области элитр при регистрации текстуры (метаданные очищаются при eviction/reset).
+Пустая область выбирает vanilla elytra, заполненная — custom cape fallback;
+SkinsScreen применяет тот же выбор для предпросмотра и образов.
+CapeTransparencyMixin заменяет entitySolid на entityTranslucent только для
+rivet:capes/*, сохраняя alpha. Native capeReview загрузил три PNG пользователя
+через сервер и проверил PlayerSkin/preview: Wings и зелёный — обычные элитры,
+искажённый — собственные. Снимки всех трёх с элитрами и без них просмотрены;
+чёрный фон прозрачных участков исчез. Сборка/mod:test прошли, клиент изолированный.
+
+2026-11-09: HD skins/capes: widths 64/128/256/512/1024; default server limits
+skins.maxResolution/maxCapeResolution = 256, migrated with comments/backup.
+Scaled legacy conversion and alpha preserved, upload limits separate. Client
+accepts normalized PNG up to 8 MiB, decoded texture cache bounded at 32 MiB.
+Live hdReview passed at 256 and 1024: real server upload/rejection, texture size,
+slim model, second layer, skull item renderer, face, cape and elytra screenshots.
+1024 live test exposed LWJGL stack overflow in NativeImage.read(byte[]); switched
+to explicitly allocated/freed native ByteBuffer, repeat passed. User skin.png and
+hd.png no longer exist at supplied paths; these exact files were not live-tested.
+SkinImage/CapeImage/ServerSettings tests and mod tests passed; isolated client
+left open. Installed client unchanged. Exact-commit CI not run.

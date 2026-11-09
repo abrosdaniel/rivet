@@ -10,8 +10,8 @@ public final class UiTheme {
  private static final Map<AbstractWidget,HoverState> motion=new WeakHashMap<>();
  private static final ThreadLocal<Screen> RENDER_SCREEN=new ThreadLocal<>();
  static void rendering(Screen screen,Runnable render){Screen previous=RENDER_SCREEN.get();RENDER_SCREEN.set(screen);try{render.run();}finally{if(previous==null)RENDER_SCREEN.remove();else RENDER_SCREEN.set(previous);}}
- public static boolean stylesButtons(Screen s,net.minecraft.client.gui.components.AbstractButton widget){if(widget instanceof CoreVersionButton)return false;if(RENDER_SCREEN.get()!=null)s=RENDER_SCREEN.get();return owns(s);}
- public static boolean owns(Screen s){return s!=null&&s.getClass().getPackageName().equals("dev.abros.rivet.client");}
+ public static boolean stylesButtons(Screen s,net.minecraft.client.gui.components.AbstractButton widget){if(widget instanceof CoreVersionButton)return false;if(RENDER_SCREEN.get()!=null)s=RENDER_SCREEN.get();return s instanceof TradeScreen trade?trade.rivetStyle():owns(s);}
+ public static boolean owns(Screen s){return s!=null&&!(s instanceof TradeScreen)&&s.getClass().getPackageName().equals("dev.abros.rivet.client");}
  static boolean keyboardFocus(AbstractWidget w){return w.active&&w.visible&&w.isFocused()&&Minecraft.getInstance().getLastInputType().isKeyboard()&&(RENDER_SCREEN.get()==null||RENDER_SCREEN.get()==Minecraft.getInstance().screen);}
  static boolean highlighted(AbstractWidget w){return w.active&&w.visible&&(w.isHovered()||keyboardFocus(w));}
  static float hover(AbstractWidget w){float target=highlighted(w)?1:0;if(!AccessibilityScreen.animations())return target;long now=System.nanoTime();var state=motion.get(w);if(state==null){motion.put(w,new HoverState(target,now));return target;}float step=Math.min(1,(now-state.at)/(AccessibilityScreen.motionMillis()*1000000f));state.at=now;state.value+=Math.copySign(Math.min(Math.abs(target-state.value),step),target-state.value);return state.value;}
@@ -32,6 +32,7 @@ public final class UiTheme {
   if(keyboardFocus(b))UiKit.focus(g,x,y,w,h);
   if(UiActions.isTool(b)){UiIcons.draw(g,style.icon(),x+(w-12)/2,y+(h-12)/2,b.active?UiActions.iconColor(b,UiKit.text()):UiKit.muted());return;}
   if(text.equals("×")||text.equals("+")||text.equals("↑")||text.equals("↓")){UiIcons.draw(g,text.equals("×")?UiIcons.CLEAR:text.equals("↑")?UiIcons.UP:text.equals("↓")?UiIcons.DOWN:UiIcons.PLUS,x+(w-12)/2,y+(h-12)/2,b.active?UiKit.text():UiKit.muted());return;}
+  if(w<=24&&text.codePointCount(0,text.length())==1){g.drawString(font,text,x+(w-font.width(text))/2,y+(h-8)/2,b.active?UiKit.text():UiKit.muted(),false);return;}
   boolean dropdown=text.endsWith(" ▾");if(dropdown)text=text.substring(0,text.length()-2);if(text.startsWith("+ "))text=text.substring(2);
   int foreground=b.active?(style.tone()==UiActions.Tone.PRIMARY?UiKit.onAccent():UiKit.text()):UiKit.muted(),ty=y+(h-8)/2;
   // A settings selector is a label/value row; its original message and native hit box stay intact.
@@ -50,7 +51,7 @@ public final class UiTheme {
  }
  public static boolean keyboard(Screen screen,int key){
   if(!owns(screen)||screen.getFocused() instanceof EditBox||screen.getFocused() instanceof MultiLineEditBox||key!=264&&key!=265)return false;
-  var cards=screen.children().stream().filter(e->e instanceof AbstractWidget w&&w.active&&w.visible&&(e instanceof CommunityCard||e instanceof PlayerRow||e instanceof UiSummaryCard)).map(e->(AbstractWidget)e).toList();
+  var cards=screen.children().stream().filter(e->e instanceof AbstractWidget w&&w.active&&w.visible&&(e instanceof CommunityCard||e instanceof PlayerRow||e instanceof UiSummaryCard||e instanceof TradeCard)).map(e->(AbstractWidget)e).toList();
   if(cards.isEmpty()||screen.getFocused()!=null&&!cards.contains(screen.getFocused()))return false;
   if(screen.getFocused()==null){screen.setFocused(cards.getFirst());return true;}
   var current=(AbstractWidget)screen.getFocused();AbstractWidget next=current;long distance=Long.MAX_VALUE;

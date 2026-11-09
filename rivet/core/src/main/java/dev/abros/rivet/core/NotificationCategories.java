@@ -5,7 +5,7 @@ import com.google.gson.JsonObject;
 /** Stable category IDs preserve old section preferences while isolating external sources. */
 public final class NotificationCategories {
     public static boolean valid(String value) {
-        return java.util.Set.of("help","server","spark").contains(value)||CommunityStore.SECTIONS.contains(value)
+        return java.util.Set.of("help","server","spark","trade").contains(value)||CommunityStore.SECTIONS.contains(value)
             || value.matches("[a-z][a-z0-9_]{1,63}:[a-zA-Z0-9_][a-zA-Z0-9_.-]{0,63}");
     }
     public static String source(JsonObject notice) {

@@ -29,7 +29,7 @@ final class UiActions {
  static boolean selected(AbstractButton button){return Boolean.TRUE.equals(quiet.get(button));}
  private static final java.util.Map<Button,Integer> iconColors=new java.util.WeakHashMap<>();
  static Button tool(Component label,String icon,int x,int y,Runnable run){return tool(label,icon,x,y,w->run.run());}
- static Button tool(Component label,String icon,int x,int y,Button.OnPress press){var b=button(label,Tone.NORMAL,icon,press).bounds(x,y,20,20).build();tools.add(b);b.setTooltip(Tooltip.create(label));return b;}
+ static Button tool(Component label,String icon,int x,int y,Button.OnPress press){var b=style(new UiIconButton(label,icon,x,y,press),Tone.NORMAL,icon);tools.add(b);b.setTooltip(Tooltip.create(label));return b;}
  static boolean isTool(AbstractButton button){return tools.contains(button);}
  static void iconColor(Button button,int color){iconColors.put(button,color);}
  static int iconColor(AbstractButton button,int fallback){return iconColors.getOrDefault(button,fallback);}

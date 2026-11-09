@@ -12,6 +12,17 @@ import static org.junit.jupiter.api.Assertions.*;
 @Tag("postgres")
 class NotificationStorePostgresTest {
     @TempDir Path root;
+    @Test void tradeReplayIsIdempotentAndNavigationBelongsToRecipient()throws Exception{
+        var db=TestDatabase.database(root);var notices=new NotificationStore(db);var community=new CommunityStore(db,CommunityStore.defaults());
+        var owner=new CommunityStore.Actor(UUID.randomUUID().toString(),"Owner",false,false);var other=new CommunityStore.Actor(UUID.randomUUID().toString(),"Other",false,false);community.seen(owner);community.seen(other);
+        String deal=UUID.randomUUID().toString();var event=new TradeBook.Notice(owner.id(),deal,"Other","offer",1);
+        notices.trade(event);long sequence=notices.popupSequence(owner.id());notices.trade(event);assertEquals(sequence,notices.popupSequence(owner.id()));assertEquals(1,notices.unread(owner.id()));assertEquals(0,notices.unread(other.id()));
+        var request=Json.parse("{\"section\":\"notifications\",\"op\":\"noticeNavigate\",\"id\":\""+sequence+"\"}");
+        assertThrows(CommunityFailure.class,()->community.request(other,request));
+        assertEquals(deal,community.request(owner,request).getAsJsonObject("noticeRoute").get("id").getAsString());
+        notices.trade(new TradeBook.Notice(owner.id(),deal,"Other","completed",2));assertEquals(1,notices.unread(owner.id()));assertTrue(notices.popupSequence(owner.id())>sequence);
+    }
+
 
     private static JsonObject notice(String section, String target) {
         var body = new JsonObject();

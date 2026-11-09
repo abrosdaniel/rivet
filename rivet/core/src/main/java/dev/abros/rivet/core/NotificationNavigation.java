@@ -34,7 +34,10 @@ final class NotificationNavigation {
         }
         RetiredFeatures.requireActive(section);
         var route=new JsonObject();route.addProperty("section",section);route.addProperty("id",id);
-        if(section.equals("map-publications")) {
+        if(section.equals("trade")){
+            // The owned persisted notice supplies only an ID; opening checks participation again.
+            route.addProperty("id",UUID.fromString(id).toString());
+        } else if(section.equals("map-publications")) {
             var publication=store.record("map-object",UUID.fromString(id).toString());
             if(publication==null||!actor.id().equals(Json.opt(publication,"owner","")))throw unavailable();
             route.addProperty("type",Json.str(publication,"type"));

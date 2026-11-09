@@ -11,7 +11,7 @@ import java.util.*;
 import java.util.concurrent.*;
 
 final class ServerCommands {
- static final List<String> RIGHTS=List.of("rivet.stats.edit","rivet.stats.view","rivet.announce","rivet.maintenance","rivet.restart","rivet.reports","rivet.diagnostics");
+ static final List<String> RIGHTS=List.of("rivet.stats.edit","rivet.stats.view","rivet.announce","rivet.maintenance","rivet.restart","rivet.reports","rivet.diagnostics","rivet.trade.view","rivet.trade.freeze","rivet.trade.cancel");
  static boolean allowed(CommandSourceStack s,String right){return s.getEntity() instanceof ServerPlayer p?allowed(p,right):s.getEntity()==null&&s.hasPermission(4);}
  static boolean allowed(ServerPlayer p,String right){if(!p.connection.getConnection().isConnected()||!AuthServer.authenticated(p))return false;if(p.hasPermissions(2))return true;if(!ServerIntegration.luckPermsEnabled())return false;var caps=ServerPermissions.profile(p).getAsJsonObject("capabilities");return caps.has("rivet.admin")&&caps.get("rivet.admin").getAsBoolean()||caps.has(right)&&caps.get(right).getAsBoolean();}
  static boolean staff(ServerPlayer p){return ServerFeatures.admin(p)||RIGHTS.stream().filter(k->!k.startsWith("rivet.stats.")).anyMatch(k->allowed(p,k));}

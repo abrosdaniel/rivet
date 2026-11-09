@@ -5,7 +5,7 @@ import net.minecraft.client.Minecraft;
 import java.util.*;
 /** Local home composition, shared by narrow and wide layouts. */
 final class HomeLayout {
- static final List<String> KEYS=List.of("announcements","groups","action:players","action:groups","action:help","action:admin","action:settings","action:notifications","action:skins");
+ static final List<String> KEYS=List.of("announcements","groups","action:players","action:groups","action:help","action:admin","action:settings","action:notifications","action:skins","action:trades");
  private static List<String> order=new ArrayList<>(KEYS);private static Set<String> hidden=new HashSet<>();private static Set<String> favorites=new HashSet<>();private static boolean loaded;
  static void load(){if(loaded)return;loaded=true;try{var path=file();if(java.nio.file.Files.exists(path)){var j=Json.read(path);if(j.has("order")){var chosen=new LinkedHashSet<String>();for(var e:j.getAsJsonArray("order"))if(KEYS.contains(e.getAsString()))chosen.add(e.getAsString());chosen.addAll(KEYS);order=new ArrayList<>(chosen);}if(j.has("favorites"))for(var e:j.getAsJsonArray("favorites"))if(KEYS.contains(e.getAsString()))favorites.add(e.getAsString());if(j.has("hidden"))for(var e:j.getAsJsonArray("hidden"))if(KEYS.contains(e.getAsString()))hidden.add(e.getAsString());}}catch(Exception ignored){}}
  private static java.nio.file.Path file(){return Minecraft.getInstance().gameDirectory.toPath().resolve("rivet/home-layout.json");}

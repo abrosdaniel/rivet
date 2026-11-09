@@ -27,6 +27,7 @@ final class PlayerActionsScreen extends ScrollScreen {
    var stats=PlayerStatisticsText.statistics(player);for(int i=0;i<stats.size();i+=2){var tiles=new ArrayList<Action>();for(int n=i;n<Math.min(i+2,stats.size());n++)tiles.add(new Action(stats.get(n),null));rows.add(new Action("stats",null,tiles));}
    }else{
    rows.add(new Action(Client.text("ui.stat_communication_and_groups_d89172ed"),null));
+   if(!self&&minecraft.getConnection()!=null&&minecraft.getConnection().hasChannel(dev.abros.rivet.network.TradeWire.State.TYPE))rows.add(new Action(Client.text("trade.new"),()->TradeClient.command("rivet trade "+Json.str(player,"name"))));
    if(!self){var social=new ArrayList<Action>();if(online&&actions.contains(new JsonPrimitive("tell")))social.add(new Action(Client.text("ui.write_bda589de"),()->openChat(surface(),Json.str(player,"name"))));if(ServerMenuClient.module("groups"))social.add(new Action(Client.text("ui.invite_e50b37ed"),()->CommunityScreen.invite(surface(),player)));if(social.size()==2)pair(social.get(0),social.get(1));else rows.addAll(social);}
    if(ServerMenuClient.module("groups"))rows.add(new Action(Client.text("ui.player_groups_b296fea9"),()->CommunityScreen.groupsFor(surface(),Json.str(player,"uuid"))));
    if(!self)rows.add(new Action(Client.text("ui.stat_security_5cee1483"),null));

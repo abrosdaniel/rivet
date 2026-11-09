@@ -186,7 +186,7 @@ public final class ServerSettings {
         // Obsolete punishment defaults are ignored, so existing production configs still load.
         values.remove("map.sharing");values.remove("map.shareTiles");values.remove("project.repository");values.remove("project.requirePack");
         values.remove("chat.allowItems");values.remove("integrations.luckperms");values.remove("display.chatMode");values.remove("votes.actions.banMinutes");values.remove("votes.actions.muteMinutes");
-        for(var e:defaults.entrySet())if(!values.containsKey(e.getKey())&&List.of("api.","statistics.","skins.","votes.","community.","menu.","updates.","retention.","chat.","display.","tasks.","spark.","groups.","storage.","board.","events.","polls.","ideas.","reports.","server.","pack.","map.").stream().anyMatch(e.getKey()::startsWith))values.put(e.getKey(),e.getValue());
+        for(var e:defaults.entrySet())if(!values.containsKey(e.getKey())&&List.of("trade.","api.","statistics.","skins.","votes.","community.","menu.","updates.","retention.","chat.","display.","tasks.","spark.","groups.","storage.","board.","events.","polls.","ideas.","reports.","server.","pack.","map.").stream().anyMatch(e.getKey()::startsWith))values.put(e.getKey(),e.getValue());
         values.putIfAbsent("auth.totp",defaults.get("auth.totp"));
         var missing=new TreeSet<>(defaults.keySet());missing.removeAll(values.keySet());
         if(!missing.isEmpty())throw invalid("отсутствуют обязательные параметры: "+String.join(", ",missing)+"; сверяйтесь с https://abrosdaniel.github.io/rivet/server/configuration/");
@@ -211,6 +211,7 @@ public final class ServerSettings {
     private void range(String key,int min,int max){long n=((Number)values.get(key)).longValue();if(n<min||n>max)throw invalid(key+": допустимо "+min+"–"+max);}
     public FeatureModules modules(){return FeatureModules.from(this);}
     private void validate(){
+        range("trade.days",1,365);range("trade.maxOutgoing",1,100);range("trade.maxPositions",16,1024);range("trade.radius",0,100000);
         var terrain=dev.abros.rivet.core.api.TerrainSettings.from(this);flag("api.terrain.isometric");
         dev.abros.rivet.core.api.TerrainProfiles.masked(terrain,strings("api.terrain.publicHidden"));
         for(var profile:terrainProfiles())dev.abros.rivet.core.api.TerrainProfiles.masked(terrain,profile.hidden());
@@ -260,7 +261,7 @@ public final class ServerSettings {
         if(password==null||password.isBlank())throw invalid("заполните database.password или заданную переменную database.passwordEnv");
         return new DatabaseSettings(text("database.host"),number("database.port"),text("database.database"),text("database.username"),password,text("database.sslMode"),text("database.sslCert"),number("database.pool"));
     }
-    public dev.abros.rivet.core.skins.SkinSettings skins(){return new dev.abros.rivet.core.skins.SkinSettings(flag("skins.enabled"),number("skins.maxSizeMiB"),number("skins.maxPerPlayer"),text("skins.fallback"),flag("skins.capes"),number("skins.maxCapesPerPlayer"),number("skins.maxCapeSizeKiB"),number("skins.maxOutfitsPerPlayer"));}
+    public dev.abros.rivet.core.skins.SkinSettings skins(){return new dev.abros.rivet.core.skins.SkinSettings(flag("skins.enabled"),number("skins.maxSizeMiB"),number("skins.maxPerPlayer"),text("skins.fallback"),flag("skins.capes"),number("skins.maxCapesPerPlayer"),number("skins.maxCapeSizeKiB"),number("skins.maxOutfitsPerPlayer"),number("skins.maxResolution"),number("skins.maxCapeResolution"));}
     public TaskLimits taskLimits(){return new TaskLimits(number("tasks.maxPerOwner"),number("tasks.maxSubtasks"),number("tasks.maxComments"));}
     public SparkTimeline.AlertSettings sparkAlerts(){return new SparkTimeline.AlertSettings(number("spark.minTps"),number("spark.maxMspt"),number("spark.durationSeconds"),number("spark.cooldownSeconds"));}
     public PlayerStatistics.Settings statistics(){return new PlayerStatistics.Settings(flag("statistics.firstJoin"),flag("statistics.lastActivity"),flag("statistics.playTime"),flag("statistics.session"),flag("statistics.deaths"));}

@@ -65,6 +65,7 @@ final class ServerMenuScreen extends ScrollScreen implements CommunityScreen.Rec
             dashboardSections.clear();
             if(Set.of("overview","reports","diagnostics","tools").contains(adminGroup)){
                 if(Set.of("overview","reports").contains(adminGroup)){
+                if(ServerMenuClient.may("rivet.trade.view")&&TradeClient.available())card(Client.text("trade.admin.title"),Client.text("trade.admin.summary"),"","",UiKit.accent(),()->TradeClient.command("rivet tradeadmin"));
                 if(ServerMenuClient.may("rivet.reports")&&ServerMenuClient.admin())dashboardSections.add(new DashboardSection(Client.text("ui.reports_summary_89cfcf75"),List.of()));
                 if(ServerMenuClient.may("rivet.reports")){
                     if(overviewData.has("attentionReports"))for(var entry:overviewData.getAsJsonArray("attentionReports")){var report=entry.getAsJsonObject();card(Json.opt(report,"player",Client.text("map.tool.player")),Json.opt(report,"attentionReason",Client.text("ui.awaiting_response_dacc6a50")),Json.opt(report,"message",""),Json.opt(report,"assignedName","").isBlank()?Client.text("ui.no_assignee_b69f1a51"):Client.text("ui.assigned_to_31372c54")+Json.opt(report,"assignedName",""),0xFFEF7777,()->minecraft.setScreen(new ReportDetailScreen(this,report,true)));}

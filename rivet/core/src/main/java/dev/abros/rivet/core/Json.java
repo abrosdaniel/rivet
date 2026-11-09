@@ -9,8 +9,9 @@ public final class Json {
     public static final Gson GSON = new GsonBuilder().setPrettyPrinting().disableHtmlEscaping().create();
     private Json() {}
     public static JsonObject read(Path path) throws IOException { return parse(Files.readString(path)); }
-    public static JsonObject parse(String value) throws IOException {
-        if (value.length()>8*1024*1024) throw new IOException("Metadata too large");
+    public static JsonObject parse(String value) throws IOException {return parse(value,8*1024*1024);}
+    public static JsonObject parse(String value,int maxChars) throws IOException {
+        if (value.length()>maxChars) throw new IOException("Metadata too large");
         try (JsonReader r=new JsonReader(new StringReader(value))) {
             r.setLenient(false);
             JsonElement e=readValue(r,0);

@@ -39,6 +39,22 @@ public final class NotificationStore {
         return id;
     }
 
+    /** Internal journal projection; no item data or private draft is copied to notifications. */
+    public void trade(TradeBook.Notice notice)throws Exception {
+        UUID.fromString(notice.recipient());UUID.fromString(notice.deal());
+        database.communityTransaction(()->{
+            database.lock("notice:"+notice.recipient());
+            try(var q=database.connection().prepareStatement("SELECT 1 FROM notices WHERE recipient=? AND body->>'section'='trade' AND body->>'target'=? AND (body->>'tradeSequence')::bigint>=?")){
+                q.setString(1,notice.recipient());q.setString(2,notice.deal());q.setLong(3,notice.sequence());try(var rows=q.executeQuery()){if(rows.next())return null;}
+            }
+            // One current card per exchange, with a fresh unread sequence for each published update.
+            try(var q=database.connection().prepareStatement("DELETE FROM notices WHERE recipient=? AND body->>'section'='trade' AND body->>'target'=?")){q.setString(1,notice.recipient());q.setString(2,notice.deal());q.executeUpdate();}
+            var body=new JsonObject();body.addProperty("section","trade");body.addProperty("target",notice.deal());body.addProperty("tradeSequence",notice.sequence());body.addProperty("at",System.currentTimeMillis());body.addProperty("event",notice.event());body.addProperty("priority","important");
+            LocalizedText.parts(LocalizedText.key("rivet.trade.notice."+notice.event()),LocalizedText.literal(" · "+notice.other())).put(body,"title");
+            LocalizedText.key("rivet.trade.notice.open").put(body,"body");append(notice.recipient(),body);return null;
+        });
+    }
+
     /** Owner/type/key are internal, validated by NotificationPublisher, never accepted from clients. */
     dev.abros.rivet.api.NotificationsApi.Receipt publish(String recipient, String type, String key,
             dev.abros.rivet.api.NotificationsApi.Message message, long expected, boolean revoke) throws Exception {

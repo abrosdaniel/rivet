@@ -17,6 +17,8 @@ final class ServerModules {
   new ModuleRuntime.Module<>("skins",List.of("base"),e->ServerDatabase.settings().flag("skins.enabled"),e->ServerSkins.start(),e->ServerSkins.stop()),
   module("data",List.of("base","notifications"),e->ServerDataRuntime.start(),e->ServerDataRuntime.stop()),
   module("notifications",List.of("base"),e->ServerNotifications.start(),e->ServerNotifications.stop()),
+  // Recovery and withdrawals remain available when new exchanges are disabled.
+  module("trade",List.of("base","notifications"),e->ServerTrades.start(e.getServer()),e->ServerTrades.stop()),
   module("social",List.of("data","notifications"),ServerFeatures::start,e->ServerFeatures.stop()),
   module("changes",List.of("data","notifications"),e->ServerChangeDelivery.start(),e->ServerChangeDelivery.stop()),
   new ModuleRuntime.Module<>("server",List.of("social"),e->ServerDatabase.settings().modules().enabled("server"),ServerManagement::start,e->ServerManagement.stop()),

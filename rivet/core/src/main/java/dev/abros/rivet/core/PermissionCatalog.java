@@ -5,6 +5,7 @@ public final class PermissionCatalog {
  public record Entry(String node,String category,boolean adminDefault){public String key(){return "permissions."+node.substring(6);}}
  public static final List<Entry> ENTRIES=List.of(
   new Entry("rivet.admin","administration",false),new Entry("rivet.permissions.manage","administration",false),
+  new Entry("rivet.trade.view","moderation",false),new Entry("rivet.trade.freeze","moderation",false),new Entry("rivet.trade.cancel","moderation",false),
   new Entry("rivet.indexor.admin","moderation",false),
   new Entry("rivet.reports","moderation",true),new Entry("rivet.vote.protected","moderation",false),
   new Entry("rivet.map.teleport","map",false),new Entry("rivet.map.seeHiddenPlayers","map",true),

@@ -5,6 +5,7 @@ import java.io.*;
 import javax.imageio.ImageIO;
 import static org.junit.jupiter.api.Assertions.*;
 class CapeImageTest {
+ @Test void hdPreservesAlphaAndChecksServerWidth()throws Exception{for(int width:new int[]{128,256,512,1024}){var png=SkinImageTest.png(width,width/2);var normalized=CapeImage.normalize(png,1048576,width);var image=ImageIO.read(new ByteArrayInputStream(normalized));assertEquals(width,image.getWidth());assertEquals(width/2,image.getHeight());assertEquals(0,image.getRGB(0,0)>>>24);assertArrayEquals(normalized,CapeImage.normalize(normalized,1048576,width));assertThrows(IOException.class,()->CapeImage.normalize(png,1048576,width/2));}assertThrows(IOException.class,()->CapeImage.normalize(SkinImageTest.png(96,48),1048576));}
  @Test void staticLayoutPreservesTransparencyAndReencodes()throws Exception{
   byte[] png=SkinImageTest.png(64,32);var result=CapeImage.normalize(png,262144);var image=ImageIO.read(new ByteArrayInputStream(result));var original=ImageIO.read(new ByteArrayInputStream(png));
   assertEquals(64,image.getWidth());assertEquals(32,image.getHeight());assertEquals(original.getRGB(0,0),image.getRGB(0,0));assertArrayEquals(result,CapeImage.normalize(result,262144));

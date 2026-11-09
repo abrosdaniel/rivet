@@ -62,7 +62,7 @@ final class SkinsScreen extends ScrollScreen {
    int addWidth=Math.min(180,listWidth/2);var search=addRenderableWidget(UiFields.text(font,collection,68,listWidth-addWidth-6,20,Client.tr("wardrobe.search")));search.setHint(Client.tr("wardrobe.search"));search.setMaxLength(40);search.setValue(query);search.setResponder(v->{query=v;resetScroll();rebuildWidgets();});search.active=editable();
    var add=button(choosing?Client.text("ui.selecting_file_247b7c5f"):addLabel+" · "+entries().size()+" / "+limit,collection+listWidth-addWidth,68,addWidth,()->{if(category==2)minecraft.setScreen(new NameScreen(this,"","","outfitSave"));else chooseFile();});
    add.active=editable()&&!PICKER.get()&&SkinClient.available()&&entries().size()<limit;
-   add.setTooltip(Tooltip.create(Client.tr(category==2?"wardrobe.saveHint":capes?"cape.dimensions":"ui.png_64_64_or_64_32_832cedb3")));
+   int maxResolution=library().has("maxResolution")?library().get("maxResolution").getAsInt():64;add.setTooltip(Tooltip.create(category==2?Client.tr("wardrobe.saveHint"):Client.tr("skin.uploadDimensions",maxResolution,capes?maxResolution/2:maxResolution)));
   }else{
    nameField=addRenderableWidget(UiFields.text(font,collection,96,listWidth,20,Client.tr(capes?"cape.name":"ui.skin_name_3f916450")));nameField.setMaxLength(40);nameField.setValue(draftName);nameField.setResponder(v->draftName=v);nameField.active=!SkinClient.busy;
    if(!capes)button(slim?Client.text("ui.slim_arms_894a2812"):Client.text("ui.classic_arms_87d0a86d"),collection,120,listWidth,()->{slim=!slim;rebuildWidgets();}).active=!SkinClient.busy;
@@ -113,13 +113,13 @@ final class SkinsScreen extends ScrollScreen {
  }
  private void chooseFile(){
   if(!PICKER.compareAndSet(false,true))return;
-  choosing=true;message="";var client=minecraft;var connection=client.getConnection();var level=client.level;int limit=library().get("maxBytes").getAsInt();rebuildWidgets();
+  choosing=true;message="";var client=minecraft;var connection=client.getConnection();var level=client.level;int limit=library().get("maxBytes").getAsInt();int resolution=library().has("maxResolution")?library().get("maxResolution").getAsInt():64;rebuildWidgets();
   FILES.execute(()->{
    byte[] bytes=null;String label="",failure="";
    try(var stack=MemoryStack.stackPush()){
     var patterns=stack.mallocPointer(1);patterns.put(stack.UTF8("*.png")).flip();
-    String chosen=TinyFileDialogs.tinyfd_openFileDialog(Client.text(capes?"cape.selectFile":"ui.select_a_png_skin_ebe006f7"),null,patterns,capes?"Minecraft cape PNG (64×32)":"Minecraft PNG (64×64, 64×32)",false);
-    if(chosen!=null){var path=Path.of(chosen);if(!Files.isRegularFile(path)||Files.size(path)>limit)throw new java.io.IOException();try(var in=Files.newInputStream(path)){bytes=capes?dev.abros.rivet.core.skins.CapeImage.normalize(in.readNBytes(limit+1),limit):SkinImage.normalize(in.readNBytes(limit+1),limit);}label=path.getFileName().toString().replaceFirst("(?i)\\.png$","").replaceAll("[\\p{Cntrl}]","");if(label.length()>40)label=label.substring(0,40);if(label.isBlank())label=Client.text("ui.skin_e5519889");}
+    String chosen=TinyFileDialogs.tinyfd_openFileDialog(Client.text(capes?"cape.selectFile":"ui.select_a_png_skin_ebe006f7"),null,patterns,capes?"Minecraft cape PNG":"Minecraft skin PNG",false);
+    if(chosen!=null){var path=Path.of(chosen);if(!Files.isRegularFile(path)||Files.size(path)>limit)throw new java.io.IOException();try(var in=Files.newInputStream(path)){bytes=capes?dev.abros.rivet.core.skins.CapeImage.normalize(in.readNBytes(limit+1),limit,resolution):SkinImage.normalize(in.readNBytes(limit+1),limit,resolution);}label=path.getFileName().toString().replaceFirst("(?i)\\.png$","").replaceAll("[\\p{Cntrl}]","");if(label.length()>40)label=label.substring(0,40);if(label.isBlank())label=Client.text("ui.skin_e5519889");}
    }catch(Exception error){failure=Client.text(capes?"cape.invalid":"ui.a_png_of_64_64_or_5c9963b5");}finally{PICKER.set(false);}
    final byte[] result=bytes;final String name=label,error=failure;
    client.execute(()->{choosing=false;if(client.screen!=this||client.getConnection()!=connection||client.level!=level)return;message=error;if(result!=null)try{draftTexture=capes?SkinClient.capePreview(result):SkinClient.preview(result);draft=result;draftName=name;slim=false;}catch(Exception invalid){message=Client.text("ui.could_not_prepare_the_skin_5b00a31c");}rebuildWidgets();});
@@ -136,8 +136,8 @@ final class SkinsScreen extends ScrollScreen {
   @Override public boolean isPauseScreen(){return false;}
  }
  private PlayerSkin previewSkin(){
-  if(category==2){var outfit=selectedEntry();if(outfit==null)return SkinClient.skin(minecraft.player.getUUID());var skin=UiSkinCard.appearance(outfit);ResourceLocation cape=null;if(!outfit.get("hidden").getAsBoolean()){String id=Json.str(outfit,"cape");cape=SkinClient.ordinarySkin().capeTexture();if(!id.isEmpty()&&SkinClient.library.has("capes"))for(var e:SkinClient.library.getAsJsonObject("capes").getAsJsonArray("entries"))if(id.equals(Json.str(e.getAsJsonObject(),"id")))cape=SkinClient.capeTexture(Json.str(e.getAsJsonObject(),"hash"));}return new PlayerSkin(skin.texture(),skin.textureUrl(),cape,skin.elytraTexture(),skin.model(),skin.secure());}
-  if(capes){var skin=SkinClient.skin(minecraft.player.getUUID());ResourceLocation cape=draftTexture;if(draft==null){var entry=selectedEntry();cape=selection.equals("hidden")?null:entry==null?SkinClient.ordinarySkin().capeTexture():SkinClient.capeTexture(Json.str(entry,"hash"));}return new PlayerSkin(skin.texture(),skin.textureUrl(),cape,skin.elytraTexture(),skin.model(),skin.secure());}
+  if(category==2){var outfit=selectedEntry();if(outfit==null)return SkinClient.skin(minecraft.player.getUUID());var skin=UiSkinCard.appearance(outfit);ResourceLocation cape=null;if(!outfit.get("hidden").getAsBoolean()){String id=Json.str(outfit,"cape");cape=SkinClient.ordinarySkin().capeTexture();if(!id.isEmpty()&&SkinClient.library.has("capes"))for(var e:SkinClient.library.getAsJsonObject("capes").getAsJsonArray("entries"))if(id.equals(Json.str(e.getAsJsonObject(),"id")))cape=SkinClient.capeTexture(Json.str(e.getAsJsonObject(),"hash"));}return new PlayerSkin(skin.texture(),skin.textureUrl(),cape,SkinClient.elytraTexture(cape,skin.elytraTexture()),skin.model(),skin.secure());}
+  if(capes){var skin=SkinClient.skin(minecraft.player.getUUID());ResourceLocation cape=draftTexture;if(draft==null){var entry=selectedEntry();cape=selection.equals("hidden")?null:entry==null?SkinClient.ordinarySkin().capeTexture():SkinClient.capeTexture(Json.str(entry,"hash"));}return new PlayerSkin(skin.texture(),skin.textureUrl(),cape,SkinClient.elytraTexture(cape,skin.elytraTexture()),skin.model(),skin.secure());}
   var current=SkinClient.skin(minecraft.player.getUUID());if(draftTexture!=null)return new PlayerSkin(draftTexture,null,current.capeTexture(),current.elytraTexture(),slim?PlayerSkin.Model.SLIM:PlayerSkin.Model.WIDE,false);
   var skin=UiSkinCard.appearance(selectedEntry());return new PlayerSkin(skin.texture(),skin.textureUrl(),current.capeTexture(),current.elytraTexture(),skin.model(),skin.secure());
  }
