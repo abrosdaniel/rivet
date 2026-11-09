@@ -221,7 +221,7 @@ jobs:
         with:
           distribution: temurin
           java-version: '21'
-      - run: sudo apt-get update && sudo apt-get install -y xvfb libgl1-mesa-dri libglx-mesa0 libopenal1
+      - run: sudo apt-get update && sudo apt-get install -y xvfb libgl1-mesa-dri libglx-mesa0 libegl1 libfontconfig1 libfreetype6 libopenal1
       - name: Check pack components and appearance profiles
         if: matrix.suite == 'components'
         timeout-minutes: 6
@@ -434,7 +434,7 @@ jobs:
         with:
           distribution: temurin
           java-version: '21'
-      - run: sudo apt-get update && sudo apt-get install -y xvfb libgl1-mesa-dri libglx-mesa0 libopenal1
+      - run: sudo apt-get update && sudo apt-get install -y xvfb libgl1-mesa-dri libglx-mesa0 libegl1 libfontconfig1 libfreetype6 libopenal1
       - name: Verify native scenarios
         env:
           SUITE: ${{ matrix.suite }}
@@ -487,7 +487,7 @@ jobs:
         with:
           distribution: temurin
           java-version: '21'
-      - run: sudo apt-get update && sudo apt-get install -y xvfb libgl1-mesa-dri libglx-mesa0 libopenal1
+      - run: sudo apt-get update && sudo apt-get install -y xvfb libgl1-mesa-dri libglx-mesa0 libegl1 libfontconfig1 libfreetype6 libopenal1
       - name: Download the tested Linux bundle
         env:
           GH_TOKEN: ${{ github.token }}
@@ -553,7 +553,7 @@ jobs:
         with:
           distribution: temurin
           java-version: '21'
-      - run: sudo apt-get update && sudo apt-get install -y xvfb libgl1-mesa-dri libglx-mesa0 libopenal1
+      - run: sudo apt-get update && sudo apt-get install -y xvfb libgl1-mesa-dri libglx-mesa0 libegl1 libfontconfig1 libfreetype6 libopenal1
       - name: Verify Envelope identity and restart recovery
         run: python3 rivet/tooling/envelope_smoke.py envelope-native
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
@@ -599,7 +599,7 @@ jobs:
         with:
           distribution: temurin
           java-version: '21'
-      - run: sudo apt-get update && sudo apt-get install -y xvfb libgl1-mesa-dri libglx-mesa0 libopenal1
+      - run: sudo apt-get update && sudo apt-get install -y xvfb libgl1-mesa-dri libglx-mesa0 libegl1 libfontconfig1 libfreetype6 libopenal1
       - name: Verify role permissions and authenticated rename
         run: xvfb-run -a -s '-screen 0 1280x1024x24' python3 rivet/tooling/role_network.py role-network
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
@@ -647,7 +647,7 @@ jobs:
         with:
           distribution: temurin
           java-version: '21'
-      - run: sudo apt-get update && sudo apt-get install -y xvfb libgl1-mesa-dri libglx-mesa0 libopenal1
+      - run: sudo apt-get update && sudo apt-get install -y xvfb libgl1-mesa-dri libglx-mesa0 libegl1 libfontconfig1 libfreetype6 libopenal1
       - name: Verify offline trades, recovery and HD appearance
         run: xvfb-run -a -s '-screen 0 1280x1024x24' python3 rivet/tooling/trade_network.py trade-network --prepare --hd-check
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02

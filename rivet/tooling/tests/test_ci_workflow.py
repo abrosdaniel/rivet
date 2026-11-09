@@ -32,3 +32,9 @@ class Workflow(unittest.TestCase):
         for name in ('ui', 'modules', 'map-network', 'builder', 'envelope', 'permissions', 'trade'):
             self.assertIn('  ' + name + ':\n    needs: [plan, java-linux]', text)
         self.assertIn('needs: [plan, java, contracts, postgres, ui, modules, map-network, builder, envelope, permissions, trade, api-proxy]', text)
+
+    def test_every_linux_gui_job_installs_egl(self):
+        text = (ROOT / '.github/workflows/ci.yml').read_text()
+        installs = [line for line in text.splitlines() if 'apt-get install' in line and 'xvfb' in line]
+        self.assertEqual(6, len(installs))
+        self.assertTrue(all('libegl1' in line.split() for line in installs))
