@@ -14,9 +14,25 @@
 
 ## Текущая работа
 
-2026-11-09: кандидат 2.12.0: общий Skia UI Kit, официальные плащи, оптимизация
-JAR/UI/CI. Реализация, измерения и приёмка — [UI_MIGRATION.md](UI_MIGRATION.md).
-Exact-commit GitHub CI и публикация ещё не выполнены. Установленный клиент не менять.
+2026-11-09: 2.12.0 опубликован; CI коммита
+21f807f9b14d5594e2427d71b0823609228ad2fb и публикация успешны.
+
+2026-11-09: кандидат 2.12.1 — Builder принимает папки ресурсов модов (emotes
+и другие) вместо фиксированного allowlist. Личные/служебные root-папки,
+скрытые сегменты, корневые файлы, config/rivet*, traversal и symlink запрещены.
+Известные mods/config roots требуют канонический регистр для сохранения аудита.
+Существующий review/backup/ownership не изменён. PackFoldersTest проверяет
+реальную публикацию/TLS/transaction: установка, обновление, owned-only удаление,
+повтор после восстановления состояния, конфликт личного/изменённого файла,
+изменение после review, rollback injected failure и повторное обновление.
+TAB: высота двух строк 30/32/36, clipping внутри каждой карточки, сохранён rich
+fit/tooltip. Native TabLayoutHarness: 126 scenarios GUI1–3, heads/density,
+длинные bold/italic prefix/suffix; строгий Skia и 6 снимков, выборочно просмотрены.
+Полный forced build + verifyBundle: 880 Java tests, 0 failures/errors, 1 opt-in skip.
+Tooling: 67 tests, 1 штатный skip. Strict docs/link check и diff check успешны.
+Кандидат dist/2.12.1-candidate: JAR, core.json, SHA256SUMS, release notes.
+Remote CI этого изменения не запускался; commit/push/publish не выполнялись.
+Установленный клиент не изменён.
 
 2026-11-09: кандидат 2.11.0 — Trade и HD-скины/плащи до 1024.
 Локальная приёмка и ограничения публикации — ai/TRADES.md.

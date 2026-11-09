@@ -24,13 +24,16 @@ public final class TabLayoutHarness {
   if(System.currentTimeMillis()<next)return;
   try{
    if(mc.screen instanceof Preview preview){
+    if(System.getenv("RIVET_TAB_CAPTURE")!=null&&(frame>=19&&frame<=21||frame>=109&&frame<=111))
+     UiCaptureHarness.grab(mc.gameDirectory,"tab-"+frame+".png",mc.getMainRenderTarget(),message->{});
     var viewport=RivetTab.rowsViewport;
     int cols=Math.max(1,Math.min(3,(mc.screen.width-32)/SocialSettings.INSTANCE.columnWidth));
-    int rowHeight=SocialSettings.INSTANCE.heads?new int[]{26,30,34}[SocialSettings.INSTANCE.density]:new int[]{24,26,30}[SocialSettings.INSTANCE.density];
+    int rowHeight=new int[]{30,32,36}[SocialSettings.INSTANCE.density];
     int capacity=cols*Math.max(1,Math.min(16,(mc.screen.height-100)/rowHeight));
     check(RivetTab.hits.size()==Math.min(capacity,preview.players.size()),"Missing players");
     var ids=new HashSet<UUID>();
     for(var hit:RivetTab.hits){
+     check(hit.h()>=28,"Metadata has no bottom padding");
      check(ids.add(hit.player()),"Duplicate player");
      check(hit.x()>=viewport.x()&&hit.y()>=viewport.y()&&hit.x()+hit.w()<=viewport.right()&&hit.y()+hit.h()<=viewport.bottom(),"Player clipped by TAB panel: "+hit.player());
      check(hit.x()+hit.w()<=mc.screen.width&&hit.y()+hit.h()<=mc.screen.height,"Player outside screen");
@@ -86,7 +89,7 @@ public final class TabLayoutHarness {
  private static void check(boolean valid,String message){if(!valid)throw new IllegalStateException(message);}
  private static final class Preview extends Screen{
   final List<PlayerInfo> players=new ArrayList<>();final boolean scrolled;
-  Preview(int count,boolean scrolled){super(Component.literal("TAB layout regression"));this.scrolled=scrolled;for(int i=0;i<count;i++)players.add(new PlayerInfo(new com.mojang.authlib.GameProfile(UUID.nameUUIDFromBytes(("tab-player-"+i).getBytes(java.nio.charset.StandardCharsets.UTF_8)),"LongPlayerName"+i),false){@Override public int getLatency(){return 10000;}});for(var player:players){var data=new com.google.gson.JsonObject();data.addProperty("prefix","<#9147FF>[Стример]&r");data.addProperty("suffix","<#1E90FF>@ruslaanchik&r");SocialClient.players.put(player.getProfile().getId(),data);}}
+  Preview(int count,boolean scrolled){super(Component.literal("TAB layout regression"));this.scrolled=scrolled;for(int i=0;i<count;i++)players.add(new PlayerInfo(new com.mojang.authlib.GameProfile(UUID.nameUUIDFromBytes(("tab-player-"+i).getBytes(java.nio.charset.StandardCharsets.UTF_8)),"LongPlayerName"+i),false){@Override public int getLatency(){return 10000;}});for(var player:players){var data=new com.google.gson.JsonObject();data.addProperty("prefix","<#9147FF>&l[Очень длинный префикс администратора]&r");data.addProperty("suffix","<#1E90FF>&oОчень длинный суффикс игрока&r");SocialClient.players.put(player.getProfile().getId(),data);}}
   @Override public void render(GuiGraphics graphics,int x,int y,float delta){RivetTab.draw(graphics,x,y,players);}
  }
 }
