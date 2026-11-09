@@ -313,3 +313,11 @@ Review: список обменов и нативное окно провере�
   без обязательного exact-commit CI.
 - Отдельный HD reload после перезапуска клиента и сервера прошёл: 1024 skin/cape,
   реальный skull renderer и custom elytra сохранены (RIVET_HD_RELOAD_OK).
+
+2026-11-09 CI: первый push 2.11.0 остановился в `notices`, step=2.
+Сценарий нажимал NotificationRow при busy обновлении и переходил дальше даже
+если callback не отправил noticeOpen. Теперь ожидает завершения запроса,
+проверяет отсутствие ошибки и факт dispatch; timeout включает класс экрана.
+Повтор notices/cards/admin/frozenOwner/adminResume/adminCancel/adminReturn/
+adminReturnB/adminDenied на отдельном клиенте прошёл. Production-код не менялся.
+Exact-commit CI после исправления ещё требуется; установленный клиент не менялся.

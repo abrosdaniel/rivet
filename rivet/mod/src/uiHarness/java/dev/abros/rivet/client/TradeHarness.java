@@ -15,7 +15,7 @@ public final class TradeHarness {
  private static int step=-1;private static long deadline,next;private static boolean done;private static String id;
  @SubscribeEvent public static void tick(net.neoforged.neoforge.client.event.ClientTickEvent.Post e){String address=System.getenv("RIVET_TRADE_ADDRESS"),scenario=System.getenv("RIVET_TRADE_SCENARIO");if(address==null||done)return;var mc=Minecraft.getInstance();long now=System.currentTimeMillis();try{
   if(step<0){if(!(mc.screen instanceof TitleScreen))return;deadline=now+120000;ConnectScreen.startConnecting(mc.screen,mc,ServerAddress.parseString(address),new ServerData("Trades",address,ServerData.Type.OTHER),false,null);step=0;return;}
-  if(!scenario.equals("review")&&now>deadline)throw new IllegalStateException("Timeout "+scenario+" step="+step);
+  if(!scenario.equals("review")&&now>deadline)throw new IllegalStateException("Timeout "+scenario+" step="+step+" screen="+(mc.screen==null?"none":mc.screen.getClass().getName()));
   if(mc.player==null||!ServerMenuClient.available()||now<next)return;next=now+700;if(!scenario.equals("review")||step<8)mc.getToasts().clear();
   if(scenario.equals("hdReview")){HdAppearanceHarness.tick(mc,now);return;}
   if(scenario.equals("capeReview")){
@@ -100,7 +100,7 @@ public final class TradeHarness {
   }
   if(scenario.equals("notices")){
    if(step==0){check(MenuSidebar.sections().contains("trades"),"Trade menu entry");mc.setScreen(new NotificationPopup(null));step++;}
-   else if(step==1&&mc.screen instanceof NotificationPopup){var row=mc.screen.children().stream().filter(c->c instanceof NotificationRow r&&r.getMessage().getString().contains("RivetTrade")).map(c->(NotificationRow)c).findFirst();if(row.isPresent()){capture("trade-notifications");row.get().onPress();step++;}}
+   else if(step==1&&mc.screen instanceof NotificationPopup popup){var controllerField=NotificationPopup.class.getDeclaredField("controller");controllerField.setAccessible(true);var controller=(dev.abros.rivet.core.PagedMenuController)controllerField.get(popup);if(controller.busy())return;check(!controller.failed(),"notification list request: "+controller.error());var row=mc.screen.children().stream().filter(c->c instanceof NotificationRow r&&r.getMessage().getString().contains("RivetTrade")).map(c->(NotificationRow)c).findFirst();if(row.isPresent()){capture("trade-notifications");row.get().onPress();check(controller.busy(),"notification open request dispatched");step++;}}
    else if(step==2&&mc.screen instanceof TextScreen){var open=mc.screen.children().stream().filter(c->c instanceof net.minecraft.client.gui.components.Button b&&b.getMessage().getString().equals(Client.text("ui.open_full_view_686862e2"))).map(c->(net.minecraft.client.gui.components.Button)c).findFirst();check(open.isPresent(),"notification offers persisted trade destination");open.get().onPress();step++;}
    else if(step==3&&mc.screen instanceof TradeScreen&&mc.player.containerMenu instanceof TradeMenu m){check(!m.dealId.isEmpty(),"notification opens real owned trade container");capture("trade-notification-open");finish(scenario);}
    return;
