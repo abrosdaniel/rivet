@@ -64,13 +64,13 @@ final class Minimap {
   for(int i=0;i<4;i++){
    String letter=Client.tr("map.compass."+List.of("north","east","south","west").get(i)).getString();
    double wx=cx+(i==1?1:i==3?-1:0),wz=cz+(i==2?1:i==0?-1:0);
-   double inset=2+Math.max(mc.font.width(letter),mc.font.lineHeight)*compassScale/2;
+   double inset=2+Math.max(UiFont.get().width(letter),UiFont.get().lineHeight)*compassScale/2;
    var compass=MinimapProjection.compass(projection.screenX(wx,wz),projection.screenY(wx,wz),side/2d-inset,s.round);
    g.pose().pushPose();g.pose().translate(x+side/2d+compass[0],y+side/2d+compass[1],0);g.pose().scale(compassScale,compassScale,1);
-   UiCanvas.text(g,mc.font,letter,-mc.font.width(letter)/2,-4,0xfff4f4f4,true);g.pose().popPose();
+   UiCanvas.text(g,UiFont.get(),letter,-UiFont.get().width(letter)/2,-4,0xfff4f4f4,true);g.pose().popPose();
   }
-  if(preview&&!WorldMapClient.ready())g.drawCenteredString(mc.font,Client.text("map.minimap"),x+side/2,y+side/2+16,UiKit.text());
-  if(!captions.isEmpty()){g.pose().pushPose();g.pose().translate(x,y+side+2,0);UiHudSurface.panel(g,side,captions.size()*11+4,s.opacity);for(int n=0;n<captions.size();n++){String text=captions.get(n);float factor=Math.min(1,(side-8f)/Math.max(1,mc.font.width(text)));g.pose().pushPose();g.pose().translate(side/2f,3+n*11,0);g.pose().scale(factor,factor,1);UiCanvas.text(g,mc.font,text,-mc.font.width(text)/2,0,UiKit.text(),false);g.pose().popPose();}g.pose().popPose();}
+  if(preview&&!WorldMapClient.ready())g.drawCenteredString(UiFont.get(),Client.text("map.minimap"),x+side/2,y+side/2+16,UiKit.text());
+  if(!captions.isEmpty()){g.pose().pushPose();g.pose().translate(x,y+side+2,0);UiHudSurface.panel(g,side,captions.size()*11+4,s.opacity);for(int n=0;n<captions.size();n++){String text=captions.get(n);float factor=Math.min(1,(side-8f)/Math.max(1,UiFont.get().width(text)));g.pose().pushPose();g.pose().translate(side/2f,3+n*11,0);g.pose().scale(factor,factor,1);UiCanvas.text(g,UiFont.get(),text,-UiFont.get().width(text)/2,0,UiKit.text(),false);g.pose().popPose();}g.pose().popPose();}
   drawn=now;
  }
  static List<MapMarker> nearestMarkers(double cx,double cz,String dimension,double zoom){long began=dev.abros.rivet.core.PerformanceMetrics.start();try{var s=MapSettings.INSTANCE;if(WorldMapClient.displayedMarkers().isEmpty()||zoom<MapRenderSettings.INSTANCE.markerMinZoom)return List.of();var visibility=WorldMapClient.markerVisibility(true);return NearestSelection.select(WorldMapClient.displayedMarkers(),64,m->m.dimension().equals(dimension)&&visibility.test(m)&&(!m.death()||s.deathMinimap),m->Math.hypot(m.x()-cx,m.z()-cz));}finally{dev.abros.rivet.core.PerformanceMetrics.end("client.minimap.select",began);}}

@@ -45,17 +45,17 @@ final class DirectionCue {
    text=arrow+"  "+Math.round(Math.hypot(dx,dz))+Client.text("ui.m_248f3fa6")+(settings.directionCoordinates?" · "+point.x()+", "+point.z():"");
   }
   float scale=Math.min(settings.directionScale,Math.min((HudViewport.width(g)-8f)/64,(HudViewport.height(g)-8f)/32));int maxWidth=Math.max(24,(int)((HudViewport.width(g)-16)/scale));
-  String name=UiKit.fit(mc.font,point.name(),maxWidth-32);text=UiKit.fit(mc.font,text,maxWidth-32);
-  int w=Math.min(maxWidth,Math.max(mc.font.width(text),mc.font.width(name))+32),h=32;bounds=HudPlacement.fit(HudViewport.width(g),HudViewport.height(g),(int)Math.ceil(w*scale),(int)Math.ceil(h*scale),settings.directionAnchorX,settings.directionAnchorY,settings.directionOffsetX,settings.directionOffsetY);g.pose().pushPose();g.pose().translate(bounds.x(),bounds.y(),0);g.pose().scale(scale,scale,1);int px=0,py=0;
+  String name=UiKit.fit(UiFont.get(),point.name(),maxWidth-32);text=UiKit.fit(UiFont.get(),text,maxWidth-32);
+  int w=Math.min(maxWidth,Math.max(UiFont.get().width(text),UiFont.get().width(name))+32),h=32;bounds=HudPlacement.fit(HudViewport.width(g),HudViewport.height(g),(int)Math.ceil(w*scale),(int)Math.ceil(h*scale),settings.directionAnchorX,settings.directionAnchorY,settings.directionOffsetX,settings.directionOffsetY);g.pose().pushPose();g.pose().translate(bounds.x(),bounds.y(),0);g.pose().scale(scale,scale,1);int px=0,py=0;
   // Background opacity is independent of text contrast and does not add a hidden opaque shadow.
   UiHudSurface.panel(g,w,h,settings.directionOpacity);
-  Ui.text(g,mc.font,name,px+8,py+6,UiKit.accent(),false);
-  Ui.text(g,mc.font,text,px+8,py+18,UiKit.text(),false);
-  if(!preview)Ui.text(g,mc.font,"×",px+w-12,py+6,UiKit.muted(),false);
+  Ui.text(g,UiFont.get(),name,px+8,py+6,UiKit.accent(),false);
+  Ui.text(g,UiFont.get(),text,px+8,py+18,UiKit.text(),false);
+  if(!preview)Ui.text(g,UiFont.get(),"×",px+w-12,py+6,UiKit.muted(),false);
   g.pose().popPose();
  }
  static boolean stopHit(double x,double y){return MapSettings.INSTANCE.hud.directionEnabled&&hasTarget()&&bounds.width()>0&&x>=bounds.right()-18*MapSettings.INSTANCE.hud.directionScale&&x<bounds.right()&&y>=bounds.y()&&y<bounds.y()+17*MapSettings.INSTANCE.hud.directionScale;}
  static boolean click(double x,double y){if(!stopHit(x,y))return false;clear();return true;}
- static void tooltip(GuiGraphics g,int x,int y){if(stopHit(x,y))g.renderTooltip(Minecraft.getInstance().font,Client.tr("ui.stop_navigation_9dbd1ec9"),x,y);}
+ static void tooltip(GuiGraphics g,int x,int y){if(stopHit(x,y))g.renderTooltip(UiFont.get(),Client.tr("ui.stop_navigation_9dbd1ec9"),x,y);}
  private DirectionCue(){}
 }

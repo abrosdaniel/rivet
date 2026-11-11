@@ -24,7 +24,7 @@ public final class UiTheme {
  public static void shell(Screen s,GuiGraphics g){if(s instanceof CommunityScreen||s instanceof ReportQueueScreen||s instanceof ServerMenuScreen||s instanceof FeatureListScreen f&&f.kind.equals("players"))UiWorkspace.fit(s.width,s.height).draw(g);}
 
  public static void button(AbstractButton b,GuiGraphics g){
-  var font=Minecraft.getInstance().font;int x=b.getX(),y=b.getY(),w=b.getWidth(),h=b.getHeight();String text=b.getMessage().getString();var style=UiActions.style(b);
+  var font=UiFont.get();int x=b.getX(),y=b.getY(),w=b.getWidth(),h=b.getHeight();String text=b.getMessage().getString();var style=UiActions.style(b);
   int accent=style.tone()==UiActions.Tone.DANGER?UiPalette.color(0xFFDB7777):UiKit.accent();
   float hover=b.active?hover(b):0;
   int base=UiKit.surface(UiKit.Surface.CONTROL);

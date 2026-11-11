@@ -25,7 +25,7 @@ final class MapRadar {
   if(settings.radarIcons){g.pose().pushPose();try{g.pose().translate(x,y,0);g.pose().scale(size/12f,size/12f,1);head=portrait(g,e,0,0);}finally{g.pose().popPose();}}
   if(!head){int dot=Math.max(1,Math.round(3*settings.markerScale)),left=x-dot/2,top=y-dot/2;g.fill(left-1,top-1,left+dot+1,top+dot+1,0xee10151a);g.fill(left,top,left+dot,top+dot,color);size=dot+2;}
   if(Math.abs(dy)>2){int sy=dy>0?y-size/2-3:y+size/2+2;g.fill(x-1,sy,x+2,sy+1,color);}
-  if(settings.radarNames){String name=UiKit.fit(mc.font,e.getDisplayName().getString(),64);int w=mc.font.width(name),ny=y+size/2+3;g.fill(x-w/2-2,ny-1,x+(w+1)/2+2,ny+10,0xcc10151a);UiCanvas.text(g,mc.font,name,x-w/2,ny,color,false);}
+  if(settings.radarNames){String name=UiKit.fit(UiFont.get(),e.getDisplayName().getString(),64);int w=UiFont.get().width(name),ny=y+size/2+3;g.fill(x-w/2-2,ny-1,x+(w+1)/2+2,ny+10,0xcc10151a);UiCanvas.text(g,UiFont.get(),name,x-w/2,ny,color,false);}
 
  }
  /** Front faces and protruding details use the vanilla model's UV coordinates, never item substitutes. */

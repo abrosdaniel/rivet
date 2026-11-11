@@ -14,6 +14,20 @@
 
 ## Текущая работа
 
+2026-11-11: кандидат 2.12.2 — исправлены обе регрессии шрифта из UI_MIGRATION.
+Ограничен scope Skia собственными окнами/компонентами, глобальный font не меняется.
+Общие дробные метрики Noto Sans согласованы с рисованием, clipping и вводом;
+нативный стиль Trade сохраняет vanilla metrics.
+Полный forced build/verifyBundle: 880 Java tests, 0 failures/errors, 1 opt-in skip.
+Tooling: 67 tests, 0 failures, 1 opt-in skip. Strict docs и 81-page link check прошли.
+Live изолированный Minecraft: approved RU126/EN126, native RU54 (Tab, focus/cursor,
+validation и возвраты), nested EN126, HUD RU216, TAB126 прошли.
+Новые framebuffer font contracts и существующие Skia/hover contracts прошли.
+Снимки списка игроков GUI3, вложенных окон и HUD просмотрены.
+Сетевое разрешение зависимостей с refresh прошло. Кандидат dist/2.12.2-candidate:
+SHA256 и классы UiFont/UiTextMetrics/UiCanvas внутри game.jar сверены с проверенной сборкой.
+Exact-commit remote CI и публикация ещё не выполнялись. Установленный клиент не заменён.
+
 2026-11-09: 2.12.0 опубликован; CI коммита
 21f807f9b14d5594e2427d71b0823609228ad2fb и публикация успешны.
 

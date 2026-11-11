@@ -25,7 +25,7 @@ final class UiSkinCard extends Button {
   int border=UiKit.accent();
 
   if(selected)g.fill(x,y+5,x+2,y+h-5,border);if(UiTheme.keyboardFocus(this))UiKit.focus(g,x,y,w,h);
-  var font=net.minecraft.client.Minecraft.getInstance().font;
+  var font=UiFont.get();
   if(capeCard){var texture=hiddenCape?null:entry==null?SkinClient.ordinarySkin().capeTexture():SkinClient.capeTexture(Json.str(entry,"hash"));int size=Math.min(26,h-10);if(texture!=null)g.blit(texture,x+12,y+(h-size)/2,size*10/16,size,1,1,10,16,64,32);else Ui.text(g,font,"—",x+14,y+(h-8)/2,UiKit.muted(),false);Ui.text(g,font,UiKit.fit(font,getMessage().getString(),w-58),x+40,y+(h-8)/2,UiKit.text(),false);}
   else if(grid){int size=Math.min(28,h-24);PlayerFaceRenderer.draw(g,appearance(entry),x+(w-size)/2,y+6,size);Ui.centered(g,font,UiKit.fit(font,getMessage().getString(),w-12),x+w/2,y+h-13,UiKit.text());}
   else{int size=Math.min(24,h-12);PlayerFaceRenderer.draw(g,appearance(entry),x+8,y+(h-size)/2,size);Ui.text(g,font,UiKit.fit(font,getMessage().getString(),w-size-42),x+size+16,y+(h-8)/2,UiKit.text(),false);}

@@ -10,7 +10,7 @@ final class ModalLayer {
  static void render(Screen parent,Screen modal,GuiGraphics graphics,float delta,Runnable contents){
   boolean root=PASS.get()==null;if(root)PASS.set(new Pass());
   try{
-   if(parent!=null){prepare(parent,modal);UiTheme.rendering(parent,()->parent.render(graphics,-10000,-10000,delta));}
+   if(parent!=null){prepare(parent,modal);UiCanvas.screen(graphics,parent,()->UiTheme.rendering(parent,()->parent.render(graphics,-10000,-10000,delta)));}
    // Item rendering adds up to 200 depth units; tooltips also raise their plane.
    // Keep the complete foreground window above all geometry from its parent.
    int layer=++PASS.get().level*600;

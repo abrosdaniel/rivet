@@ -16,7 +16,7 @@ final class MapSharedOverlay {
   else MapGlyphs.marker(g,"flag",x-size/2,y-size/2,size);
  }
  static void world(GuiGraphics g,String dimension,MapViewport view,int width,int height,dev.abros.rivet.core.BoxIntersectionIndex occupied,List<dev.abros.rivet.core.NativeLayout.Box> reserved){
-  var font=Minecraft.getInstance().font;int size=Math.round(16*MapRenderSettings.INSTANCE.markerScale);
+  var font=UiFont.get();int size=Math.round(16*MapRenderSettings.INSTANCE.markerScale);
   var visible=points(false).stream().filter(p->p.location().dimension().equals(dimension)).toList();
   for(var point:visible){var p=point.location();int x=(int)view.screenX(p.x()+.5,width/2d),y=(int)view.screenZ(p.z()+.5,height/2d);occupied.add(new dev.abros.rivet.core.NativeLayout.Box(x-size/2-1,y-size/2-1,size+2,size+2));}
   for(var point:visible){var p=point.location();

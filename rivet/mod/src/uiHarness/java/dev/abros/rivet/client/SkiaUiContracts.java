@@ -9,6 +9,7 @@ import static org.lwjgl.opengl.GL33C.*;
 /** Actual framebuffer checks: clipping, transforms, alpha and restored GL state. */
 final class SkiaUiContracts {
     static void verify(GuiGraphics g){
+        UiFontContracts.verify(g);
         g.flush();int program=glGetInteger(GL_CURRENT_PROGRAM),active=glGetInteger(GL_ACTIVE_TEXTURE);
         boolean depth=glIsEnabled(GL_DEPTH_TEST),blend=glIsEnabled(GL_BLEND);
         UiCanvas.scoped(g,()->{
@@ -46,7 +47,7 @@ final class SkiaUiContracts {
             var mixed=net.minecraft.network.chat.Component.literal("Text ").append(net.minecraft.network.chat.Component.literal("x").withStyle(net.minecraft.ChatFormatting.OBFUSCATED)).append(" → Текст");
             check(UiCanvas.drawText(g,Minecraft.getInstance().font,mixed.getVisualOrderText(),8,100,0xffffffff,false),"One fallback glyph reverts the entire text line");
         });
-        g.flush();ink(8+Minecraft.getInstance().font.width("Text x → "),100,25,10);
+        g.flush();ink(8+UiFont.get().width("Text x → "),100,25,10);
         var tabs=new java.util.ArrayList<net.minecraft.client.gui.components.AbstractWidget>();
         UiTabs.build(Minecraft.getInstance().screen,Minecraft.getInstance().font,new dev.abros.rivet.core.NativeLayout.Box(10,10,200,28),java.util.List.of("One","Two"),0,tabs::add,i->{},true);
         check(tabs.size()==2&&tabs.stream().allMatch(t->t.getHeight()==28),"Tab height ignored layout");

@@ -24,11 +24,11 @@ final class ChatChannelIndicator {
  static void draw(GuiGraphics g,ChatScreen chat,String text){
   rendered=new java.lang.ref.WeakReference<>(chat);bounds=new dev.abros.rivet.core.NativeLayout.Box(0,0,0,0);String label=label(text);if(label.isEmpty())return;label+=" ▾";
   var mc=Minecraft.getInstance();var accessor=(dev.abros.rivet.mixin.ChatInputAccessor)chat;var input=accessor.rivet$input();
-  int max=Math.min(input.getWidth(),g.guiWidth()-8);if(max<12)return;String fitted=UiKit.fit(mc.font,label,max-8);int w=mc.font.width(fitted)+8,h=13;
+  int max=Math.min(input.getWidth(),g.guiWidth()-8);if(max<12)return;String fitted=UiKit.fit(UiFont.get(),label,max-8);int w=UiFont.get().width(fitted)+8,h=13;
   // Native completions occupy the left edge above input; move the badge to the right while they are open.
   int x=accessor.rivet$suggestions().isVisible()?g.guiWidth()-w-4:Math.max(4,input.getX());int y=Math.max(0,input.getY()-h-2);
   bounds=new dev.abros.rivet.core.NativeLayout.Box(x,y,w,h);UiKit.plate(g,x,y,w,h,UiKit.surface());
-  UiCanvas.text(g,mc.font,fitted,x+4,y+2,0xFF000000|color(ChatHints.parse(text).channel()),false);
+  UiCanvas.text(g,UiFont.get(),fitted,x+4,y+2,0xFF000000|color(ChatHints.parse(text).channel()),false);
  }
  private ChatChannelIndicator(){}
 }

@@ -10,7 +10,7 @@ final class PlayerRow extends Button {
  private final JsonObject player;private final boolean selected;
  PlayerRow(int x,int y,int width,JsonObject player,Runnable action,boolean selected){super(x,y,width,32,PlayerText.name(player),b->action.run(),DEFAULT_NARRATION);this.player=player;this.selected=selected;}
  @Override protected void renderWidget(GuiGraphics g,int mx,int my,float dt){
-  var font=Minecraft.getInstance().font;boolean online=player.has("online")&&player.get("online").getAsBoolean();
+  var font=UiFont.get();boolean online=player.has("online")&&player.get("online").getAsBoolean();
   UiTheme.panel(g,getX(),getY(),width,height,selected?UiKit.surface(UiKit.Surface.SELECTED):UiTheme.mix(UiKit.surface(UiKit.Surface.CONTROL),UiKit.surface(UiKit.Surface.HOVER),UiTheme.hover(this)));
   if(selected)g.fill(getX(),getY()+4,getX()+2,getY()+height-4,UiKit.accent());
   net.minecraft.client.gui.components.PlayerFaceRenderer.draw(g,SkinClient.skin(java.util.UUID.fromString(Json.str(player,"uuid"))),getX()+8,getY()+6,20);

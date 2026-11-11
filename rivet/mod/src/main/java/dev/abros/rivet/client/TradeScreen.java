@@ -34,7 +34,7 @@ public final class TradeScreen extends AbstractContainerScreen<TradeMenu> {
  }
  @Override protected void containerTick(){super.containerTick();update();}
  private void press(int action){if(action<10)net.neoforged.neoforge.network.PacketDistributor.sendToServer(new dev.abros.rivet.network.TradeWire.Action(menu.containerId,menu.revision,action));else if(minecraft.gameMode!=null)minecraft.gameMode.handleInventoryButtonClick(menu.containerId,action);}
- void update(){if(accept==null)return;result=!menu.status.equals("draft")&&!menu.status.equals("open");menu.resultLayout(result);
+ void update(){font=rivetStyle()?UiFont.get():minecraft.font;if(accept==null)return;result=!menu.status.equals("draft")&&!menu.status.equals("open");menu.resultLayout(result);
   if(shownRevision!=menu.revision){cancelArmed=false;freeArmed=false;shownRevision=menu.revision;}
   accept.setX(leftPos+(result?74:132));accept.setWidth(result?108:116);closeButton.setX(leftPos+(result?218:258));styleButton.setX(closeButton.getX());styleButton.setTooltip(Tooltip.create(Client.tr("trade.style",rivetStyle()?"Rivet":"Minecraft")));styleButton.setMessage(Client.tr("trade.style",rivetStyle()?"Rivet":"Minecraft"));cancel.visible=!result;cancel.setMessage(Client.tr(cancelArmed||freeArmed?"trade.cancel.back":"trade.cancel"));
   accept.active=cancelArmed||(result?menu.fullyCollected()||menu.canCollect:menu.status.equals("draft")?!menu.ownEmpty:menu.dirty||!menu.otherDirty&&(!menu.accepted&&(!menu.ownEmpty||!menu.otherEmpty)));

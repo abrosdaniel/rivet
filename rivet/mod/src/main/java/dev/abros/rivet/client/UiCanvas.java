@@ -36,8 +36,10 @@ public final class UiCanvas {
     private static final long[] timings=PROFILE?new long[240]:null;
     private static long frameNanos;private static int profileFrames,profileSamples,frameBatches,maxBatches;
     private UiCanvas(){}
-    public static boolean active(){var s=Minecraft.getInstance().screen;return scope>0||UiTheme.owns(s)||s instanceof TradeScreen t&&t.rivetStyle();}
-    public static void scoped(GuiGraphics g,Runnable action){scope++;try{action.run();}finally{flush(g);scope--;}}
+    public static boolean active(){return scope>0;}
+    public static boolean owns(net.minecraft.client.gui.screens.Screen s){return UiTheme.owns(s)||s instanceof TradeScreen t&&t.rivetStyle();}
+    public static void screen(GuiGraphics g,net.minecraft.client.gui.screens.Screen s,Runnable action){int previous=scope;flush(g);scope=owns(s)?1:0;try{action.run();}finally{try{flush(g);}finally{scope=previous;}}}
+    public static void scoped(GuiGraphics g,Runnable action){scope++;try{action.run();}finally{try{flush(g);}finally{scope--;}}}
     private static boolean ready(GuiGraphics g){
         if(flushing||failed||scope==0&&Minecraft.getInstance().screen instanceof TradeScreen t&&!t.rivetStyle())return false;
         try{
@@ -70,7 +72,7 @@ public final class UiCanvas {
             frameNanos=0;frameBatches=0;
         }
     }
-    public static void close(){if(backend!=null){backend.close();backend=null;}pending.clear();owner=null;}
+    public static void close(){UiTextMetrics.close();if(backend!=null){backend.close();backend=null;}pending.clear();owner=null;}
     private static int tint(int color){
         float[] rgba=com.mojang.blaze3d.systems.RenderSystem.getShaderColor();
         return Math.round((color>>>24)*rgba[3])<<24|Math.round((color>>16&255)*rgba[0])<<16
@@ -99,9 +101,9 @@ public final class UiCanvas {
         var pose=new Matrix4f(g.pose().last().pose());float[] cursor={x};
         var fallback=new ArrayList<Runnable>();
         value.accept((index,style,point)->{
-            String glyph=new String(Character.toChars(point));float advance=nativeFont.width(FormattedCharSequence.forward(glyph,style));
+            String glyph=new String(Character.toChars(point));float advance=((UiFont)UiFont.of(nativeFont)).advance(point,style);
             if(style.isObfuscated()||!style.getFont().equals(Style.DEFAULT_FONT)||!backend.supports(point)&&!Character.isWhitespace(point)){
-                float at=cursor[0];fallback.add(()->g.drawString(nativeFont,FormattedCharSequence.forward(glyph,style),at,y,base,shadow));
+                float at=cursor[0];fallback.add(()->g.drawString(UiFont.nativeFont(nativeFont),FormattedCharSequence.forward(glyph,style),at,y,base,shadow));
                 cursor[0]+=advance;return true;
             }
             int tint=tint(style.getColor()==null?base:(base&0xff000000)|style.getColor().getValue());
@@ -132,5 +134,5 @@ public final class UiCanvas {
     public static int text(GuiGraphics g,Font f,FormattedCharSequence s,int x,int y,int c){return text(g,f,s,x,y,c,true);}
     public static int text(GuiGraphics g,Font f,String s,int x,int y,int c,boolean shadow){return text(g,f,s==null?FormattedCharSequence.EMPTY:sequence(f,s),x,y,c,shadow);}
     public static int text(GuiGraphics g,Font f,Component s,int x,int y,int c,boolean shadow){return text(g,f,s.getVisualOrderText(),x,y,c,shadow);}
-    public static int text(GuiGraphics g,Font f,FormattedCharSequence s,int x,int y,int c,boolean shadow){if(drawText(g,f,s,x,y,c,shadow))return x+f.width(s)+(shadow?1:0);return g.drawString(f,s,x,y,c,shadow);}
+    public static int text(GuiGraphics g,Font f,FormattedCharSequence s,int x,int y,int c,boolean shadow){if(drawText(g,f,s,x,y,c,shadow))return x+UiFont.of(f).width(s)+(shadow?1:0);return g.drawString(f,s,x,y,c,shadow);}
 }

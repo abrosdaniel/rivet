@@ -18,7 +18,7 @@ abstract class UiCanvasMixin {
     private void rivet$nativeBoundary(CallbackInfo ci){UiCanvas.flush(self());}
     @Redirect(method="renderTooltipInternal",at=@At(value="INVOKE",target="Lnet/minecraft/client/gui/screens/inventory/tooltip/ClientTooltipComponent;renderText(Lnet/minecraft/client/gui/Font;IILorg/joml/Matrix4f;Lnet/minecraft/client/renderer/MultiBufferSource$BufferSource;)V"))
     private void rivet$tooltip(net.minecraft.client.gui.screens.inventory.tooltip.ClientTooltipComponent component,Font font,int x,int y,org.joml.Matrix4f pose,net.minecraft.client.renderer.MultiBufferSource.BufferSource buffer){
-        if(UiCanvas.active()&&component instanceof UiTooltipTextAccessor text){UiCanvas.tooltipText(self(),font,text.rivet$text(),x,y);return;}
+        if((UiCanvas.active()||font instanceof dev.abros.rivet.client.UiFont)&&component instanceof UiTooltipTextAccessor text){UiCanvas.tooltipText(self(),font,text.rivet$text(),x,y);return;}
         UiCanvas.flush(self());component.renderText(font,x,y,pose,buffer);
     }
     @Inject(method="bufferSource",at=@At("HEAD"))
@@ -31,10 +31,10 @@ abstract class UiCanvasMixin {
     }
     @Inject(method="drawString(Lnet/minecraft/client/gui/Font;Ljava/lang/String;FFIZ)I",at=@At("HEAD"),cancellable=true)
     private void rivet$text(Font font,String value,float x,float y,int color,boolean shadow,CallbackInfoReturnable<Integer> cir){
-        if(value!=null&&UiCanvas.active()&&UiCanvas.drawText(self(),font,UiCanvas.sequence(font,value),x,y,color,shadow))cir.setReturnValue((int)x+font.width(value)+(shadow?1:0));else UiCanvas.flush(self());
+        if(value!=null&&(UiCanvas.active()||font instanceof dev.abros.rivet.client.UiFont)&&UiCanvas.drawText(self(),font,UiCanvas.sequence(font,value),x,y,color,shadow))cir.setReturnValue((int)x+dev.abros.rivet.client.UiFont.of(font).width(value)+(shadow?1:0));else UiCanvas.flush(self());
     }
     @Inject(method="drawString(Lnet/minecraft/client/gui/Font;Lnet/minecraft/util/FormattedCharSequence;FFIZ)I",at=@At("HEAD"),cancellable=true)
     private void rivet$styled(Font font,FormattedCharSequence value,float x,float y,int color,boolean shadow,CallbackInfoReturnable<Integer> cir){
-        if(UiCanvas.active()&&UiCanvas.drawText(self(),font,value,x,y,color,shadow))cir.setReturnValue((int)x+font.width(value)+(shadow?1:0));else UiCanvas.flush(self());
+        if((UiCanvas.active()||font instanceof dev.abros.rivet.client.UiFont)&&UiCanvas.drawText(self(),font,value,x,y,color,shadow))cir.setReturnValue((int)x+dev.abros.rivet.client.UiFont.of(font).width(value)+(shadow?1:0));else UiCanvas.flush(self());
     }
 }

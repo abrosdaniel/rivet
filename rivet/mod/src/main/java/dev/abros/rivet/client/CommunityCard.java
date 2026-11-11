@@ -20,7 +20,7 @@ final class CommunityCard extends Button {
  private String value(String key){return Json.opt(item,key,"");}
  private String count(String key){return dev.abros.rivet.core.DisplayCounts.text(item,key,"0");}
  private int color(){return switch(section){case "moderation"->UiPalette.color(0xFFEF7777);case "groups"->UiPalette.color(0xFF79CBA6);default->UiPalette.color(0xFFE2BE75);};}
- private void line(GuiGraphics g,String text,int x,int y,int w,int color){var font=Minecraft.getInstance().font;String line=font.width(text)>w?font.plainSubstrByWidth(text,Math.max(4,w-font.width("…")))+"…":text;Ui.text(g,font,line,x,y,color,false);}
+ private void line(GuiGraphics g,String text,int x,int y,int w,int color){var font=UiFont.get();String line=font.width(text)>w?font.plainSubstrByWidth(text,Math.max(4,w-font.width("…")))+"…":text;Ui.text(g,font,line,x,y,color,false);}
  @Override protected void renderWidget(GuiGraphics g,int mx,int my,float delta){
   int x=getX(),y=getY(),w=getWidth(),h=getHeight(),left=x+10;boolean focus=selected||UiTheme.highlighted(this);
   float hover=UiTheme.hover(this);int surface=UiTheme.mix(UiKit.surface(UiKit.Surface.CONTROL),UiKit.surface(selected?UiKit.Surface.SELECTED:UiKit.Surface.HOVER),selected?1:hover);
@@ -30,11 +30,11 @@ final class CommunityCard extends Button {
 
   g.enableScissor(x+4,y+3,x+w-4,y+h-3);
   String eyebrow=section.equals("groups")?value("type")+" · "+(item.has("recruiting")&&item.get("recruiting").getAsBoolean()?Client.text("ui.registration_open_4bd5a5ce"):Client.text("ui.registration_closed_a0d3acee")):CommunityScreen.name(section);
-  var font=Minecraft.getInstance().font;var titleLines=titleLayout.lines(font,heading,Math.max(1,x+w-left-26));int lineCount=Math.min(h>=78?2:1,titleLines.size());
+  var font=UiFont.get();var titleLines=titleLayout.lines(font,heading,Math.max(1,x+w-left-26));int lineCount=Math.min(h>=78?2:1,titleLines.size());
   var tooltip=titleLines.size()>lineCount?titleTooltip:null;if(getTooltip()!=tooltip)setTooltip(tooltip);
   for(int n=0;n<lineCount;n++)UiCanvas.text(g,font,titleLines.get(n),left,y+8+n*11,UiKit.text(),false);
   int extra=Math.max(0,lineCount-1)*11;
-  if(h>=54){String badge=item.has("attention")?value("attention"):eyebrow;int bw=Math.min(x+w-left-12,Minecraft.getInstance().font.width(badge)+10);if(bw>8){if(item.has("attention")||section.equals("moderation"))UiBadge.draw(g,Minecraft.getInstance().font,badge,left-2,y+20+extra,bw,color());else line(g,badge,left,y+23+extra,x+w-left-12,UiKit.muted());}}
+  if(h>=54){String badge=item.has("attention")?value("attention"):eyebrow;int bw=Math.min(x+w-left-12,UiFont.get().width(badge)+10);if(bw>8){if(item.has("attention")||section.equals("moderation"))UiBadge.draw(g,UiFont.get(),badge,left-2,y+20+extra,bw,color());else line(g,badge,left,y+23+extra,x+w-left-12,UiKit.muted());}}
   if(selected||UiTheme.highlighted(this))UiIcons.draw(g,UiIcons.RIGHT,x+w-22,y+6,color());
   String preview=value("preview");
   line(g,preview,left,y+(h>=54?38:23)+extra,x+w-left-12,UiKit.muted());

@@ -33,7 +33,7 @@ final class MapIntegrationLayers {
   index();for(var t:territories.visible(dimension,view.worldX(0,width/2d),view.worldZ(0,height/2d),view.worldX(width,width/2d),view.worldZ(height,height/2d)))MapTerritories.draw(g,t.points(),t.color(),t.name(),p->new double[]{view.screenX(p.x(),width/2d),view.screenZ(p.z(),height/2d)},0,0,width,height,false,true);
  }
  static void world(GuiGraphics g,String dimension,MapViewport view,int width,int height,BoxIntersectionIndex occupied,List<NativeLayout.Box> reserved){
-  int size=Math.max(4,Math.round(24*MapRenderSettings.INSTANCE.markerScale));var font=Minecraft.getInstance().font;
+  int size=Math.max(4,Math.round(24*MapRenderSettings.INSTANCE.markerScale));var font=UiFont.get();
   index();
   for(var m:markers.getOrDefault(dimension,List.of())){
    int x=(int)view.screenX(m.x()+.5,width/2d),y=(int)view.screenZ(m.z()+.5,height/2d);if(x<size/2||y<size/2||x>=width-size/2||y>=height-size/2)continue;

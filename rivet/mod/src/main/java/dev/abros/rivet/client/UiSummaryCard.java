@@ -12,7 +12,7 @@ final class UiSummaryCard extends Button {
  UiSummaryCard(int x,int y,int width,String title,String value,List<String> details,int accent,Runnable action){super(x,y,width,88,Component.literal(title+". "+value+". "+String.join(". ",details)),b->action.run(),DEFAULT_NARRATION);this.title=title;this.value=value;this.details=List.copyOf(details);this.accent=accent;setTooltip(net.minecraft.client.gui.components.Tooltip.create(Component.literal(title+"\n"+value+"\n"+String.join("\n",details))));}
  static UiSummaryCard compact(int x,int y,int width,String title,String value,List<String> details,int accent,Runnable action){var card=new UiSummaryCard(x,y,width,title,value,details,accent,action);card.setHeight(62);return card;}
  @Override protected void renderWidget(GuiGraphics g,int mx,int my,float delta){
-  int x=getX(),y=getY(),w=getWidth(),color=UiPalette.color(accent);var font=Minecraft.getInstance().font;
+  int x=getX(),y=getY(),w=getWidth(),color=UiPalette.color(accent);var font=UiFont.get();
   UiKit.plate(g,x,y,w,getHeight(),UiTheme.mix(UiKit.surface(UiKit.Surface.CONTROL),UiKit.surface(UiKit.Surface.HOVER),UiTheme.hover(this)));
   if(UiTheme.keyboardFocus(this))UiKit.focus(g,x,y,w,getHeight());
   g.enableScissor(x+8,y+5,x+w-8,y+getHeight()-5);

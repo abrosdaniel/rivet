@@ -16,7 +16,6 @@ final class SkiaUiBackend implements AutoCloseable {
     private final MaskFilter shadow=MaskFilter.makeBlur(FilterBlurMode.NORMAL,3);
     private final ColorSpace colorSpace=ColorSpace.getSRGB();
     private final java.util.Map<Integer,Boolean> supported=boundedCache();
-    private final java.util.Map<String,Float> advances=boundedCache();
     private static <K,V> java.util.Map<K,V> boundedCache(){return new java.util.LinkedHashMap<K,V>(256,.75f,true){
         @Override protected boolean removeEldestEntry(java.util.Map.Entry<K,V> entry){return size()>4096;}
     };}
@@ -83,11 +82,7 @@ final class SkiaUiBackend implements AutoCloseable {
     boolean supports(int point){return supported.computeIfAbsent(point,p->font.getUTF32Glyph(p)!=0);}
     void glyph(float x,float y,String text,float advance,int color,boolean bold,boolean italic){
         font.setEmboldened(bold).setSkewX(italic?-.2f:0);paint.setColor(color).setMode(PaintMode.FILL);
-        // Keep Minecraft's advances: caret, selection, wrapping and click hitboxes remain identical.
-        String key=(bold?"b":"n")+(italic?"i":"n")+text;
-        float measured=advances.computeIfAbsent(key,k->font.measureTextWidth(text));canvas.save();canvas.translate(x,y);
-        if(measured>advance&&advance>0)canvas.scale(advance/measured,1);
-        canvas.drawString(text,0,8,font,paint);canvas.restore();
+        canvas.drawString(text,x,y+8,font,paint);
     }
     public void close(){try(State ignored=new State()){if(surface!=null)surface.close();if(target!=null)target.close();font.close();typeface.close();paint.close();shadow.close();colorSpace.close();context.close();}}
 
